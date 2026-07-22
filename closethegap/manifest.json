@@ -1,0 +1,37 @@
+{
+  "name": "Close the Gap",
+  "short_name": "CtG",
+  "description": "Cycling Training OS — chiudi il gap verso il tuo obiettivo",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#080a0f",
+  "theme_color": "#e8ff47",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%23e8ff47'/><polyline points='32,140 64,80 96,100 136,48 168,80' stroke='%23000' stroke-width='18' stroke-linecap='round' stroke-linejoin='round' fill='none'/><circle cx='168' cy='80' r='14' fill='%23000'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%23e8ff47'/><polyline points='80,380 170,200 256,260 365,120 450,200' stroke='%23000' stroke-width='45' stroke-linecap='round' stroke-linejoin='round' fill='none'/><circle cx='450' cy='200' r='36' fill='%23000'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "fitness", "sports"],
+  "shortcuts": [
+    {
+      "name": "Oggi",
+      "url": "/",
+      "description": "Allenamento di oggi"
+    },
+    {
+      "name": "Piano",
+      "url": "/?page=plan",
+      "description": "Piano di allenamento"
+    }
+  ]
+}

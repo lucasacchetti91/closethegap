@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Close the Gap</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e8ff47">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Close the Gap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ── RESET & TOKENS ─────────────────────────────────────── */
+:root{
+  --bg:#080a0f;
+  --s1:#0e1117;
+  --s2:#141720;
+  --s3:#1c2030;
+  --s4:#242840;
+  --acc:#e8ff47;      /* lime elettrico */
+  --acc2:#3b82f6;     /* blue */
+  --grn:#22d46a;
+  --red:#ff4d4d;
+  --yel:#fbbf24;
+  --pur:#a78bfa;
+  --tx:#f0f2f8;
+  --tx2:#8b92a8;
+  --tx3:#4a5168;
+  --br:#1e2235;
+  --br2:#2a2f48;
+  --r:10px;
+  --r2:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;font-size:14px;line-height:1.5;}
+
+/* ── LAYOUT ─────────────────────────────────────────────── */
+.app{display:flex;height:100vh;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:220px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--br);display:flex;flex-direction:column;padding:0;z-index:20;}
+.sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid var(--br);}
+.logo-mark{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:34px;height:34px;background:var(--acc);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.logo-icon svg{width:20px;height:20px;}
+.logo-text{font-size:1.05rem;font-weight:700;letter-spacing:-.02em;color:var(--tx);}
+.logo-sub{font-size:.6rem;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-top:1px;}
+
+.sidebar-nav{flex:1;padding:12px 10px;overflow-y:auto;}
+.nav-section{margin-bottom:6px;}
+.nav-section-label{font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);padding:6px 10px 4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;color:var(--tx2);font-size:.82rem;font-weight:500;transition:all .15s;margin-bottom:2px;}
+.nav-item:hover{background:var(--s3);color:var(--tx);}
+.nav-item.active{background:var(--acc);color:#000;font-weight:700;}
+.nav-item.active .ni{opacity:1;}
+.ni{font-size:.95rem;width:18px;text-align:center;opacity:.7;}
+
+.sidebar-bottom{padding:12px 10px;border-top:1px solid var(--br);}
+.sync-btn{width:100%;display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;background:rgba(252,76,2,.12);border:1px solid rgba(252,76,2,.25);color:#fc4c02;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .15s;}
+.sync-btn:hover{background:rgba(252,76,2,.2);}
+.strava-dot{width:7px;height:7px;background:#fc4c02;border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* MAIN */
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.topbar{height:52px;background:var(--s1);border-bottom:1px solid var(--br);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0;}
+.topbar-title{font-size:.9rem;font-weight:600;color:var(--tx);}
+.topbar-date{font-size:.75rem;color:var(--tx3);margin-left:2px;}
+.topbar-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.topbar-btn{padding:6px 14px;border-radius:7px;border:none;cursor:pointer;font-size:.74rem;font-weight:600;transition:all .15s;}
+.tb-acc{background:var(--acc);color:#000;}
+.tb-acc:hover{background:#d4eb3f;}
+.tb-outline{background:transparent;color:var(--tx2);border:1px solid var(--br2);}
+.tb-outline:hover{border-color:var(--acc);color:var(--acc);}
+.tb-purple{background:var(--pur);color:#000;}
+.import-label{padding:6px 14px;border-radius:7px;border:1px solid var(--br2);cursor:pointer;font-size:.74rem;font-weight:600;color:var(--tx2);transition:all .15s;}
+.import-label:hover{border-color:var(--acc);color:var(--acc);}
+
+.content{flex:1;overflow-y:auto;padding:20px 24px;}
+
+/* ── PAGES ──────────────────────────────────────────────── */
+.page{display:none;}.page.active{display:block;}
+
+/* ── HOME SPLIT ─────────────────────────────────────────── */
+.home-split{display:grid;grid-template-columns:340px 1fr;gap:20px;height:calc(100vh - 52px - 40px);}
+
+/* LEFT PANEL */
+.left-panel{display:flex;flex-direction:column;gap:14px;overflow-y:auto;padding-right:4px;}
+
+.kpi-stack{display:flex;flex-direction:column;gap:8px;}
+.kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.kpi{background:var(--s2);border:1px solid var(--br);border-radius:var(--r);padding:12px 14px;}
+.kpi.wide{grid-column:span 3;}
+.kl{font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:4px;}
+.kv{font-size:1.55rem;font-weight:700;letter-spacing:-.02em;line-height:1;}
+.ks{font-size:.65rem;color:var(--tx3);margin-top:3px;}
+.kv-up{color:var(--grn);}.kv-dn{color:var(--red);}.kv-wa{color:var(--yel);}.kv-acc{color:var(--acc);}
+
+.week-recap{background:var(--s2);border:1px solid var(--br);border-radius:var(--r);padding:14px;}
+.wr-title{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:10px;}
+.wr-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.wr-item{text-align:center;}
+.wr-val{font-size:1.1rem;font-weight:700;color:var(--tx);}
+.wr-lbl{font-size:.6rem;color:var(--tx3);margin-top:2px;}
+
+.mini-pmc{background:var(--s2);border:1px solid var(--br);border-radius:var(--r);padding:14px;}
+.mp-title{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:10px;}
+
+/* RIGHT PANEL — Today's workout */
+.right-panel{display:flex;flex-direction:column;gap:14px;overflow-y:auto;}
+.today-card{background:var(--s2);border:1px solid var(--br);border-radius:var(--r2);padding:20px;flex-shrink:0;}
+.today-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;}
+.today-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);}
+.today-name{font-size:1.3rem;font-weight:700;margin:4px 0;letter-spacing:-.02em;}
+.today-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:.68rem;font-weight:700;letter-spacing:.04em;}
+.badge-z1{background:rgba(100,116,139,.2);color:#94a3b8;}
+.badge-z2{background:rgba(34,212,106,.15);color:var(--grn);}
+.badge-z3{background:rgba(251,191,36,.15);color:var(--yel);}
+.badge-z4{background:rgba(249,115,22,.15);color:#f97316;}
+.badge-z5{background:rgba(255,77,77,.15);color:var(--red);}
+.badge-z6{background:rgba(167,139,250,.15);color:var(--pur);}
+.badge-race{background:rgba(167,139,250,.2);color:var(--pur);}
+.badge-off{background:rgba(74,81,104,.2);color:var(--tx3);}
+
+.today-meta{display:flex;gap:16px;margin:12px 0;flex-wrap:wrap;}
+.tm-item{display:flex;flex-direction:column;gap:2px;}
+.tm-val{font-size:1rem;font-weight:700;}
+.tm-lbl{font-size:.6rem;color:var(--tx3);text-transform:uppercase;}
+
+.today-desc{font-size:.8rem;color:var(--tx2);line-height:1.6;margin:10px 0 14px;padding:10px 14px;background:var(--s3);border-radius:8px;border-left:3px solid var(--acc);}
+
+/* Workout chart */
+.wc-wrap{margin:14px 0 8px;}
+.wc-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:8px;}
+.wc-chart{display:flex;align-items:flex-end;gap:2px;height:90px;background:var(--s3);border-radius:8px;padding:8px;}
+.wc-block{border-radius:4px 4px 0 0;flex-shrink:0;position:relative;cursor:pointer;transition:opacity .15s;}
+.wc-block:hover{opacity:.8;}
+.wc-tooltip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--s4);border:1px solid var(--br2);color:var(--tx);font-size:.6rem;padding:4px 8px;border-radius:5px;white-space:nowrap;z-index:10;pointer-events:none;opacity:0;transition:opacity .15s;}
+.wc-block:hover .wc-tooltip{opacity:1;}
+.wc-zones{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.wc-zone-tag{font-size:.6rem;font-weight:600;padding:2px 7px;border-radius:10px;}
+
+.adapt-note{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;font-size:.75rem;color:var(--yel);margin-top:8px;}
+
+/* Week plan strip */
+.week-strip{background:var(--s2);border:1px solid var(--br);border-radius:var(--r2);padding:16px;}
+.ws-title{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:12px;}
+.ws-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.ws-day{background:var(--s3);border:1px solid var(--br);border-radius:8px;padding:8px 6px;text-align:center;cursor:pointer;transition:all .15s;position:relative;}
+.ws-day:hover{border-color:var(--br2);}
+.ws-day.ws-today{border-color:var(--acc);background:rgba(232,255,71,.06);}
+.ws-day.ws-done{border-color:var(--grn);background:rgba(34,212,106,.05);}
+.ws-day.ws-off{opacity:.5;}
+.ws-day.ws-selected{border-color:var(--acc2);background:rgba(59,130,246,.08);}
+.ws-dow{font-size:.58rem;text-transform:uppercase;color:var(--tx3);margin-bottom:4px;}
+.ws-date{font-size:.75rem;font-weight:700;margin-bottom:5px;}
+.ws-type{width:8px;height:8px;border-radius:50%;margin:0 auto 4px;}
+.ws-tss{font-size:.58rem;color:var(--tx3);}
+.ws-done-icon{position:absolute;top:4px;right:4px;font-size:.55rem;}
+
+/* Recent activities */
+.recent-list{background:var(--s2);border:1px solid var(--br);border-radius:var(--r2);padding:16px;}
+.rl-title{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:10px;}
+.rl-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--br);}
+.rl-item:last-child{border-bottom:none;padding-bottom:0;}
+.rl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.rl-name{font-size:.8rem;font-weight:500;flex:1;}
+.rl-meta{font-size:.68rem;color:var(--tx3);display:flex;gap:8px;}
+.rl-tss{font-size:.75rem;font-weight:700;color:var(--acc);}
+
+/* ── FULL PLAN PAGE ──────────────────────────────────────── */
+.plan-week-block{margin-bottom:24px;}
+.pwb-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--br);}
+.pwb-title{font-size:.75rem;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.05em;}
+.pwb-tss{font-size:.68rem;color:var(--tx3);margin-left:auto;}
+.plan-day-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
+
+.plan-card{background:var(--s2);border:1px solid var(--br);border-radius:var(--r);padding:14px;cursor:pointer;transition:border-color .15s;border-left:3px solid var(--br);}
+.plan-card:hover{border-color:var(--br2);}
+.plan-card.pc-done{border-left-color:var(--grn);}
+.plan-card.pc-today{border-left-color:var(--acc);}
+.plan-card.pc-z2{border-left-color:var(--grn);}
+.plan-card.pc-z3{border-left-color:var(--yel);}
+.plan-card.pc-z4{border-left-color:#f97316;}
+.plan-card.pc-z5{border-left-color:var(--red);}
+.plan-card.pc-race{border-left-color:var(--pur);}
+.plan-card.pc-off{opacity:.55;}
+.pc-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.pc-date{font-size:.65rem;color:var(--tx3);}
+.pc-name{font-size:.82rem;font-weight:600;flex:1;}
+.pc-tss{font-size:.68rem;color:var(--tx3);}
+.pc-desc{font-size:.72rem;color:var(--tx2);margin:5px 0 8px;line-height:1.5;}
+.pc-adapt{font-size:.65rem;color:var(--yel);display:flex;align-items:center;gap:4px;margin-top:5px;}
+
+/* ── ANALYTICS ───────────────────────────────────────────── */
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.analytics-grid.g1{grid-template-columns:1fr;}
+.analytics-grid.g3{grid-template-columns:1fr 1fr 1fr;}
+.card{background:var(--s2);border:1px solid var(--br);border-radius:var(--r);padding:16px;margin-bottom:16px;}
+.card-title{font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:12px;}
+.cw{position:relative;}
+
+/* Zone bars */
+.zbar{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.zbar-lbl{font-size:.68rem;flex:0 0 120px;color:var(--tx2);}
+.zbar-track{flex:1;background:var(--s3);border-radius:3px;height:6px;}
+.zbar-fill{height:100%;border-radius:3px;}
+.zbar-pct{font-size:.62rem;color:var(--tx3);flex:0 0 28px;text-align:right;}
+
+/* Power KPI */
+.power-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;margin-bottom:14px;}
+.pk{background:var(--s3);border:1px solid var(--br);border-radius:8px;padding:10px;text-align:center;}
+.pkv{font-size:1.05rem;font-weight:700;color:var(--acc);}
+.pkl{font-size:.58rem;color:var(--tx3);margin-top:2px;text-transform:uppercase;}
+
+/* Heatmap */
+.hm-wrap{overflow-x:auto;padding-bottom:4px;}
+
+/* Scatter quadrant labels */
+.scatter-wrap{position:relative;}
+
+/* ── ACTIVITIES TABLE ────────────────────────────────────── */
+.act-filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.act-input{background:var(--s2);border:1px solid var(--br);color:var(--tx);padding:6px 10px;border-radius:7px;font-size:.76rem;}
+.act-input:focus{outline:none;border-color:var(--br2);}
+.act-table{width:100%;border-collapse:collapse;font-size:.76rem;}
+.act-table th{padding:7px 10px;text-align:left;color:var(--tx3);font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--br);font-weight:500;}
+.act-table td{padding:8px 10px;border-bottom:1px solid var(--br);}
+.act-table tr:hover td{background:var(--s3);}
+.bdg{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.62rem;font-weight:600;}
+.bdg-ride{background:rgba(232,255,71,.1);color:var(--acc);}
+.bdg-race{background:rgba(167,139,250,.15);color:var(--pur);}
+.bdg-gran{background:rgba(251,191,36,.12);color:var(--yel);}
+
+/* ── MODAL ───────────────────────────────────────────────── */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center;}
+.mo.open{display:flex;}
+.mbox{background:var(--s1);border:1px solid var(--br2);border-radius:var(--r2);padding:22px;max-width:440px;width:90%;max-height:90vh;overflow-y:auto;}
+.mbox-title{font-size:.92rem;font-weight:700;margin-bottom:14px;}
+.mbox-close{float:right;background:none;border:none;color:var(--tx3);font-size:1.1rem;cursor:pointer;}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg label{font-size:.65rem;color:var(--tx3);}
+.fg input,.fg select{background:var(--s2);border:1px solid var(--br);border-radius:7px;color:var(--tx);padding:7px 9px;font-size:.78rem;}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--acc);}
+
+/* ── SCROLLBAR ───────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--br2);border-radius:4px;}
+
+/* ── UTILS ───────────────────────────────────────────────── */
+.empty{text-align:center;color:var(--tx3);padding:28px;font-size:.78rem;}
+.divider{height:1px;background:var(--br);margin:16px 0;}
+
+@media(max-width:1100px){
+  .home-split{grid-template-columns:1fr;}
+  .sidebar{width:180px;}
+}
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .analytics-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── SIDEBAR ─────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">
+      <div class="logo-icon">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 14 L7 7 L11 10 L15 4 L17 8" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="17" cy="8" r="2" fill="#000"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-text">Close the Gap</div>
+        <div class="logo-sub">Cycling Training OS</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-label">Dashboard</div>
+      <div class="nav-item active" onclick="showPage('home',this)"><span class="ni">⚡</span>Oggi</div>
+      <div class="nav-item" onclick="showPage('plan',this)"><span class="ni">📋</span>Piano</div>
+      <div class="nav-item" onclick="showPage('calendar',this)"><span class="ni">📅</span>Calendario</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Dati</div>
+      <div class="nav-item" onclick="showPage('activities',this)"><span class="ni">🏃</span>Attività</div>
+      <div class="nav-item" onclick="showPage('analytics',this)"><span class="ni">📊</span>Analisi & Power</div>
+    </div>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <button class="sync-btn" onclick="syncStrava()">
+      <span class="strava-dot"></span>
+      <span>Sincronizza Strava</span>
+    </button>
+    <button class="sync-btn" id="btn-sync-icu" onclick="syncIntervals()" style="margin-top:6px;background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.25);color:#3b82f6;">
+      <span style="width:7px;height:7px;background:#3b82f6;border-radius:50%;animation:pulse 2s infinite;"></span>
+      <span>Sync Intervals.icu</span>
+    </button>
+    <label class="sync-btn" style="margin-top:6px;background:rgba(232,255,71,.06);border-color:rgba(232,255,71,.2);color:var(--acc);cursor:pointer;">
+      <span>📂</span><span>Importa CSV</span>
+      <input type="file" accept=".csv" onchange="importGarminFile(event)" style="display:none;">
+    </label>
+  </div>
+</aside>
+
+<!-- ── MAIN ────────────────────────────────────────────── -->
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="topbar-title">Oggi</div>
+      <div class="topbar-date" id="topbar-date"></div>
+    </div>
+    <div class="topbar-right">
+      <span id="import-status" style="font-size:.65rem;color:var(--tx3);"></span>
+      <button class="topbar-btn tb-purple" onclick="adaptPlan()" id="btn-adapt">🧠 Adatta Piano</button>
+      <button class="topbar-btn tb-acc" onclick="openAdd()">+ Attività</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ HOME ══ -->
+    <div class="page active" id="page-home">
+      <div class="home-split">
+
+        <!-- LEFT: KPI + recap -->
+        <div class="left-panel">
+          <!-- Fitness KPIs -->
+          <div class="kpi-row">
+            <div class="kpi">
+              <div class="kl">CTL · Fitness</div>
+              <div class="kv kv-up" id="k-ctl">—</div>
+              <div class="ks">42gg EMA</div>
+            </div>
+            <div class="kpi">
+              <div class="kl">ATL · Fatica</div>
+              <div class="kv kv-dn" id="k-atl">—</div>
+              <div class="ks">7gg EMA</div>
+            </div>
+            <div class="kpi">
+              <div class="kl">TSB · Forma</div>
+              <div class="kv" id="k-tsb">—</div>
+              <div class="ks">CTL−ATL ieri</div>
+            </div>
+          </div>
+
+          <!-- FTP -->
+          <div class="kpi-row">
+            <div class="kpi">
+              <div class="kl">FTP</div>
+              <div class="kv kv-acc" id="k-ftp">340W</div>
+              <div class="ks">4.8 W/kg</div>
+            </div>
+            <div class="kpi">
+              <div class="kl">LTHR</div>
+              <div class="kv kv-acc">180</div>
+              <div class="ks">bpm soglia</div>
+            </div>
+            <div class="kpi">
+              <div class="kl">Obiettivo</div>
+              <div class="kv" style="color:var(--pur);">360W</div>
+              <div class="ks">19 set 2026</div>
+            </div>
+          </div>
+
+          <!-- Week recap -->
+          <div class="week-recap">
+            <div class="wr-title">Questa Settimana</div>
+            <div class="wr-grid">
+              <div class="wr-item"><div class="wr-val" id="w-tss">—</div><div class="wr-lbl">TSS</div></div>
+              <div class="wr-item"><div class="wr-val" id="w-km">—</div><div class="wr-lbl">km</div></div>
+              <div class="wr-item"><div class="wr-val" id="w-hrs">—</div><div class="wr-lbl">ore</div></div>
+            </div>
+          </div>
+
+          <!-- Mini PMC -->
+          <div class="mini-pmc">
+            <div class="mp-title">PMC — Ultimi 60 giorni</div>
+            <div class="cw" style="height:130px;"><canvas id="ch-mini-pmc"></canvas></div>
+          </div>
+
+          <!-- TSS 8 weeks -->
+          <div class="mini-pmc">
+            <div class="mp-title">TSS & Km — Ultime 8 Settimane</div>
+            <div class="cw" style="height:110px;"><canvas id="ch-home-tss"></canvas></div>
+          </div>
+
+          <!-- Recent activities -->
+          <div class="recent-list">
+            <div class="rl-title">Ultime Attività</div>
+            <div id="home-recent"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Today + week strip -->
+        <div class="right-panel">
+          <!-- Today's workout -->
+          <div class="today-card" id="today-card">
+            <div class="today-label">Allenamento di Oggi</div>
+            <div id="today-content"><div class="empty">Nessun allenamento previsto per oggi.</div></div>
+          </div>
+
+          <!-- Week strip -->
+          <div class="week-strip">
+            <div class="ws-title">Settimana Corrente</div>
+            <div class="ws-days" id="week-strip"></div>
+          </div>
+
+          <!-- Adapt message -->
+          <div id="adapt-msg" style="display:none;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:var(--r);padding:14px;font-size:.75rem;color:var(--yel);line-height:1.6;"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ PLAN ══ -->
+    <div class="page" id="page-plan">
+      <div id="plan-render"></div>
+    </div>
+
+    <!-- ══ CALENDAR ══ -->
+    <div class="page" id="page-calendar">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-size:1rem;font-weight:700;" id="cal-label">—</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <label style="display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--tx3);cursor:pointer;">
+              <input type="checkbox" id="tog-plan" onchange="renderCal()" style="accent-color:var(--acc);"> Piano
+            </label>
+            <button onclick="calPrev()" style="background:var(--s3);border:1px solid var(--br);color:var(--tx);border-radius:6px;padding:4px 10px;cursor:pointer;">‹</button>
+            <button onclick="calToday()" style="background:var(--s3);border:1px solid var(--br);color:var(--tx);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.72rem;">Oggi</button>
+            <button onclick="calNext()" style="background:var(--s3);border:1px solid var(--br);color:var(--tx);border-radius:6px;padding:4px 10px;cursor:pointer;">›</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;" id="cal-dow"></div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:3px;" id="cal-grid"></div>
+      </div>
+    </div>
+
+    <!-- ══ ACTIVITIES ══ -->
+    <div class="page" id="page-activities">
+      <div class="act-filters">
+        <input type="month" id="f-month" onchange="renderActs()" class="act-input">
+        <input type="text" id="f-search" placeholder="Cerca attività..." oninput="renderActs()" class="act-input" style="width:180px;">
+        <span id="act-count" style="color:var(--tx3);font-size:.72rem;margin-left:auto;"></span>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table class="act-table">
+          <thead><tr><th>Data</th><th>Nome</th><th>Tipo</th><th>Durata</th><th>Km</th><th>D+</th><th>W avg</th><th>NP</th><th>IF</th><th>TSS</th><th>HR</th></tr></thead>
+          <tbody id="act-body"></tbody>
+        </table>
+        <div id="act-empty" class="empty" style="display:none;">Nessuna attività.</div>
+      </div>
+    </div>
+
+    <!-- ══ ANALYTICS ══ -->
+    <div class="page" id="page-analytics">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;background:var(--s2);padding:12px 16px;border-radius:var(--r);border:1px solid var(--br);">
+        <span style="font-size:.72rem;color:var(--tx3);">FTP</span>
+        <input type="number" id="ftp-inp" value="340" class="act-input" style="width:62px;">
+        <span style="font-size:.72rem;color:var(--tx3);">W · LTHR</span>
+        <input type="number" id="lthr-inp" value="180" class="act-input" style="width:58px;">
+        <span style="font-size:.72rem;color:var(--tx3);">bpm · HRmax</span>
+        <input type="number" id="hrmax-inp" value="197" class="act-input" style="width:58px;">
+        <button onclick="recalcAll()" class="topbar-btn tb-acc" style="padding:5px 14px;">✓ Aggiorna</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Performance Management Chart — CTL / ATL / TSB (120gg)</div>
+        <div class="cw" style="height:240px;"><canvas id="ch-pmc"></canvas></div>
+      </div>
+
+      <div class="analytics-grid">
+        <div class="card"><div class="card-title">Km Mensili</div><div class="cw" style="height:170px;"><canvas id="ch-km"></canvas></div></div>
+        <div class="card"><div class="card-title">Ore Mensili</div><div class="cw" style="height:170px;"><canvas id="ch-hours"></canvas></div></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="card">
+        <div class="card-title">Curva di Potenza — Best Efforts</div>
+        <div class="power-kpis" id="power-kpis"></div>
+        <div class="cw" style="height:210px;"><canvas id="ch-pc"></canvas></div>
+      </div>
+
+      <div class="analytics-grid">
+        <div class="card">
+          <div class="card-title">Zone Potenza Coggan — <span id="pz-label">340W</span></div>
+          <div id="power-zones"></div>
+        </div>
+        <div class="card"><div class="card-title">W Medi per Uscita (ultimi 20)</div><div class="cw" style="height:200px;"><canvas id="ch-watts"></canvas></div></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="card">
+        <div class="card-title">Heat Map TSS — Ultimo Anno</div>
+        <div class="hm-wrap" id="hm-wrap"></div>
+        <div style="display:flex;gap:5px;align-items:center;margin-top:8px;font-size:.6rem;color:var(--tx3);">
+          Meno
+          <span style="width:10px;height:10px;display:inline-block;border-radius:2px;background:var(--s3);"></span>
+          <span style="width:10px;height:10px;display:inline-block;border-radius:2px;background:rgba(232,255,71,.2);"></span>
+          <span style="width:10px;height:10px;display:inline-block;border-radius:2px;background:rgba(232,255,71,.45);"></span>
+          <span style="width:10px;height:10px;display:inline-block;border-radius:2px;background:rgba(232,255,71,.7);"></span>
+          <span style="width:10px;height:10px;display:inline-block;border-radius:2px;background:var(--acc);"></span>
+          Più
+        </div>
+      </div>
+
+      <div class="analytics-grid">
+        <div class="card">
+          <div class="card-title">Distribuzione Zona Potenza</div>
+          <div id="zone-dist-power"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Distribuzione Zona HR — LTHR <span id="lthr-label">180</span>bpm</div>
+          <div id="zone-dist-hr"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Scatterplot TSS vs IF</div>
+        <p style="font-size:.67rem;color:var(--tx3);margin-bottom:10px;">🟦 Recupero · 🟩 Volume · 🟧 Intensità · 🔴 Massimo · 🟣 Gara</p>
+        <div class="cw" style="height:250px;"><canvas id="ch-scatter"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Modello Critical Power — CP / W'</div>
+        <div class="analytics-grid g3" style="margin-bottom:12px;">
+          <div class="pk"><div class="pkv" id="cp-val">—</div><div class="pkl">Critical Power</div></div>
+          <div class="pk"><div class="pkv" id="wp-val">—</div><div class="pkl">W' Riserva</div></div>
+          <div class="pk"><div class="pkv" id="pmax-val">—</div><div class="pkl">P-max 5s</div></div>
+        </div>
+        <div class="cw" style="height:210px;"><canvas id="ch-cp"></canvas></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MODAL ADD -->
+<div class="mo" id="modal-add">
+  <div class="mbox">
+    <button class="mbox-close" onclick="closeM('modal-add')">✕</button>
+    <div class="mbox-title">+ Nuova Attività</div>
+    <div class="fgrid">
+      <div class="fg"><label>Data</label><input type="date" id="a-date"></div>
+      <div class="fg"><label>Nome</label><input type="text" id="a-name" placeholder="Uscita colline"></div>
+      <div class="fg"><label>Durata (min)</label><input type="number" id="a-dur"></div>
+      <div class="fg"><label>Distanza (km)</label><input type="number" id="a-dist"></div>
+      <div class="fg"><label>NP (W)</label><input type="number" id="a-np"></div>
+      <div class="fg"><label>TSS</label><input type="number" id="a-tss"></div>
+      <div class="fg"><label>Dislivello (m)</label><input type="number" id="a-elev"></div>
+      <div class="fg"><label>HR media</label><input type="number" id="a-hr"></div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;">
+      <button class="topbar-btn tb-outline" onclick="closeM('modal-add')">Annulla</button>
+      <button class="topbar-btn tb-acc" onclick="saveAct()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ GLOBALS ══════════════════════════════════════
+var FTP=340, LTHR=180, HR_MAX=197;
+var charts={}, calDate=new Date(), plan=[];
+var selectedPlanDay=null;
+
+// ══ ZONE COLORS (acc-based palette) ══════════════
+var ZCOLS={'0':'#4a5168','1':'#4a5168','2':'#22d46a','3':'#fbbf24','4':'#f97316','5':'#ff4d4d','6':'#a78bfa','7':'#ec4899','race':'#a78bfa','off':'#2a2f48'};
+var ZBADGE={'z1':'badge-z1','z2':'badge-z2','z3':'badge-z3','z4':'badge-z4','z5':'badge-z5','z6':'badge-z6','race':'badge-race','off':'badge-off'};
+
+function zc(z){return ZCOLS[String(z)]||'#4a5168';}
+
+// ══ ACTIVITIES DATA ══════════════════════════════
+var RAW=[
+  {id:"19360116613",name:"Rima/Rimasco",date:"2026-07-18",dur:14007,dist:126160,elev:1692,re:310,cal:3629,avg_watts:234,hr:155,max_hr:188},
+  {id:"19349118875",name:"Pedalata pranzo",date:"2026-07-17",dur:4908,dist:48067,elev:291,re:78,cal:1291,avg_watts:238,hr:150,max_hr:181},
+  {id:"19319031721",name:"Pedalata mattutina",date:"2026-07-15",dur:5342,dist:51793,elev:355,re:104,cal:1449,avg_watts:246,hr:154,max_hr:181},
+  {id:"19279982967",name:"GF Biella",date:"2026-07-12",dur:11963,dist:100410,elev:1889,re:284,cal:3310,avg_watts:252,hr:158,max_hr:191,isRace:true},
+  {id:"19245395851",name:"Pedalata pomeridiana",date:"2026-07-09",dur:5492,dist:57273,elev:221,re:121,cal:1460,avg_watts:240,hr:156,max_hr:190},
+  {id:"19217849075",name:"Pedalata serale",date:"2026-07-07",dur:4555,dist:45878,elev:118,re:41,cal:1130,avg_watts:222,hr:141,max_hr:182},
+  {id:"19187476821",name:"Colma di Varallo",date:"2026-07-05",dur:10204,dist:92277,elev:1413,re:236,cal:2665,avg_watts:236,np:279,if_val:0.82,_tss_override:224,hr:156,max_hr:193},
+  {id:"19162407558",name:"Pedalata pranzo",date:"2026-07-03",dur:5032,dist:50702,elev:323,re:97,cal:1293,avg_watts:231,hr:154,max_hr:193},
+  {id:"19136487956",name:"Pedalata pranzo",date:"2026-07-01",dur:4304,dist:43398,elev:157,re:57,cal:1112,avg_watts:232,hr:147,max_hr:176},
+  {id:"19113532612",name:"Pedalata serale",date:"2026-06-29",dur:4741,dist:50933,elev:284,re:60,cal:1172,avg_watts:222,hr:145,max_hr:190},
+  {id:"19082236540",name:"Calogna",date:"2026-06-27",dur:9706,dist:90192,elev:1120,re:203,cal:2451,avg_watts:228,hr:154,max_hr:195},
+  {id:"19062655515",name:"Afternoon Ride",date:"2026-06-25",dur:6296,dist:63180,elev:176,re:114,cal:1622,avg_watts:233,hr:152,max_hr:189},
+  {id:"19031717160",name:"Morning Ride",date:"2026-06-23",dur:4655,dist:46163,elev:209,re:101,cal:1299,avg_watts:253,hr:156,max_hr:176},
+  {id:"19007836013",name:"Pedalata mattutina",date:"2026-06-21",dur:13948,dist:111846,elev:2176,re:252,cal:3077,avg_watts:196,hr:150,max_hr:182},
+  {id:"18983553582",name:"Pedalata pranzo",date:"2026-06-19",dur:4865,dist:48062,elev:284,re:76,cal:1186},
+  {id:"18932416745",name:"Pedalata serale",date:"2026-06-15",dur:4350,dist:45799,elev:132,re:72,cal:1205},
+  {id:"18905594898",name:"Agrate Conturbia 2nd",date:"2026-06-13",dur:5067,dist:64090,elev:365,cal:1424,isRace:true},
+  {id:"18877266738",name:"Pedalata pranzo",date:"2026-06-11",dur:4567,dist:46821,elev:172,re:80,cal:1232},
+  {id:"18867748015",name:"Pedalata serale",date:"2026-06-10",dur:3706,dist:39496,elev:112,re:33,cal:980},
+  {id:"18826785121",name:"Pedalata pomeridiana",date:"2026-06-07",dur:9055,dist:89764,elev:546,re:158,cal:2409},
+  {id:"18798739356",name:"Pedalata pomeridiana",date:"2026-06-05",dur:4698,dist:45702,elev:254,re:42,cal:1188},
+  {id:"18775225431",name:"Evening Ride",date:"2026-06-03",dur:5120,dist:51027,elev:284,re:73,cal:1371},
+  {id:"18726241224",name:"Morning Ride",date:"2026-05-31",dur:16003,dist:130663,elev:2626,re:267,cal:3778},
+  {id:"18630594293",name:"Nove Colli",date:"2026-05-24",dur:13683,dist:135079,elev:2019,re:337,cal:3636,isRace:true},
+  {id:"18540072157",name:"Bra Bra",date:"2026-05-17",dur:10294,dist:100625,elev:1917,re:282,cal:2773,isRace:true},
+  {id:"18356817094",name:"Canegrate 7th",date:"2026-05-03",dur:4917,dist:62622,elev:147,re:196,cal:1539,isRace:true},
+  {id:"18251323000",name:"Alzate Brianza",date:"2026-04-25",dur:4536,dist:53866,elev:546,re:116,cal:1232,isRace:true},
+  {id:"18160402585",name:"Suno 1st",date:"2026-04-18",dur:5452,dist:70570,elev:182,re:204,cal:1585,isRace:true},
+  {id:"18076316357",name:"MF Colnago 23th",date:"2026-04-12",dur:10220,dist:109682,elev:1509,re:320,cal:2882,isRace:true},
+  {id:"17896806764",name:"Castelletto Ticino 3rd",date:"2026-03-29",dur:5513,dist:62951,elev:568,re:154,cal:1617,isRace:true},
+  {id:"17815204439",name:"Pedalata mattutina",date:"2026-03-22",dur:14797,dist:134464,elev:1563,re:292,cal:3904},
+  {id:"17734727357",name:"Pedalata pomeridiana",date:"2026-03-15",dur:11847,dist:115073,elev:889,re:238,cal:3310},
+  {id:"17644515154",name:"Strade Bianche 21th",date:"2026-03-08",dur:8545,dist:84608,elev:1470,re:240,cal:2331,isRace:true}
+];
+
+var bestEfforts=[
+  {label:'5s',secs:5,watts:919},{label:'15s',secs:15,watts:818},
+  {label:'30s',secs:30,watts:702},{label:'1min',secs:60,watts:460},
+  {label:'2min',secs:120,watts:367},{label:'5min',secs:300,watts:359},
+  {label:'8min',secs:480,watts:356},{label:'10min',secs:600,watts:350},
+  {label:'20min',secs:1200,watts:342},{label:'30min',secs:1800,watts:317},
+  {label:'1h',secs:3600,watts:290}
+];
+
+var activities=RAW.map(function(a){return Object.assign({},a);});
+
+// ══ HELPERS ══════════════════════════════════════
+function fmtDist(m){return (m/1000).toFixed(1);}
+function fmtDur(s){var h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?h+'h'+String(m).padStart(2,'0'):m+'min';}
+function dateKey(d){
+  if(typeof d==='string')return d;
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function today(){return dateKey(new Date());}
+
+function calcTSS(a){
+  if(a._tss_override||a.tss_real)return Math.round(a._tss_override||a.tss_real);
+  if(a.np){var IF=a.np/FTP;return Math.round((a.dur*a.np*IF)/(FTP*3600)*100);}
+  if(a.avg_watts){var np2=Math.round(a.avg_watts*1.05);var IF2=np2/FTP;return Math.round((a.dur*np2*IF2)/(FTP*3600)*100);}
+  return a.re?Math.round(a.re):Math.round(a.dur/3600*70);
+}
+function calcNP(a){return a.np||(a.avg_watts?Math.round(a.avg_watts*1.05):null);}
+function calcIF(a){if(a.if_val)return parseFloat(a.if_val.toFixed(2));var np=calcNP(a);return np?parseFloat((np/FTP).toFixed(2)):null;}
+
+function computePMC(){
+  var sorted=[].concat(activities).sort(function(a,b){return a.date.localeCompare(b.date);});
+  if(!sorted.length)return{ctl:0,atl:0,tsb:0,history:[]};
+  var start=new Date(sorted[0].date),end=new Date();
+  var ctl=0,atl=0,prev_ctl=0,prev_atl=0,history=[];
+  for(var d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
+    var ds=dateKey(d);
+    var tss=activities.filter(function(a){return a.date===ds;}).reduce(function(s,a){return s+calcTSS(a);},0);
+    var tsb=parseFloat((prev_ctl-prev_atl).toFixed(1));
+    ctl=parseFloat((ctl+(tss-ctl)/42).toFixed(2));
+    atl=parseFloat((atl+(tss-atl)/7).toFixed(2));
+    history.push({date:ds,ctl:parseFloat(ctl.toFixed(1)),atl:parseFloat(atl.toFixed(1)),tsb:tsb,tss:tss});
+    prev_ctl=ctl;prev_atl=atl;
+  }
+  return{ctl:Math.round(ctl),atl:Math.round(atl),tsb:Math.round(prev_ctl-prev_atl),history:history};
+}
+
+function weekStats(wb){
+  wb=wb||0;
+  var now=new Date(),mon=new Date(now);
+  mon.setDate(now.getDate()-now.getDay()+1-wb*7);mon.setHours(0,0,0,0);
+  var sun=new Date(mon);sun.setDate(mon.getDate()+6);sun.setHours(23,59,59);
+  var acts=activities.filter(function(a){var d=new Date(a.date);return d>=mon&&d<=sun;});
+  return{
+    tss:acts.reduce(function(s,a){return s+calcTSS(a);},0),
+    km:acts.reduce(function(s,a){return s+(a.dist||0);},0),
+    dur:acts.reduce(function(s,a){return s+(a.dur||0);},0)
+  };
+}
+
+function mkChart(id,type,data,extraOpts){
+  if(charts[id])charts[id].destroy();
+  var ctx=document.getElementById(id);if(!ctx)return;
+  var opts={responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#8b92a8',font:{size:9},boxWidth:10}}},
+    scales:type==='doughnut'||type==='pie'?{}:{
+      x:{ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}},
+      y:{ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.04)'}}
+    }
+  };
+  if(extraOpts)Object.assign(opts,extraOpts);
+  charts[id]=new Chart(ctx,{type:type,data:data,options:opts});
+}
+
+// ══ NAV ══════════════════════════════════════════
+var pageTitles={home:'Oggi',plan:'Piano di Allenamento',calendar:'Calendario',activities:'Attività',analytics:'Analisi & Power'};
+
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  document.getElementById('page-'+id).classList.add('active');
+  if(el)el.classList.add('active');
+  document.getElementById('topbar-title').textContent=pageTitles[id]||id;
+  var fns={home:renderHome,plan:renderPlanPage,calendar:renderCal,activities:renderActs,analytics:renderAnalytics};
+  if(fns[id])fns[id]();
+}
+
+// ══ HOME ═════════════════════════════════════════
+function renderHome(){
+  var pmc=computePMC();
+  // KPIs
+  document.getElementById('k-ctl').textContent=pmc.ctl||'—';
+  document.getElementById('k-atl').textContent=pmc.atl||'—';
+  var te=document.getElementById('k-tsb');
+  te.textContent=pmc.tsb||'—';
+  te.className='kv '+(pmc.tsb>5?'kv-up':pmc.tsb<-10?'kv-dn':'kv-wa');
+  document.getElementById('k-ftp').textContent=FTP+'W';
+  var ws=weekStats(0);
+  document.getElementById('w-tss').textContent=Math.round(ws.tss)||'0';
+  document.getElementById('w-km').textContent=Math.round(ws.km/1000)||'0';
+  var wh=Math.floor(ws.dur/3600),wm=Math.floor((ws.dur%3600)/60);
+  document.getElementById('w-hrs').textContent=ws.dur>0?wh+'h'+String(wm).padStart(2,'0'):'0h00';
+
+  // Mini PMC
+  var h=pmc.history.slice(-60);
+  mkChart('ch-mini-pmc','line',{labels:h.map(function(d){return d.date.slice(5);}),datasets:[
+    {label:'CTL',data:h.map(function(d){return d.ctl;}),borderColor:'#3b82f6',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
+    {label:'ATL',data:h.map(function(d){return d.atl;}),borderColor:'#ff4d4d',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
+    {label:'TSB',data:h.map(function(d){return d.tsb;}),borderColor:'#e8ff47',tension:.4,pointRadius:0,fill:false,borderWidth:1.5}
+  ]});
+
+  // TSS + Km 8 weeks
+  var wks=[];
+  for(var i=7;i>=0;i--){var s=weekStats(i);var d=new Date();d.setDate(d.getDate()-i*7);var m=new Date(d);m.setDate(d.getDate()-d.getDay()+1);wks.push({label:m.toLocaleDateString('it',{day:'2-digit',month:'2-digit'}),tss:Math.round(s.tss),km:Math.round(s.km/1000)});}
+  mkChart('ch-home-tss','bar',{labels:wks.map(function(w){return w.label;}),datasets:[
+    {label:'TSS',data:wks.map(function(w){return w.tss;}),backgroundColor:'rgba(232,255,71,.55)',borderColor:'var(--acc)',borderWidth:1,borderRadius:3,yAxisID:'y'},
+    {label:'Km',data:wks.map(function(w){return w.km;}),type:'line',borderColor:'#3b82f6',pointRadius:2,tension:.3,yAxisID:'y1'}
+  ]},{scales:{y:{ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}},y1:{position:'right',ticks:{color:'#4a5168',font:{size:8}},grid:{display:false}}}});
+
+  // Recent
+  var rec=[].concat(activities).sort(function(a,b){return b.date.localeCompare(a.date);}).slice(0,5);
+  document.getElementById('home-recent').innerHTML=rec.map(function(a){
+    return'<div class="rl-item">'+
+      '<div class="rl-dot" style="background:'+(a.isRace?'#a78bfa':'#22d46a')+'"></div>'+
+      '<div><div class="rl-name">'+(a.isRace?'🏁 ':'')+a.name+'</div>'+
+      '<div class="rl-meta"><span>'+a.date.slice(5)+'</span><span>'+fmtDist(a.dist)+'km</span><span>'+fmtDur(a.dur)+'</span></div></div>'+
+      '<div class="rl-tss">'+calcTSS(a)+'</div>'+
+    '</div>';
+  }).join('');
+
+  // Today's workout
+  renderTodayCard();
+  renderWeekStrip();
+}
+
+function renderTodayCard(){
+  var td=today();
+  var session=plan.find(function(p){return p.date===td;});
+  var content=document.getElementById('today-content');
+  if(!session){
+    content.innerHTML='<div class="empty" style="padding:20px 0;">Nessun allenamento pianificato per oggi.<br><span style="font-size:.7rem;color:var(--tx3);">Premi 🧠 Adatta Piano per aggiornare il piano.</span></div>';
+    return;
+  }
+  var typeKey=session.type;
+  var badgeCls=ZBADGE[typeKey]||'badge-z2';
+  var done=activities.find(function(a){return a.date===td;});
+  var html='';
+  html+='<div class="today-header"><div><span class="today-badge '+badgeCls+'">'+session.type.toUpperCase()+'</span>'+(done?'<span class="today-badge badge-z2" style="margin-left:6px;">✅ Completato</span>':'')+'</div></div>';
+  html+='<div class="today-name">'+session.name+'</div>';
+  html+='<div class="today-meta">';
+  if(session.durMin)html+='<div class="tm-item"><div class="tm-val">'+session.durMin+'<span style="font-size:.65rem;font-weight:400;color:var(--tx3)"> min</span></div><div class="tm-lbl">Durata</div></div>';
+  html+='<div class="tm-item"><div class="tm-val">'+session.tss+'<span style="font-size:.65rem;font-weight:400;color:var(--tx3)"> TSS</span></div><div class="tm-lbl">Target</div></div>';
+  if(session.type!=='off')html+='<div class="tm-item"><div class="tm-val" style="color:var(--acc);">'+Math.round(FTP*((session.blocks&&session.blocks[Math.floor(session.blocks.length/2)]||{lo:55}).lo||55)/100)+'<span style="font-size:.65rem;font-weight:400;color:var(--tx3)"> W</span></div><div class="tm-lbl">Zona target</div></div>';
+  html+='</div>';
+  if(session.desc)html+='<div class="today-desc">'+session.desc+'</div>';
+  if(session.blocks&&session.blocks.length)html+=renderWorkoutBlock(session);
+  if(session.adaptNote)html+='<div class="adapt-note">⚡ '+session.adaptNote+'</div>';
+  content.innerHTML=html;
+}
+
+function renderWorkoutBlock(session){
+  var blocks=session.blocks;
+  var totalMin=blocks.reduce(function(s,b){return s+b.d;},0)||session.durMin||60;
+  var html='<div class="wc-wrap"><div class="wc-label">Struttura Allenamento</div><div class="wc-chart">';
+  blocks.forEach(function(b){
+    var wpct=Math.max((b.d/totalMin)*100,0.5);
+    var targetPct=(b.lo+b.hi)/2;
+    var hpct=Math.min(Math.round(targetPct/150*100),100);
+    var watt=Math.round(targetPct*FTP/100);
+    var tip=b.l+' · '+watt+'W · '+Math.round(b.lo)+'-'+Math.round(b.hi)+'% FTP · '+(b.d<1?'~30s':Math.round(b.d)+'min');
+    html+='<div class="wc-block" style="width:'+wpct+'%;height:'+hpct+'%;background:'+zc(b.z)+';opacity:.85;">'+
+      '<div class="wc-tooltip">'+tip+'</div></div>';
+  });
+  html+='</div>';
+  var zones={};
+  blocks.forEach(function(b){if(b.z>0)zones[b.z]=(zones[b.z]||0)+b.d;});
+  html+='<div class="wc-zones">';
+  Object.keys(zones).forEach(function(z){
+    html+='<span class="wc-zone-tag" style="background:'+zc(parseInt(z))+'22;color:'+zc(parseInt(z))+';border:1px solid '+zc(parseInt(z))+'44;">Z'+z+' '+Math.round(zones[z])+'min</span>';
+  });
+  html+='</div></div>';
+  return html;
+}
+
+function renderWeekStrip(){
+  var now=new Date();
+  var mon=new Date(now);
+  mon.setDate(now.getDate()-now.getDay()+1);mon.setHours(0,0,0,0);
+  var dows=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+  var td=today();
+  var html='';
+  for(var i=0;i<7;i++){
+    var d=new Date(mon);d.setDate(mon.getDate()+i);
+    var ds=dateKey(d);
+    var session=plan.find(function(p){return p.date===ds;});
+    var done=activities.find(function(a){return a.date===ds;});
+    var isToday=ds===td;
+    var cls='ws-day';
+    if(isToday)cls+=' ws-today';
+    if(done)cls+=' ws-done';
+    if(session&&session.type==='off')cls+=' ws-off';
+    var dotColor=session?zc(session.type==='race'?'race':session.type.replace('z','')):'#2a2f48';
+    html+='<div class="'+cls+'" onclick="selectPlanDay(\''+ds+'\')">';
+    html+='<div class="ws-dow">'+dows[i]+'</div>';
+    html+='<div class="ws-date">'+d.getDate()+'</div>';
+    html+='<div class="ws-type" style="background:'+dotColor+';"></div>';
+    html+='<div class="ws-tss">'+(session&&session.tss>0?session.tss+'tss':'—')+'</div>';
+    if(done)html+='<div class="ws-done-icon">✅</div>';
+    html+='</div>';
+  }
+  document.getElementById('week-strip').innerHTML=html;
+}
+
+function selectPlanDay(ds){
+  selectedPlanDay=ds;
+  var session=plan.find(function(p){return p.date===ds;});
+  if(!session)return;
+  var content=document.getElementById('today-content');
+  var td2=today();
+  var typeKey=session.type;
+  var badgeCls=ZBADGE[typeKey]||'badge-z2';
+  var done=activities.find(function(a){return a.date===ds;});
+  var label=ds===td2?'Allenamento di Oggi':'Allenamento del '+ds.slice(5).replace('-','/');
+  document.querySelector('.today-card .today-label').textContent=label;
+  var html='';
+  html+='<div class="today-header"><div><span class="today-badge '+badgeCls+'">'+session.type.toUpperCase()+'</span>'+(done?'<span class="today-badge badge-z2" style="margin-left:6px;">✅ Completato</span>':'')+'</div></div>';
+  html+='<div class="today-name">'+session.name+'</div>';
+  html+='<div class="today-meta">';
+  if(session.durMin)html+='<div class="tm-item"><div class="tm-val">'+session.durMin+'<span style="font-size:.65rem;font-weight:400;color:var(--tx3)"> min</span></div><div class="tm-lbl">Durata</div></div>';
+  html+='<div class="tm-item"><div class="tm-val">'+session.tss+'<span style="font-size:.65rem;font-weight:400;color:var(--tx3)"> TSS</span></div><div class="tm-lbl">Target</div></div>';
+  html+='</div>';
+  if(session.desc)html+='<div class="today-desc">'+session.desc+'</div>';
+  if(session.blocks&&session.blocks.length)html+=renderWorkoutBlock(session);
+  if(session.adaptNote)html+='<div class="adapt-note">⚡ '+session.adaptNote+'</div>';
+  content.innerHTML=html;
+  document.querySelectorAll('.ws-day').forEach(function(el,i){el.classList.remove('ws-selected');});
+}
+
+// ══ PLAN PAGE ════════════════════════════════════
+function renderPlanPage(){
+  var weeks={};
+  plan.forEach(function(p){if(!weeks[p.week])weeks[p.week]=[];weeks[p.week].push(p);});
+  var td=today();
+  var typeMap={'z1':'pc-z1','z2':'pc-z2','z3':'pc-z3','z4':'pc-z4','z5':'pc-z5','z6':'pc-z5','race':'pc-race','off':'pc-off'};
+  var html='';
+  Object.keys(weeks).forEach(function(wk){
+    var items=weeks[wk];
+    var weekTSS=items.reduce(function(s,p){return s+(p.tss||0);},0);
+    html+='<div class="plan-week-block">';
+    html+='<div class="pwb-header"><div class="pwb-title">'+wk+'</div><div class="pwb-tss">TSS settimana: '+weekTSS+'</div></div>';
+    html+='<div class="plan-day-grid">';
+    items.forEach(function(p){
+      var done=activities.find(function(a){return a.date===p.date;});
+      var isToday=p.date===td;
+      var cls='plan-card '+(typeMap[p.type]||'pc-z2')+(done?' pc-done':'')+(isToday?' pc-today':'');
+      var dateLabel=new Date(p.date+'T12:00').toLocaleDateString('it',{weekday:'short',day:'2-digit',month:'2-digit'});
+      html+='<div class="'+cls+'">';
+      html+='<div class="pc-header"><span class="pc-date">'+dateLabel+'</span><span class="pc-name">'+p.name+'</span><span class="pc-tss">'+p.tss+' TSS</span></div>';
+      if(done)html+='<div style="font-size:.65rem;color:var(--grn);margin-bottom:4px;">✅ Completato · '+calcTSS(done)+' TSS reale · '+fmtDist(done.dist)+'km</div>';
+      if(p.type!=='off')html+='<div class="pc-desc">'+p.desc.substring(0,120)+(p.desc.length>120?'…':'')+'</div>';
+      else html+='<div class="pc-desc" style="color:var(--tx3);">'+p.desc+'</div>';
+      if(p.blocks&&p.blocks.length&&p.type!=='off')html+=renderWorkoutBlock(p);
+      if(p.adaptNote)html+='<div class="pc-adapt">⚡ '+p.adaptNote+'</div>';
+      html+='</div>';
+    });
+    html+='</div></div>';
+  });
+  document.getElementById('plan-render').innerHTML=html||'<div class="empty">Nessun piano caricato.</div>';
+}
+
+// ══ CALENDAR ═════════════════════════════════════
+function renderCal(){
+  var showPlan=document.getElementById('tog-plan').checked;
+  var y=calDate.getFullYear(),m=calDate.getMonth();
+  document.getElementById('cal-label').textContent=calDate.toLocaleDateString('it',{month:'long',year:'numeric'}).replace(/^\w/,function(c){return c.toUpperCase();});
+  document.getElementById('cal-dow').innerHTML=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(function(d){return'<div style="text-align:center;font-size:.6rem;color:var(--tx3);padding:4px;text-transform:uppercase;">'+d+'</div>';}).join('');
+  var first=new Date(y,m,1);var sd=first.getDay();if(sd===0)sd=7;
+  var last=new Date(y,m+1,0).getDate();var cells=[];
+  for(var i=1;i<sd;i++)cells.push({date:new Date(y,m,1-sd+i),cur:false});
+  for(var d2=1;d2<=last;d2++)cells.push({date:new Date(y,m,d2),cur:true});
+  while(cells.length%7){var l=cells[cells.length-1].date;var nd=new Date(l);nd.setDate(l.getDate()+1);cells.push({date:nd,cur:false});}
+  var td=today();
+  document.getElementById('cal-grid').innerHTML=cells.map(function(c){
+    var ds=dateKey(c.date);
+    var da=activities.filter(function(a){return a.date===ds;});
+    var pi=showPlan?plan.filter(function(p){return p.date===ds&&p.type!=='off';}):[];
+    var isT=ds===td;
+    var bdr=isT?'border-color:var(--acc);':'';
+    var bg=!c.cur?'opacity:.2;':'';
+    var html='<div style="background:var(--s2);border:1px solid var(--br);border-radius:8px;min-height:80px;padding:5px;'+bdr+bg+'">';
+    html+='<div style="font-size:.68rem;color:var(--tx3);margin-bottom:3px;font-weight:600;">'+c.date.getDate()+'</div>';
+    da.forEach(function(a){
+      html+='<div style="font-size:.6rem;border-radius:3px;padding:2px 5px;margin-bottom:2px;font-weight:600;background:'+(a.isRace?'rgba(167,139,250,.2)':'rgba(34,212,106,.15)')+';color:'+(a.isRace?'#a78bfa':'#22d46a')+';">'+(a.isRace?'🏁 ':'')+a.name.substring(0,12)+'</div>';
+      html+='<div style="font-size:.55rem;color:var(--tx3);padding:0 3px;margin-bottom:1px;">'+fmtDur(a.dur)+' · '+fmtDist(a.dist)+'km · '+calcTSS(a)+'TSS'+(calcNP(a)?' · NP '+calcNP(a)+'W':'')+'</div>';
+    });
+    pi.forEach(function(p){
+      html+='<div style="font-size:.6rem;border-radius:3px;padding:2px 5px;margin-bottom:2px;font-weight:600;background:rgba(59,130,246,.15);color:#3b82f6;">📋 '+p.name.substring(0,12)+'</div>';
+      html+='<div style="font-size:.55rem;color:var(--tx3);padding:0 3px;">'+p.durMin+'min · '+p.tss+' TSS</div>';
+    });
+    return html+'</div>';
+  }).join('');
+}
+function calPrev(){calDate.setMonth(calDate.getMonth()-1);renderCal();}
+function calNext(){calDate.setMonth(calDate.getMonth()+1);renderCal();}
+function calToday(){calDate=new Date();renderCal();}
+
+// ══ ACTIVITIES ═══════════════════════════════════
+function renderActs(){
+  var fm=document.getElementById('f-month').value;
+  var fs=document.getElementById('f-search').value.toLowerCase();
+  var f=activities.filter(function(a){return(!fm||a.date.startsWith(fm))&&(!fs||a.name.toLowerCase().includes(fs));});
+  f.sort(function(a,b){return b.date.localeCompare(a.date);});
+  document.getElementById('act-count').textContent=f.length+' attività';
+  document.getElementById('act-empty').style.display=f.length?'none':'block';
+  document.getElementById('act-body').innerHTML=f.map(function(a){
+    var np=calcNP(a),IF=calcIF(a);
+    return'<tr><td>'+a.date+'</td><td>'+(a.isRace?'<span style="color:var(--pur);">🏁 </span>':'')+a.name+'</td>'+
+      '<td><span class="bdg '+(a.isRace?'bdg-race':a.dur>9000?'bdg-gran':'bdg-ride')+'">'+(a.isRace?'Gara':a.dur>9000?'Granfondo':'Ride')+'</span></td>'+
+      '<td>'+fmtDur(a.dur)+'</td><td>'+fmtDist(a.dist)+'</td><td>'+(a.elev||0)+'m</td>'+
+      '<td>'+(a.avg_watts?a.avg_watts+'W':'—')+'</td><td>'+(np?'<strong>'+np+'W</strong>':'—')+'</td>'+
+      '<td>'+(IF||'—')+'</td><td><strong style="color:var(--acc);">'+calcTSS(a)+'</strong></td><td>'+(a.hr?a.hr+'bpm':'—')+'</td></tr>';
+  }).join('');
+}
+
+// ══ ANALYTICS ════════════════════════════════════
+function recalcAll(){
+  FTP=parseInt(document.getElementById('ftp-inp').value)||340;
+  LTHR=parseInt(document.getElementById('lthr-inp').value)||180;
+  HR_MAX=parseInt(document.getElementById('hrmax-inp').value)||197;
+  document.getElementById('k-ftp').textContent=FTP+'W';
+  document.getElementById('pz-label').textContent=FTP+'W';
+  document.getElementById('lthr-label').textContent=LTHR;
+  renderAnalytics();
+}
+
+function renderAnalytics(){
+  var pmc=computePMC();
+  // PMC
+  var h=pmc.history.slice(-120);
+  mkChart('ch-pmc','line',{labels:h.map(function(d){return d.date.slice(5);}),datasets:[
+    {label:'CTL',data:h.map(function(d){return d.ctl;}),borderColor:'#3b82f6',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
+    {label:'ATL',data:h.map(function(d){return d.atl;}),borderColor:'#ff4d4d',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
+    {label:'TSB',data:h.map(function(d){return d.tsb;}),borderColor:'#e8ff47',tension:.4,pointRadius:0,fill:false,borderWidth:1.5}
+  ]});
+  // Monthly
+  var mm={},hm={};
+  activities.forEach(function(a){var m=a.date.slice(0,7);mm[m]=(mm[m]||0)+a.dist;hm[m]=(hm[m]||0)+a.dur;});
+  var mk=Object.keys(mm).sort();
+  mkChart('ch-km','bar',{labels:mk,datasets:[{label:'Km',data:mk.map(function(k){return Math.round(mm[k]/1000);}),backgroundColor:'rgba(34,212,106,.4)',borderColor:'#22d46a',borderWidth:1,borderRadius:3}]});
+  mkChart('ch-hours','bar',{labels:mk,datasets:[{label:'Ore',data:mk.map(function(k){return parseFloat((hm[k]/3600).toFixed(1));}),backgroundColor:'rgba(59,130,246,.4)',borderColor:'#3b82f6',borderWidth:1,borderRadius:3}]});
+  // Power curve
+  var show=['1min','5min','20min','1h'];
+  document.getElementById('power-kpis').innerHTML=
+    bestEfforts.filter(function(e){return show.indexOf(e.label)>=0;}).map(function(e){
+      return'<div class="pk"><div class="pkv">'+e.watts+'W</div><div class="pkl">'+e.label+' · '+Math.round(e.watts/FTP*100)+'%</div></div>';
+    }).join('')+
+    '<div class="pk"><div class="pkv" style="color:var(--acc);">'+FTP+'W</div><div class="pkl">FTP</div></div>'+
+    '<div class="pk"><div class="pkv">'+parseFloat((FTP/70.5).toFixed(1))+'</div><div class="pkl">W/kg</div></div>';
+  mkChart('ch-pc','line',{labels:bestEfforts.map(function(e){return e.label;}),datasets:[
+    {label:'Best Power',data:bestEfforts.map(function(e){return e.watts;}),borderColor:'#e8ff47',backgroundColor:'rgba(232,255,71,.07)',tension:.4,pointRadius:3,pointBackgroundColor:'#e8ff47',fill:true,borderWidth:1.5},
+    {label:'FTP',data:bestEfforts.map(function(){return FTP;}),borderColor:'rgba(59,130,246,.5)',borderDash:[4,4],pointRadius:0,fill:false,borderWidth:1}
+  ]});
+  // Power zones
+  document.getElementById('pz-label').textContent=FTP+'W';
+  var zones=[{n:'Z1 Recupero',pct:[0,55],c:'#4a5168'},{n:'Z2 Resistenza',pct:[55,75],c:'#22d46a'},{n:'Z3 Tempo/SS',pct:[75,90],c:'#fbbf24'},{n:'Z4 Soglia',pct:[90,105],c:'#f97316'},{n:'Z5 VO2max',pct:[105,120],c:'#ff4d4d'},{n:'Z6 Anaerobica',pct:[120,150],c:'#a78bfa'},{n:'Z7 Neuro',pct:[150,999],c:'#ec4899'}];
+  document.getElementById('power-zones').innerHTML=zones.map(function(z){
+    var lo=Math.round(z.pct[0]*FTP/100),hi=z.pct[1]===999?'Max':Math.round(z.pct[1]*FTP/100);
+    return'<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--br);">'+
+      '<div style="width:8px;height:8px;border-radius:50%;background:'+z.c+';flex-shrink:0;"></div>'+
+      '<div style="font-size:.72rem;flex:1;color:var(--tx2);">'+z.n+'</div>'+
+      '<div style="font-size:.7rem;font-weight:600;color:var(--tx);">'+lo+'–'+hi+'W</div></div>';
+  }).join('');
+  // Watts chart
+  var ww=[].concat(activities).filter(function(a){return a.avg_watts;}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-20);
+  mkChart('ch-watts','bar',{labels:ww.map(function(a){return a.date.slice(5);}),datasets:[
+    {label:'W medi',data:ww.map(function(a){return a.avg_watts;}),backgroundColor:'rgba(232,255,71,.5)',borderColor:'#e8ff47',borderWidth:1,borderRadius:3},
+    {label:'FTP',data:ww.map(function(){return FTP;}),type:'line',borderColor:'rgba(59,130,246,.5)',borderDash:[4,4],pointRadius:0,borderWidth:1}
+  ]});
+  // Heatmap
+  renderHeatmap();
+  // Zone dist
+  renderZoneDist();
+  // Scatter
+  renderScatter();
+  // CP Model
+  renderCPModel();
+}
+
+function renderHeatmap(){
+  var end=new Date(),start=new Date(end);start.setFullYear(end.getFullYear()-1);
+  var cur=new Date(start);while(cur.getDay()!==1)cur.setDate(cur.getDate()-1);
+  var tssMap={};activities.forEach(function(a){tssMap[a.date]=(tssMap[a.date]||0)+calcTSS(a);});
+  var cols=[],col=[],monthCols=[],lastMonth=-1,colIdx=0;
+  while(cur<=end){
+    var ds=dateKey(cur);var tss=tssMap[ds]||0;
+    var lvl=tss===0?0:tss<50?1:tss<100?2:tss<150?3:5;
+    col.push({ds:ds,lvl:lvl,tss:tss});
+    var mo=cur.getMonth();
+    if(mo!==lastMonth){monthCols.push({idx:colIdx,label:cur.toLocaleDateString('it',{month:'short'})});lastMonth=mo;}
+    cur.setDate(cur.getDate()+1);
+    if(cur.getDay()===1){cols.push(col);col=[];colIdx++;}
+  }
+  if(col.length)cols.push(col);
+  var hmColors=['var(--s3)','rgba(232,255,71,.15)','rgba(232,255,71,.35)','rgba(232,255,71,.6)','var(--acc)'];
+  var html='<div style="display:flex;gap:2px;">';
+  cols.forEach(function(column,ci){
+    var mLabel=monthCols.find(function(m){return m.idx===ci;});
+    html+='<div style="display:flex;flex-direction:column;gap:2px;min-width:11px;">';
+    html+='<div style="font-size:.5rem;color:var(--tx3);height:10px;white-space:nowrap;">'+(mLabel?mLabel.label:'')+'</div>';
+    for(var day=0;day<7;day++){
+      if(column[day]){html+='<div style="width:11px;height:11px;border-radius:2px;background:'+hmColors[column[day].lvl]+'" title="'+column[day].ds+': '+column[day].tss+' TSS"></div>';}
+      else{html+='<div style="width:11px;height:11px;"></div>';}
+    }
+    html+='</div>';
+  });
+  html+='</div>';
+  document.getElementById('hm-wrap').innerHTML=html;
+}
+
+function renderZoneDist(){
+  var pzBounds=[0,55,75,90,105,120,150,999].map(function(p){return Math.round(p*FTP/100);});
+  var pzLabels=['Z1','Z2','Z3','Z4','Z5','Z6','Z7'];
+  var pzColors=['#4a5168','#22d46a','#fbbf24','#f97316','#ff4d4d','#a78bfa','#ec4899'];
+  var pzSecs=new Array(7).fill(0);
+  activities.filter(function(a){return a.avg_watts;}).forEach(function(a){
+    for(var i=0;i<7;i++){if(a.avg_watts>=pzBounds[i]&&a.avg_watts<pzBounds[i+1]){pzSecs[i]+=a.dur;break;}}
+  });
+  var pzTotal=Math.max(pzSecs.reduce(function(s,v){return s+v;},0),1);
+  document.getElementById('zone-dist-power').innerHTML=pzLabels.map(function(l,i){
+    var lo=pzBounds[i],hi=i===6?'Max':pzBounds[i+1];
+    var pct=Math.round(pzSecs[i]/pzTotal*100);
+    return'<div class="zbar"><span class="zbar-lbl" style="color:'+pzColors[i]+';">'+l+' '+lo+'–'+hi+'W</span>'+
+      '<div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+pzColors[i]+'"></div></div>'+
+      '<span class="zbar-pct">'+pct+'%</span></div>';
+  }).join('');
+
+  var hrBounds=[0,Math.round(LTHR*.81),Math.round(LTHR*.90),Math.round(LTHR*.94),LTHR,220];
+  var hrZ=['Z1 Rec','Z2 Aerob','Z3 Tempo','Z4 Soglia','Z5 VO2'];
+  var hrC=['#4a5168','#22d46a','#fbbf24','#f97316','#ff4d4d'];
+  var hrSecs=new Array(5).fill(0);
+  activities.filter(function(a){return a.hr;}).forEach(function(a){
+    for(var i=0;i<5;i++){if(a.hr>=hrBounds[i]&&a.hr<hrBounds[i+1]){hrSecs[i]+=a.dur;break;}}
+  });
+  var hrTotal=Math.max(hrSecs.reduce(function(s,v){return s+v;},0),1);
+  document.getElementById('lthr-label').textContent=LTHR;
+  document.getElementById('zone-dist-hr').innerHTML=hrZ.map(function(l,i){
+    var lo=hrBounds[i],hi=hrBounds[i+1]===220?HR_MAX:hrBounds[i+1]-1;
+    var pct=Math.round(hrSecs[i]/hrTotal*100);
+    return'<div class="zbar"><span class="zbar-lbl" style="color:'+hrC[i]+';">'+l+' '+lo+'–'+hi+'</span>'+
+      '<div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+hrC[i]+'"></div></div>'+
+      '<span class="zbar-pct">'+pct+'%</span></div>';
+  }).join('');
+}
+
+function renderScatter(){
+  var pts=activities.filter(function(a){return calcTSS(a)>10;}).map(function(a){
+    var IF=calcIF(a)||0.65;return{x:IF,y:calcTSS(a),name:a.name,date:a.date,isRace:a.isRace};
+  });
+  var colors=pts.map(function(p){return p.isRace?'rgba(167,139,250,.85)':p.y>150&&p.x>0.75?'rgba(255,77,77,.75)':p.y>150?'rgba(34,212,106,.75)':p.x>0.75?'rgba(249,115,22,.75)':'rgba(59,130,246,.65)';});
+  mkChart('ch-scatter','scatter',{datasets:[
+    {label:'Attività',data:pts.map(function(p){return{x:p.x,y:p.y};}),backgroundColor:colors,pointRadius:5,pointHoverRadius:7},
+    {label:'IF=0.75',type:'line',data:[{x:0.75,y:0},{x:0.75,y:400}],borderColor:'rgba(255,255,255,.08)',borderDash:[3,3],pointRadius:0},
+    {label:'TSS=150',type:'line',data:[{x:0,y:150},{x:1.3,y:150}],borderColor:'rgba(255,255,255,.08)',borderDash:[3,3],pointRadius:0}
+  ]},{plugins:{tooltip:{callbacks:{label:function(c){var p=pts[c.dataIndex];return p?p.date+' '+p.name.substring(0,16)+' IF:'+c.parsed.x.toFixed(2)+' TSS:'+c.parsed.y:'';}}}},scales:{x:{min:0.4,max:1.3},y:{min:0}}});
+}
+
+function renderCPModel(){
+  var pts=bestEfforts.filter(function(e){return e.secs>=60&&e.secs<=3600;});
+  var n=pts.length,xs=pts.map(function(e){return e.secs;}),ys=pts.map(function(e){return e.watts*e.secs;});
+  var sx=xs.reduce(function(a,b){return a+b;},0),sy=ys.reduce(function(a,b){return a+b;},0);
+  var sxx=xs.reduce(function(a,b){return a+b*b;},0),sxy=xs.reduce(function(a,v,i){return a+v*ys[i];},0);
+  var CP=Math.round((n*sxy-sx*sy)/(n*sxx-sx*sx));
+  var Wp=Math.round((sy-CP*sx)/n);
+  document.getElementById('cp-val').textContent=CP+'W';
+  document.getElementById('wp-val').textContent=Math.round(Wp/1000)+'kJ';
+  document.getElementById('pmax-val').textContent=bestEfforts[0].watts+'W';
+  var tPts=[5,10,20,30,60,120,180,300,480,600,900,1200,1800,2700,3600];
+  mkChart('ch-cp','line',{labels:tPts.map(function(t){return t<60?t+'s':t<3600?Math.round(t/60)+'min':'1h';}),datasets:[
+    {label:'Best Efforts',data:bestEfforts.map(function(e){return e.watts;}),type:'scatter',backgroundColor:'#e8ff47',pointRadius:5},
+    {label:"CP="+CP+"W W'="+Math.round(Wp/1000)+"kJ",data:tPts.map(function(t){return Math.round(CP+Wp/t);}),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.4,pointRadius:0,fill:true,borderWidth:1.5},
+    {label:'FTP',data:tPts.map(function(){return FTP;}),borderColor:'rgba(232,255,71,.4)',borderDash:[4,4],pointRadius:0,borderWidth:1}
+  ]});
+}
+
+// ══ PLAN ADAPT ═══════════════════════════════════
+function adaptPlan(){
+  var btn=document.getElementById('btn-adapt');
+  btn.textContent='🧠 Analisi...';btn.disabled=true;
+  var pmc=computePMC();
+  var tsb=pmc.tsb,ctl=pmc.ctl,atl=pmc.atl;
+  var td=today();
+  var last3=0;
+  for(var i=1;i<=3;i++){var d=new Date();d.setDate(d.getDate()-i);last3+=activities.filter(function(a){return a.date===dateKey(d);}).reduce(function(s,a){return s+calcTSS(a);},0);}
+  var adapted=0;
+  plan.forEach(function(p){
+    if(p.date<=td)return;
+    delete p.adaptNote;
+    if(tsb<-20&&(p.type==='z4'||p.type==='z5')){p.tss=Math.max(Math.round(p.tss*.8),20);p.adaptNote='TSB '+tsb+': intensità ridotta del 20%.';adapted++;}
+    if(tsb>10&&p.type==='z4'){p.tss=Math.round(p.tss*1.1);p.adaptNote='Ottima forma (TSB +'+tsb+'): carico aumentato del 10%.';adapted++;}
+    if(atl>ctl+15&&p.type==='z2'&&!p.adaptNote){p.adaptNote='Fatica elevata (ATL '+Math.round(atl)+'): valuta di ridurre il volume.';adapted++;}
+    if(last3>200&&p.date===dateKey(new Date(new Date().setDate(new Date().getDate()+1)))&&p.type!=='off'){p.adaptNote='Ultimi 3gg: '+last3+' TSS. Domani tieni Z2 o riposa.';adapted++;}
+  });
+  var col=tsb<-10?'#ff4d4d':tsb>5?'#22d46a':'#fbbf24';
+  var msg='<strong style="color:'+col+';">TSB '+tsb+'</strong> · CTL '+Math.round(ctl)+' · ATL '+Math.round(atl)+'. ';
+  msg+=adapted>0?'<strong>'+adapted+' sessioni adattate</strong> in base alla tua forma attuale.':'Il piano è già ottimale per la forma attuale.';
+  var el=document.getElementById('adapt-msg');
+  el.innerHTML=msg;el.style.display='block';
+  renderTodayCard();renderWeekStrip();
+  if(document.getElementById('page-plan').classList.contains('active'))renderPlanPage();
+  btn.textContent='🧠 Adatta Piano';btn.disabled=false;
+}
+
+// ══ INTERVALS.ICU CONFIG ═════════════════════════
+var ICU_ATHLETE_ID = 'i52141';
+var ICU_API_KEY = '5yh0f9alz0tjxr18wq4qbrb5p';
+var ICU_PROXY = 'https://closethegap-ba2.pages.dev/api';
+
+function icuHeaders() {
+  return { 'Content-Type': 'application/json' };
+  // La API key è gestita dal worker, non serve qui
+}
+
+async function syncIntervals() {
+  var btn = document.getElementById('btn-sync-icu');
+  if (btn) { btn.textContent = '⏳ Sync...'; btn.disabled = true; }
+  var el = document.getElementById('import-status');
+  el.textContent = 'Connessione a Intervals.icu...';
+  el.style.color = 'var(--tx3)';
+
+  try {
+    var today = dateKey(new Date());
+    var from = dateKey(new Date(new Date().setDate(new Date().getDate() - 120)));
+
+    // 1. Wellness (CTL/ATL/TSB reali da Intervals)
+    var wResp = await fetch(ICU_PROXY + '/wellness?oldest=' + from + '&newest=' + today, { headers: icuHeaders() });
+    if (!wResp.ok) throw new Error('Wellness HTTP ' + wResp.status);
+    var wellness = await wResp.json();
+
+    if (wellness && wellness.length) {
+      var latest = wellness[wellness.length - 1];
+      if (latest.ctl != null) document.getElementById('k-ctl').textContent = Math.round(latest.ctl);
+      if (latest.atl != null) document.getElementById('k-atl').textContent = Math.round(latest.atl);
+      if (latest.ctl != null && latest.atl != null) {
+        var tsb = Math.round(latest.ctl - latest.atl);
+        var te = document.getElementById('k-tsb');
+        te.textContent = tsb;
+        te.className = 'kv ' + (tsb > 5 ? 'kv-up' : tsb < -10 ? 'kv-dn' : 'kv-wa');
+      }
+      window._icuWellness = wellness;
+    }
+
+    // 2. Activities (ultimi 120gg con NP, TSS, IF reali)
+    var aResp = await fetch(ICU_PROXY + '/activities?oldest=' + from + '&newest=' + today, { headers: icuHeaders() });
+    if (!aResp.ok) throw new Error('Activities HTTP ' + aResp.status);
+    var icuActs = await aResp.json();
+
+    var imported = 0, updated = 0;
+    icuActs.forEach(function(ia) {
+      if (!ia.start_date_local) return;
+      var date = ia.start_date_local.slice(0, 10);
+      var type = (ia.type || '').toLowerCase();
+      if (!type.match(/ride|cycling|virtualride/)) return;
+
+      var np   = ia.icu_normalized_watts || null;
+      var tss  = ia.icu_training_load    || null;
+      var ifv  = ia.icu_intensity        || null;
+      var avgW = ia.icu_average_watts    || null;
+      var hr   = ia.average_heartrate    || null;
+      var maxHr= ia.max_heartrate        || null;
+      var dist = Math.round(ia.distance  || 0);
+      var dur  = ia.moving_time          || 0;
+      var elev = ia.total_elevation_gain || 0;
+      var cal  = ia.calories             || null;
+
+      var existing = activities.find(function(a) {
+        return a.date === date && Math.abs((a.dist || 0) - dist) < 3000;
+      });
+
+      if (existing) {
+        if (np)   { existing.np = np; }
+        if (avgW) { existing.avg_watts = avgW; }
+        if (tss)  { existing.tss_real = tss; existing._tss_override = tss; }
+        if (ifv)  { existing.if_val = ifv; }
+        if (hr)   { existing.hr = hr; }
+        if (maxHr){ existing.max_hr = maxHr; }
+        if (cal)  { existing.cal = cal; }
+        existing.source = 'intervals';
+        updated++;
+      } else {
+        activities.push({
+          id: 'icu-' + (ia.id || date),
+          name: ia.name || 'Uscita',
+          date: date, dur: dur, dist: dist, elev: elev,
+          avg_watts: avgW, np: np,
+          _tss_override: tss, tss_real: tss,
+          if_val: ifv, hr: hr, max_hr: maxHr, cal: cal,
+          isRace: ia.race || false,
+          source: 'intervals'
+        });
+        imported++;
+      }
+    });
+
+    renderHome();
+    if (document.getElementById('page-analytics').classList.contains('active')) renderAnalytics();
+
+    el.textContent = '✅ Intervals: +' + imported + ' nuove, ' + updated + ' aggiornate';
+    el.style.color = '#22d46a';
+
+  } catch(e) {
+    el.textContent = '❌ Errore: ' + e.message;
+    el.style.color = 'var(--red)';
+    console.error('Intervals sync error:', e);
+  }
+
+  if (btn) { btn.textContent = '⚡ Sync Intervals'; btn.disabled = false; }
+}
+function importGarminFile(evt){
+  var file=evt.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){parseGarminCSV(e.target.result);};
+  reader.readAsText(file,'utf-8');
+}
+function parseGarminCSV(raw){
+  var lines=raw.split('\n').filter(function(l){return l.trim();});
+  function parseRow(line){var vals=[],cur='',inQ=false;for(var i=0;i<line.length;i++){var ch=line[i];if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){vals.push(cur.trim());cur='';}else cur+=ch;}vals.push(cur.trim());return vals;}
+  var headers=parseRow(lines[0]).map(function(h){return h.replace(/\uFEFF/g,'').trim();});
+  function idx(k){return headers.findIndex(function(h){return h===k;});}
+  function cleanNum(v){if(!v||v===''||v==='--')return null;var n=parseFloat(v.replace(/\./g,'').replace(',','.').replace(/[^0-9.\-]/g,''));return isNaN(n)?null:n;}
+  function parseDur(v){if(!v)return 0;var p=v.trim().split(':').map(Number);if(p.length===3)return p[0]*3600+p[1]*60+p[2];if(p.length===2)return p[0]*60+p[1];return 0;}
+  var COL={tipo:'Tipo di attività',data:'Data',titolo:'Titolo',dist:'Distanza',cal:'Calorie',tempo:'Tempo',hr:'FC Media',hrmax:'FC max',asc:'Ascesa totale',np:'Normalized Power® (NP®)',tss:'Training Stress Score®',p20:'Potenza media massima (20 min)',pavg:'Potenza media'};
+  var imported=0,updated=0;
+  for(var i=1;i<lines.length;i++){
+    var vals=parseRow(lines[i]);
+    function get(k){return vals[idx(COL[k])]?vals[idx(COL[k])].trim():null;}
+    var tipo=get('tipo')||'';if(!tipo.match(/ciclismo|cycling|ride|bici/i))continue;
+    var rawDate=get('data');if(!rawDate)continue;
+    var date=rawDate.trim().slice(0,10);
+    var distKm=cleanNum(get('dist'))||0,dist=Math.round(distKm*1000);
+    var np=cleanNum(get('np')),pavg=cleanNum(get('pavg')),tss_r=cleanNum(get('tss'));
+    var existing=activities.find(function(a){return a.date===date&&Math.abs((a.dist||0)-dist)<2000;});
+    if(existing){
+      if(np)existing.np=np;if(pavg)existing.avg_watts=pavg;
+      if(tss_r){existing.tss_real=tss_r;existing._tss_override=tss_r;}
+      var hr=cleanNum(get('hr')),mhr=cleanNum(get('hrmax')),cal=cleanNum(get('cal'));
+      if(hr)existing.hr=hr;if(mhr)existing.max_hr=mhr;if(cal)existing.cal=cal;
+      existing.source='garmin';updated++;
+    }else{
+      activities.push({id:'garmin-'+date+'-'+i,name:get('titolo')||'Uscita',date:date,dur:parseDur(get('tempo')),dist:dist,elev:cleanNum(get('asc'))||0,avg_watts:pavg,np:np,_tss_override:tss_r,tss_real:tss_r,hr:cleanNum(get('hr')),max_hr:cleanNum(get('hrmax')),cal:cleanNum(get('cal')),source:'garmin'});
+      imported++;
+    }
+  }
+  var el=document.getElementById('import-status');
+  el.textContent='✅ +'+imported+' nuove, '+updated+' aggiornate';el.style.color='#22d46a';
+  renderHome();
+}
+
+// ══ MISC ═════════════════════════════════════════
+function syncStrava(){alert('Per sincronizzare scrivi in chat:\n"Sincronizza Strava"\n\nClaude recupererà le ultime attività e aggiornerà la dashboard.');}
+function openAdd(){document.getElementById('a-date').value=dateKey(new Date());document.getElementById('modal-add').classList.add('open');}
+function saveAct(){
+  var a={id:'manual-'+Date.now(),name:document.getElementById('a-name').value||'Allenamento',date:document.getElementById('a-date').value,dur:(parseInt(document.getElementById('a-dur').value)||60)*60,dist:(parseFloat(document.getElementById('a-dist').value)||0)*1000,np:parseInt(document.getElementById('a-np').value)||null,_tss_override:parseInt(document.getElementById('a-tss').value)||null,elev:parseInt(document.getElementById('a-elev').value)||0,hr:parseInt(document.getElementById('a-hr').value)||null};
+  if(!a.date){alert('Inserisci la data!');return;}
+  activities.push(a);closeM('modal-add');renderHome();
+}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.mo').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
+
+// ══ DATE ═════════════════════════════════════════
+document.getElementById('topbar-date').textContent=new Date().toLocaleDateString('it',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+// ══ PLAN DATA ════════════════════════════════════
+function makePlan(){
+  plan=[
+    {date:"2026-07-19",week:"Sett. 3 · Recupero e Ripartenza (14–20 lug)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo completo.",blocks:[]},
+    {date:"2026-07-20",week:"Sett. 3 · Recupero e Ripartenza (14–20 lug)",name:"Recupero Z1",type:"z1",tss:22,durMin:45,desc:"45' Z1 puro. Spin legs dopo la settimana pesante.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:45}]},
+    {date:"2026-07-21",week:"Sett. 4 · Carico FTP + Gara 25 lug (21–27 lug)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-07-22",week:"Sett. 4 · Carico FTP + Gara 25 lug (21–27 lug)",name:"Soglia 2×15'",type:"z4",tss:85,durMin:80,desc:"WU 15', poi 2×15' a 323–340W (95–100% FTP), rec 5' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:95,hi:100,d:15},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:4,l:"Soglia",lo:95,hi:100,d:15},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-07-23",week:"Sett. 4 · Carico FTP + Gara 25 lug (21–27 lug)",name:"Z2 Aerobico",type:"z2",tss:70,durMin:90,desc:"90' Z2 225–238W. Mantieni la cadenza alta.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:70},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-07-24",week:"Sett. 4 · Carico FTP + Gara 25 lug (21–27 lug)",name:"Riposo + Carb Loading",type:"off",tss:0,durMin:0,desc:"Riposo. Carboidrati, idratazione, sonno.",blocks:[]},
+    {date:"2026-07-25",week:"Sett. 4 · Carico FTP + Gara 25 lug (21–27 lug)",name:"🏁 GARA — 25 Luglio",type:"race",tss:160,durMin:180,desc:"Gara del 25 luglio. Parti controllato nei primi 20'. Usa la gara come stimolo FTP.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Gara",lo:90,hi:105,d:150},{z:1,l:"CD",lo:0,hi:55,d:15}]},
+    {date:"2026-07-26",week:"Sett. 4 · Carico FTP + Gara 25 lug (21–27 lug)",name:"Recupero Z1",type:"z1",tss:20,durMin:45,desc:"45' Z1 leggero post-gara.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:45}]},
+    {date:"2026-07-27",week:"Sett. 4 · Carico FTP + Gara 25 lug (21–27 lug)",name:"VO2max 5×4'",type:"z5",tss:88,durMin:70,desc:"WU 15', poi 5×4' a 357–374W (105–110% FTP), rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-07-28",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-07-29",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"Soglia 3×12'",type:"z4",tss:92,durMin:85,desc:"WU 15', poi 3×12' a 326–340W (96–100% FTP), rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:96,hi:100,d:12},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:4,l:"Soglia",lo:96,hi:100,d:12},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:4,l:"Soglia",lo:96,hi:100,d:12},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-07-30",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"Z2 Lungo",type:"z2",tss:78,durMin:100,desc:"100' Z2 228–242W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:80},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-07-31",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"VO2max 4×5'",type:"z5",tss:90,durMin:75,desc:"WU 15', poi 4×5' a 352–368W (103–108% FTP), rec 5' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:103,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:5,l:"VO2",lo:103,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:5,l:"VO2",lo:103,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:5,l:"VO2",lo:103,hi:108,d:5},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-08-01",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-08-02",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"Lungo Z2 + Soglia finale",type:"z2",tss:135,durMin:180,desc:"2h30 Z2, poi ultimi 20' a 323–340W (95–100% FTP). Simula la fatica accumulata.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:130},{z:4,l:"Soglia",lo:95,hi:100,d:20},{z:1,l:"CD",lo:0,hi:55,d:15}]},
+    {date:"2026-08-03",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"Recupero Z1",type:"z1",tss:25,durMin:50,desc:"50' Z1.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:50}]},
+    {date:"2026-08-04",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-08-05",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"Soglia 2×20'",type:"z4",tss:98,durMin:90,desc:"WU 15', poi 2×20' a 330–348W (97–102% FTP), rec 6' Z1, CD 10'. Sessione chiave.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:97,hi:102,d:20},{z:1,l:"Rec",lo:0,hi:55,d:6},{z:4,l:"Soglia",lo:97,hi:102,d:20},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-08-06",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"Z2 Aerobico",type:"z2",tss:72,durMin:90,desc:"90' Z2 230–245W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:70},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-08-07",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"VO2max 6×4'",type:"z5",tss:96,durMin:80,desc:"WU 15', poi 6×4' a 357–374W (105–110% FTP), rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-08-08",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"Z2 Recupero attivo",type:"z2",tss:45,durMin:60,desc:"60' Z2 leggero.",blocks:[{z:2,l:"Z2",lo:55,hi:75,d:60}]},
+    {date:"2026-08-09",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"Lungo Z2 3h",type:"z2",tss:128,durMin:180,desc:"3h Z2 continuo 228–242W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:150},{z:1,l:"CD",lo:0,hi:55,d:15}]},
+    {date:"2026-08-10",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-08-11",week:"Sett. 7 · Scarico (11–17 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-08-12",week:"Sett. 7 · Scarico (11–17 ago)",name:"Z1-Z2 Leggero",type:"z2",tss:42,durMin:60,desc:"60' Z1-Z2 sotto 220W.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:40},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-08-13",week:"Sett. 7 · Scarico (11–17 ago)",name:"Sweet Spot 2×10'",type:"z3",tss:62,durMin:65,desc:"WU 15', poi 2×10' a 285–298W, rec 5' Z1, CD 10'. Mantiene la forma.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:3,l:"SS",lo:83,hi:87,d:10},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:3,l:"SS",lo:83,hi:87,d:10},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-08-14",week:"Sett. 7 · Scarico (11–17 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-08-15",week:"Sett. 7 · Scarico (11–17 ago)",name:"Z2 Moderato",type:"z2",tss:38,durMin:50,desc:"50' Z2.",blocks:[{z:2,l:"Z2",lo:55,hi:75,d:50}]},
+    {date:"2026-08-16",week:"Sett. 7 · Scarico (11–17 ago)",name:"Z2 Libero",type:"z2",tss:65,durMin:90,desc:"90' Z2.",blocks:[{z:2,l:"Z2",lo:55,hi:75,d:90}]},
+    {date:"2026-08-17",week:"Sett. 7 · Scarico (11–17 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-08-18",week:"Sett. 8 · Affilatura (18–24 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-08-19",week:"Sett. 8 · Affilatura (18–24 ago)",name:"Soglia 3×10'",type:"z4",tss:88,durMin:80,desc:"WU 15', poi 3×10' a 330–348W, rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:97,hi:102,d:10},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:4,l:"Soglia",lo:97,hi:102,d:10},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:4,l:"Soglia",lo:97,hi:102,d:10},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-08-20",week:"Sett. 8 · Affilatura (18–24 ago)",name:"Z2 Aerobico",type:"z2",tss:66,durMin:85,desc:"85' Z2.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:65},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-08-21",week:"Sett. 8 · Affilatura (18–24 ago)",name:"VO2max 5×3'",type:"z5",tss:82,durMin:70,desc:"WU 15', poi 5×3' a 357–374W, rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-08-22",week:"Sett. 8 · Affilatura (18–24 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-08-23",week:"Sett. 8 · Affilatura (18–24 ago)",name:"Lungo Z2",type:"z2",tss:105,durMin:150,desc:"2h30 Z2.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:120},{z:1,l:"CD",lo:0,hi:55,d:15}]},
+    {date:"2026-08-24",week:"Sett. 8 · Affilatura (18–24 ago)",name:"Recupero Z1",type:"z1",tss:18,durMin:40,desc:"40' Z1.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:40}]},
+    {date:"2026-08-25",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-08-26",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"Soglia 2×15' — Test FTP",type:"z4",tss:85,durMin:75,desc:"WU 15', poi 2×15' a 333–348W (98–102% FTP), rec 5'. Usa questa sessione per stimare la nuova FTP.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:98,hi:102,d:15},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:4,l:"Soglia",lo:98,hi:102,d:15},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-08-27",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"Z2 Moderato",type:"z2",tss:58,durMin:75,desc:"75' Z2.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:55},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-08-28",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"VO2max 4×3'",type:"z5",tss:72,durMin:60,desc:"WU 15', poi 4×3' a 360–378W (106–111% FTP), rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:106,hi:111,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:106,hi:111,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:106,hi:111,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:106,hi:111,d:3},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-08-29",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-08-30",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"Z2 con Sweet Spot",type:"z3",tss:95,durMin:120,desc:"2h: Z2 poi 2×10' Sweet Spot a 285–298W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:60},{z:3,l:"SS",lo:83,hi:87,d:10},{z:2,l:"Z2",lo:55,hi:75,d:20},{z:3,l:"SS",lo:83,hi:87,d:10},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-08-31",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"Z2 Leggero",type:"z2",tss:45,durMin:60,desc:"60' Z2.",blocks:[{z:2,l:"Z2",lo:55,hi:75,d:60}]},
+    {date:"2026-09-01",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-09-02",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Soglia 2×12'",type:"z4",tss:78,durMin:70,desc:"WU 15', poi 2×12' a 340–357W (100–105% FTP), rec 5' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:100,hi:105,d:12},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:4,l:"Soglia",lo:100,hi:105,d:12},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-09-03",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Z2 Aerobico",type:"z2",tss:58,durMin:75,desc:"75' Z2.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:55},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-09-04",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Qualità 3×5'",type:"z5",tss:70,durMin:60,desc:"WU 15', poi 3×5' a 349–368W (102–108% FTP), rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"Q",lo:102,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"Q",lo:102,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"Q",lo:102,hi:108,d:5},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-09-05",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Z2 Leggero",type:"z2",tss:38,durMin:50,desc:"50' Z2.",blocks:[{z:2,l:"Z2",lo:55,hi:75,d:50}]},
+    {date:"2026-09-06",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Z2 con Strappi",type:"z2",tss:72,durMin:90,desc:"90' Z2 con 4×30'' strappi a >400W.",blocks:[{z:2,l:"Z2",lo:55,hi:75,d:40},{z:6,l:"St",lo:120,hi:150,d:0.5},{z:2,l:"Z2",lo:55,hi:75,d:12},{z:6,l:"St",lo:120,hi:150,d:0.5},{z:2,l:"Z2",lo:55,hi:75,d:12},{z:6,l:"St",lo:120,hi:150,d:0.5},{z:2,l:"Z2",lo:55,hi:75,d:12},{z:6,l:"St",lo:120,hi:150,d:0.5},{z:2,l:"Z2",lo:55,hi:75,d:12}]},
+    {date:"2026-09-07",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-09-08",week:"Sett. 11 · Tapering Finale — Gara 19 set",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-09-09",week:"Sett. 11 · Tapering Finale — Gara 19 set",name:"Z1-Z2 Leggero",type:"z2",tss:38,durMin:55,desc:"55' Z1-Z2, cadenza alta.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:35},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-09-10",week:"Sett. 11 · Tapering Finale — Gara 19 set",name:"Attivazione Soglia 2×8'",type:"z4",tss:58,durMin:65,desc:"WU 15', poi 2×8' a 323–348W, rec 5' Z1, CD 10'. Ultima sessione di qualità.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:95,hi:102,d:8},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:4,l:"Soglia",lo:95,hi:102,d:8},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-09-11",week:"Sett. 11 · Tapering Finale — Gara 19 set",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-09-12",week:"Sett. 11 · Tapering Finale — Gara 19 set",name:"Scarico con Strappi",type:"z2",tss:32,durMin:45,desc:"45' Z1 con 3×1' a 340–360W, rec 3'. Mantiene la reattività.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:15},{z:4,l:"St",lo:100,hi:106,d:1},{z:1,l:"Rec",lo:0,hi:55,d:3},{z:4,l:"St",lo:100,hi:106,d:1},{z:1,l:"Rec",lo:0,hi:55,d:3},{z:4,l:"St",lo:100,hi:106,d:1},{z:1,l:"Z1",lo:0,hi:55,d:14}]},
+    {date:"2026-09-13",week:"Sett. 11 · Tapering Finale — Gara 19 set",name:"Z1 Gambe libere",type:"z1",tss:15,durMin:30,desc:"30' Z1. Nessuno sforzo.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:30}]},
+    {date:"2026-09-14",week:"Sett. 11 · Tapering Finale — Gara 19 set",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo. Carb loading.",blocks:[]},
+    {date:"2026-09-15",week:"Sett. 11 · Tapering Finale — Gara 19 set",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo. Idratazione.",blocks:[]},
+    {date:"2026-09-16",week:"Sett. 11 · Tapering Finale — Gara 19 set",name:"Attivazione 20'",type:"z2",tss:14,durMin:20,desc:"20': Z1 poi 2×45'' progressivi fino a 289W.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:10},{z:3,l:"Prog",lo:70,hi:85,d:0.75},{z:1,l:"Rec",lo:0,hi:55,d:2},{z:3,l:"Prog",lo:70,hi:85,d:0.75},{z:1,l:"Z1",lo:0,hi:55,d:5}]},
+    {date:"2026-09-17",week:"Sett. 11 · Tapering Finale — Gara 19 set",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-09-18",week:"Sett. 11 · Tapering Finale — Gara 19 set",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo. Prepara kit.",blocks:[]},
+    {date:"2026-09-19",week:"Sett. 11 · Tapering Finale — Gara 19 set",name:"🏆 GARA — 19 Settembre",type:"race",tss:200,durMin:240,desc:"OBIETTIVO STAGIONALE. WU 15' con 2-3 strappi a 289W. Parti controllato — mai sopra 360W nelle prime salite. 60-70g carbo/ora. TSB atteso +15/+20.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:60},{z:4,l:"Climb",lo:90,hi:106,d:120},{z:5,l:"Finale",lo:105,hi:112,d:30},{z:1,l:"CD",lo:0,hi:55,d:15}]}
+  ];
+}
+
+// ══ PWA SERVICE WORKER ═══════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+      console.log('SW registrato:', reg.scope);
+    }).catch(function(e) {
+      console.log('SW errore:', e);
+    });
+  });
+}
+
+// ══ INIT ═════════════════════════════════════════
+makePlan();
+renderHome();
+</script>
+</body>
+</html>
