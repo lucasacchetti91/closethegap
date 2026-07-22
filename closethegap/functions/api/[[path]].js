@@ -1,79 +1,69 @@
-// ══ WattForm — Cloudflare Worker ══════════════════════════════
-// Proxy sicuro per Intervals.icu API
-// Incolla questo codice nel tuo Cloudflare Worker
+// functions/api/[[path]].js
+// Salva questo file esattamente in: functions/api/[[path]].js
+// (con le doppie parentesi quadre nel nome del file)
 
 const ICU_ATHLETE_ID = 'i52141';
-const ICU_API_KEY = '5yh0f9alz0tjxr18wq4qbrb5p'; // cambia se rigeneri la key
-const ICU_BASE = `https://intervals.icu/api/v1/athlete/${ICU_ATHLETE_ID}`;
+const ICU_API_KEY = '5yh0f9alz0tjxr18wq4qbrb5p';
+const ICU_BASE = 'https://intervals.icu/api/v1/athlete/' + ICU_ATHLETE_ID;
 
-// Domini autorizzati a chiamare questo worker
-// Aggiungi qui il tuo dominio Netlify quando lo hai
-const ALLOWED_ORIGINS = [
-  'http://localhost:3000',
-  'http://localhost:8080',
-  'http://127.0.0.1:5500',
-  'https://wattform.netlify.app', // sostituisci col tuo dominio reale
-];
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
-function corsHeaders(origin) {
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    'Access-Control-Allow-Origin': allowed,
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Max-Age': '86400',
-  };
-}
+export async function onRequest(context) {
+  const { request, params } = context;
 
-export default {
-  async fetch(request, env) {
-    const origin = request.headers.get('Origin') || '';
-    const url = new URL(request.url);
+  // Risponde al preflight CORS
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
 
-    // Preflight CORS
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders(origin) });
-    }
+  // Legge il path dinamico dall'URL
+  // params.path è un array come ['wellness'] o ['activities']
+  const pathParts = params.path;
+  const path = Array.isArray(pathParts) ? pathParts.join('/') : (pathParts || '');
 
-    // Routing
-    const path = url.pathname.replace('/api/', '');
-    const query = url.search;
+  // Sicurezza: solo endpoint permessi
+  const ALLOWED = ['activities', 'wellness', 'athlete', 'events'];
+  const isAllowed = ALLOWED.some(function(p) { return path.startsWith(p); });
 
-    // Endpoint whitelist (sicurezza)
-    const allowed_paths = [
-      'activities',
-      'wellness',
-      'athlete',
-      'events',
-    ];
+  if (!isAllowed) {
+    return new Response(
+      JSON.stringify({ error: 'Endpoint non permesso: ' + path }),
+      { status: 403, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
+    );
+  }
 
-    const isAllowed = allowed_paths.some(p => path.startsWith(p));
-    if (!isAllowed) {
-      return new Response(JSON.stringify({ error: 'Path non autorizzato' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) }
-      });
-    }
+  // Costruisce l'URL verso Intervals.icu
+  const url = new URL(request.url);
+  const queryString = url.search; // es: ?oldest=2026-01-01&newest=2026-07-22
+  const icuUrl = ICU_BASE + '/' + path + queryString;
 
-    // Chiama Intervals.icu
-    const icuUrl = `${ICU_BASE}/${path}${query}`;
-    const icuResp = await fetch(icuUrl, {
-      method: request.method,
+  try {
+    const icuResponse = await fetch(icuUrl, {
+      method: 'GET',
       headers: {
-        'Authorization': 'Basic ' + btoa(`API_KEY:${ICU_API_KEY}`),
+        'Authorization': 'Basic ' + btoa('API_KEY:' + ICU_API_KEY),
         'Content-Type': 'application/json',
       },
-      body: request.method !== 'GET' ? request.body : undefined,
     });
 
-    const data = await icuResp.text();
+    const body = await icuResponse.text();
 
-    return new Response(data, {
-      status: icuResp.status,
+    return new Response(body, {
+      status: icuResponse.status,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders(origin),
-      }
+        ...CORS_HEADERS,
+      },
     });
+
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: 'Errore proxy: ' + err.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
+    );
   }
-};
+}
