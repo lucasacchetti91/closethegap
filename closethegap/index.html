@@ -1,5 +1,5 @@
-<!-- Close the Gap v2.0 - BUILD 20260723 -->
 <!DOCTYPE html>
+<!-- Close the Gap v3.0 - BUILD 20260723 -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -7,6 +7,7 @@
 <title>Close the Gap</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#e8ff47">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Close the Gap">
@@ -14,14 +15,12 @@
 <style>
 :root{
   --bg:#080a0f;--s1:#0e1117;--s2:#141720;--s3:#1c2030;--s4:#242840;
-  --acc:#e8ff47;--acc2:#3b82f6;--grn:#22d46a;--red:#ff4d4d;--yel:#fbbf24;--pur:#a78bfa;
+  --acc:#e8ff47;--blu:#3b82f6;--grn:#22d46a;--red:#ff4d4d;--yel:#fbbf24;--pur:#a78bfa;
   --tx:#f0f2f8;--tx2:#8b92a8;--tx3:#4a5168;--br:#1e2235;--br2:#2a2f48;--r:10px;--r2:16px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;font-size:14px;line-height:1.5;}
 .app{display:flex;height:100vh;overflow:hidden;}
-
-/* SIDEBAR */
 .sidebar{width:220px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--br);display:flex;flex-direction:column;z-index:20;}
 .sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid var(--br);}
 .logo-mark{display:flex;align-items:center;gap:10px;}
@@ -45,8 +44,6 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .dot{width:7px;height:7px;border-radius:50%;animation:pulse 2s infinite;flex-shrink:0;}
 .dot-ora{background:#fc4c02;}.dot-icu{background:#3b82f6;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
-
-/* MAIN */
 .main{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 .topbar{height:52px;background:var(--s1);border-bottom:1px solid var(--br);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0;}
 .topbar-title{font-size:.9rem;font-weight:600;}
@@ -56,34 +53,22 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .tb-acc{background:var(--acc);color:#000;}.tb-acc:hover{background:#d4eb3f;}
 .tb-pur{background:var(--pur);color:#000;}
 .tb-out{background:transparent;color:var(--tx2);border:1px solid var(--br2);}.tb-out:hover{border-color:var(--acc);color:var(--acc);}
-.import-lbl{padding:6px 14px;border-radius:7px;border:1px solid var(--br2);cursor:pointer;font-size:.74rem;font-weight:600;color:var(--tx2);transition:all .15s;}
-.import-lbl:hover{border-color:var(--acc);color:var(--acc);}
 .content{flex:1;overflow-y:auto;padding:20px 24px;}
-
-/* PAGES */
 .page{display:none;}.page.active{display:block;}
-
-/* HOME SPLIT */
 .home-split{display:grid;grid-template-columns:340px 1fr;gap:20px;height:calc(100vh - 52px - 40px);}
 .left-panel{display:flex;flex-direction:column;gap:12px;overflow-y:auto;padding-right:4px;}
 .right-panel{display:flex;flex-direction:column;gap:12px;overflow-y:auto;}
-
-/* KPI */
 .kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
 .kpi{background:var(--s2);border:1px solid var(--br);border-radius:var(--r);padding:12px 14px;}
 .kl{font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:4px;}
 .kv{font-size:1.5rem;font-weight:700;line-height:1;letter-spacing:-.02em;}
 .ks{font-size:.62rem;color:var(--tx3);margin-top:3px;}
 .kv-up{color:var(--grn);}.kv-dn{color:var(--red);}.kv-wa{color:var(--yel);}.kv-acc{color:var(--acc);}
-
-/* CARDS */
 .card{background:var(--s2);border:1px solid var(--br);border-radius:var(--r);padding:15px;margin-bottom:14px;}
 .ct{font-size:.63rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:10px;}
 .cw{position:relative;}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
-
-/* TODAY CARD */
 .today-card{background:var(--s2);border:1px solid var(--br);border-radius:var(--r2);padding:20px;flex-shrink:0;}
 .today-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);margin-bottom:6px;}
 .today-name{font-size:1.25rem;font-weight:700;letter-spacing:-.02em;margin:4px 0 10px;}
@@ -102,8 +87,6 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .tm-lbl{font-size:.58rem;color:var(--tx3);text-transform:uppercase;}
 .today-desc{font-size:.78rem;color:var(--tx2);line-height:1.6;padding:10px 14px;background:var(--s3);border-radius:8px;border-left:3px solid var(--acc);margin:10px 0;}
 .adapt-note{display:flex;gap:8px;padding:9px 12px;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:8px;font-size:.72rem;color:var(--yel);margin-top:8px;}
-
-/* WORKOUT CHART */
 .wc-wrap{margin:12px 0 6px;}
 .wc-lbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:6px;}
 .wc-chart{display:flex;align-items:flex-end;gap:2px;height:80px;background:var(--s3);border-radius:8px;padding:8px;}
@@ -113,8 +96,6 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .wc-block:hover .wc-tip{opacity:1;}
 .wc-zones{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
 .wc-ztag{font-size:.58rem;font-weight:600;padding:2px 7px;border-radius:10px;}
-
-/* WEEK STRIP */
 .week-strip{background:var(--s2);border:1px solid var(--br);border-radius:var(--r2);padding:14px;}
 .ws-title{font-size:.63rem;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:10px;}
 .ws-days{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
@@ -128,8 +109,6 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .ws-dot{width:7px;height:7px;border-radius:50%;margin:0 auto 3px;}
 .ws-tss{font-size:.56rem;color:var(--tx3);}
 .ws-done-ico{position:absolute;top:3px;right:4px;font-size:.52rem;}
-
-/* RECENT */
 .recent-list{background:var(--s2);border:1px solid var(--br);border-radius:var(--r2);padding:14px;}
 .rl-title{font-size:.63rem;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:8px;}
 .rl-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--br);}
@@ -138,8 +117,6 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .rl-name{font-size:.78rem;font-weight:500;flex:1;}
 .rl-meta{font-size:.65rem;color:var(--tx3);display:flex;gap:7px;}
 .rl-tss{font-size:.72rem;font-weight:700;color:var(--acc);}
-
-/* PLAN PAGE */
 .plan-week-block{margin-bottom:22px;}
 .pwb-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid var(--br);}
 .pwb-title{font-size:.72rem;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.04em;}
@@ -161,13 +138,9 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .pc-tss-lbl{font-size:.63rem;color:var(--tx3);}
 .pc-desc{font-size:.7rem;color:var(--tx2);margin:5px 0 7px;line-height:1.5;}
 .pc-adapt{font-size:.63rem;color:var(--yel);margin-top:4px;}
-
-/* CALENDAR */
-.cal-day-cell{background:var(--s2);border:1px solid var(--br);border-radius:7px;min-height:82px;padding:5px;transition:border-color .15s;}
+.cal-day-cell{background:var(--s2);border:1px solid var(--br);border-radius:7px;min-height:82px;padding:5px;}
 .cal-pill{font-size:.58rem;border-radius:3px;padding:2px 5px;margin-bottom:2px;font-weight:600;display:block;}
 .cal-sub{font-size:.53rem;color:var(--tx3);padding:0 3px;margin-bottom:1px;display:block;}
-
-/* ACTIVITIES */
 .act-table{width:100%;border-collapse:collapse;font-size:.75rem;}
 .act-table th{padding:6px 9px;text-align:left;color:var(--tx3);font-size:.6rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--br);font-weight:500;}
 .act-table td{padding:7px 9px;border-bottom:1px solid var(--br);}
@@ -176,12 +149,11 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .bdg-r{background:rgba(232,255,71,.1);color:var(--acc);}
 .bdg-rc{background:rgba(167,139,250,.15);color:var(--pur);}
 .bdg-g{background:rgba(251,191,36,.12);color:var(--yel);}
-
-/* ANALYTICS */
 .power-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:7px;margin-bottom:12px;}
 .pk{background:var(--s3);border:1px solid var(--br);border-radius:7px;padding:9px;text-align:center;}
 .pkv{font-size:1rem;font-weight:700;color:var(--acc);}
 .pkl{font-size:.56rem;color:var(--tx3);margin-top:2px;text-transform:uppercase;}
+.pkw{font-size:.56rem;color:var(--tx3);}
 .zbar{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
 .zbar-lbl{font-size:.66rem;flex:0 0 115px;}
 .zbar-track{flex:1;background:var(--s3);border-radius:3px;height:6px;}
@@ -189,8 +161,8 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .zbar-pct{font-size:.6rem;color:var(--tx3);flex:0 0 26px;text-align:right;}
 .hm-wrap{overflow-x:auto;padding-bottom:4px;}
 .divider{height:1px;background:var(--br);margin:14px 0;}
-
-/* MODAL */
+.act-input{background:var(--s2);border:1px solid var(--br);color:var(--tx);padding:5px 9px;border-radius:6px;font-size:.75rem;}
+.act-input:focus{outline:none;border-color:var(--br2);}
 .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;align-items:center;justify-content:center;}
 .mo.open{display:flex;}
 .mbox{background:var(--s1);border:1px solid var(--br2);border-radius:var(--r2);padding:20px;max-width:440px;width:90%;max-height:90vh;overflow-y:auto;}
@@ -201,9 +173,6 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .fg label{font-size:.63rem;color:var(--tx3);}
 .fg input,.fg select{background:var(--s2);border:1px solid var(--br);border-radius:6px;color:var(--tx);padding:6px 8px;font-size:.78rem;}
 .fg input:focus,.fg select:focus{outline:none;border-color:var(--acc);}
-.act-input{background:var(--s2);border:1px solid var(--br);color:var(--tx);padding:5px 9px;border-radius:6px;font-size:.75rem;}
-.act-input:focus{outline:none;border-color:var(--br2);}
-
 .empty{text-align:center;color:var(--tx3);padding:24px;font-size:.76rem;}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -214,7 +183,6 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 </head>
 <body>
 <div class="app">
-
 <aside class="sidebar">
   <div class="sidebar-logo">
     <div class="logo-mark">
@@ -265,7 +233,6 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
       <button class="tb tb-acc" onclick="openAdd()">+ Attività</button>
     </div>
   </div>
-
   <div class="content">
 
     <!-- HOME -->
@@ -306,7 +273,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
         <div class="right-panel">
           <div class="today-card">
             <div class="today-label" id="today-label">Allenamento di Oggi</div>
-            <div id="today-content"><div class="empty">Nessun allenamento previsto.</div></div>
+            <div id="today-content"><div class="empty">Nessun allenamento pianificato.</div></div>
           </div>
           <div class="week-strip">
             <div class="ws-title">Settimana Corrente</div>
@@ -331,9 +298,9 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
             <label style="display:flex;align-items:center;gap:5px;font-size:.7rem;color:var(--tx3);cursor:pointer;">
               <input type="checkbox" id="tog-plan" onchange="renderCal()" style="accent-color:var(--acc);"> Piano
             </label>
-            <button onclick="calPrev()" class="tb tb-out" style="padding:4px 10px;">‹</button>
+            <button onclick="calPrev()" class="tb tb-out" style="padding:4px 10px;">&#8249;</button>
             <button onclick="calToday()" class="tb tb-out" style="padding:4px 10px;font-size:.7rem;">Oggi</button>
-            <button onclick="calNext()" class="tb tb-out" style="padding:4px 10px;">›</button>
+            <button onclick="calNext()" class="tb tb-out" style="padding:4px 10px;">&#8250;</button>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;" id="cal-dow"></div>
@@ -362,30 +329,30 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;background:var(--s2);padding:11px 15px;border-radius:var(--r);border:1px solid var(--br);">
         <span style="font-size:.7rem;color:var(--tx3);">FTP</span>
         <input type="number" id="ftp-inp" value="340" class="act-input" style="width:60px;">
-        <span style="font-size:.7rem;color:var(--tx3);">W · LTHR</span>
+        <span style="font-size:.7rem;color:var(--tx3);">W &middot; LTHR</span>
         <input type="number" id="lthr-inp" value="180" class="act-input" style="width:56px;">
-        <span style="font-size:.7rem;color:var(--tx3);">bpm · HRmax</span>
+        <span style="font-size:.7rem;color:var(--tx3);">bpm &middot; HRmax</span>
         <input type="number" id="hrmax-inp" value="197" class="act-input" style="width:56px;">
-        <button onclick="recalcAll()" class="tb tb-acc" style="padding:5px 12px;">✓ Aggiorna</button>
+        <button onclick="recalcAll()" class="tb tb-acc" style="padding:5px 12px;">&#10003; Aggiorna</button>
       </div>
-      <div class="card"><div class="ct">PMC — CTL / ATL / TSB (120gg)</div><div class="cw" style="height:230px;"><canvas id="ch-pmc"></canvas></div></div>
+      <div class="card"><div class="ct">PMC &mdash; CTL / ATL / TSB (120gg)</div><div class="cw" style="height:230px;"><canvas id="ch-pmc"></canvas></div></div>
       <div class="g2">
         <div class="card"><div class="ct">Km Mensili</div><div class="cw" style="height:160px;"><canvas id="ch-km"></canvas></div></div>
         <div class="card"><div class="ct">Ore Mensili</div><div class="cw" style="height:160px;"><canvas id="ch-hours"></canvas></div></div>
       </div>
       <div class="divider"></div>
       <div class="card">
-        <div class="ct">Curva di Potenza — Best Efforts</div>
+        <div class="ct">Curva di Potenza &mdash; Best Efforts</div>
         <div class="power-kpis" id="power-kpis"></div>
         <div class="cw" style="height:200px;"><canvas id="ch-pc"></canvas></div>
       </div>
       <div class="g2">
-        <div class="card"><div class="ct">Zone Potenza Coggan — <span id="pz-label">340W</span></div><div id="power-zones"></div></div>
+        <div class="card"><div class="ct">Zone Potenza Coggan &mdash; <span id="pz-label">340W</span></div><div id="power-zones"></div></div>
         <div class="card"><div class="ct">W Medi per Uscita (ultimi 20)</div><div class="cw" style="height:190px;"><canvas id="ch-watts"></canvas></div></div>
       </div>
       <div class="divider"></div>
       <div class="card">
-        <div class="ct">Heat Map TSS — Ultimo Anno</div>
+        <div class="ct">Heat Map TSS &mdash; Ultimo Anno</div>
         <div class="hm-wrap" id="hm-wrap"></div>
         <div style="display:flex;gap:5px;align-items:center;margin-top:7px;font-size:.6rem;color:var(--tx3);">
           Meno
@@ -394,23 +361,30 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
           <span style="width:10px;height:10px;display:inline-block;border-radius:2px;background:rgba(232,255,71,.45);"></span>
           <span style="width:10px;height:10px;display:inline-block;border-radius:2px;background:rgba(232,255,71,.7);"></span>
           <span style="width:10px;height:10px;display:inline-block;border-radius:2px;background:var(--acc);"></span>
-          Più
+          Piu
         </div>
       </div>
       <div class="g2">
         <div class="card"><div class="ct">Distribuzione Zona Potenza</div><div id="zone-dist-power"></div></div>
-        <div class="card"><div class="ct">Distribuzione Zona HR — LTHR <span id="lthr-label">180</span>bpm</div><div id="zone-dist-hr"></div></div>
+        <div class="card"><div class="ct">Distribuzione Zona HR &mdash; LTHR <span id="lthr-label">180</span>bpm</div><div id="zone-dist-hr"></div></div>
       </div>
       <div class="card">
         <div class="ct">Scatterplot TSS vs IF</div>
-        <p style="font-size:.65rem;color:var(--tx3);margin-bottom:8px;">🟦 Recupero · 🟩 Volume · 🟧 Intensità · 🔴 Massimo · 🟣 Gara</p>
+        <p style="font-size:.65rem;color:var(--tx3);margin-bottom:8px;">Recupero &middot; Volume &middot; Intensita &middot; Massimo &middot; Gara</p>
         <div class="cw" style="height:240px;"><canvas id="ch-scatter"></canvas></div>
       </div>
-      <div class="divider"></div>
-
-      <!-- POWER DURATION MODEL + FTP PREDICTOR -->
       <div class="card">
-        <div class="ct">⚡ Power Duration Model — FTP Predictor</div>
+        <div class="ct">Modello Critical Power &mdash; CP / W'</div>
+        <div class="g3" style="margin-bottom:10px;">
+          <div class="pk"><div class="pkv" id="cp-val">—</div><div class="pkl">Critical Power</div></div>
+          <div class="pk"><div class="pkv" id="wp-val">—</div><div class="pkl">W' Riserva</div></div>
+          <div class="pk"><div class="pkv" id="pmax-val">—</div><div class="pkl">P-max 5s</div></div>
+        </div>
+        <div class="cw" style="height:200px;"><canvas id="ch-cp"></canvas></div>
+      </div>
+      <div class="divider"></div>
+      <div class="card">
+        <div class="ct">Power Duration Model &mdash; FTP Predictor</div>
         <div class="g3" style="margin-bottom:14px;">
           <div class="pk"><div class="pkv" id="pdm-ftp">—</div><div class="pkl">FTP stimato</div><div class="pkw">Da best efforts</div></div>
           <div class="pk"><div class="pkv" id="pdm-cp">—</div><div class="pkl">Critical Power</div><div class="pkw">Modello Morton</div></div>
@@ -419,49 +393,34 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
         <div class="cw" style="height:220px;"><canvas id="ch-pdm"></canvas></div>
         <p style="font-size:.65rem;color:var(--tx3);margin-top:8px;" id="pdm-note"></p>
       </div>
-
-      <!-- EFFICIENCY FACTOR + VARIABILITY INDEX + DECOUPLING -->
       <div class="g2">
         <div class="card">
-          <div class="ct">📈 Efficiency Factor nel Tempo (NP/HR)</div>
-          <p style="font-size:.68rem;color:var(--tx2);margin-bottom:8px;">Misura l'adattamento aerobico — valori crescenti indicano miglioramento.</p>
+          <div class="ct">Efficiency Factor nel Tempo (NP/HR)</div>
+          <p style="font-size:.68rem;color:var(--tx2);margin-bottom:8px;">Valori crescenti indicano miglioramento aerobico.</p>
           <div class="cw" style="height:180px;"><canvas id="ch-ef"></canvas></div>
         </div>
         <div class="card">
-          <div class="ct">🌊 Variability Index per Uscita (NP/W avg)</div>
-          <p style="font-size:.68rem;color:var(--tx2);margin-bottom:8px;">Vicino a 1.0 = sforzo costante · >1.15 = uscita molto mossa.</p>
+          <div class="ct">Variability Index (NP/W avg)</div>
+          <p style="font-size:.68rem;color:var(--tx2);margin-bottom:8px;">1.0 = costante &middot; &gt;1.15 = molto mosso</p>
           <div class="cw" style="height:180px;"><canvas id="ch-vi"></canvas></div>
         </div>
       </div>
-
-      <!-- W'BAL + BANISTER -->
       <div class="g2">
         <div class="card">
-          <div class="ct">🔋 W' Balance Model</div>
-          <p style="font-size:.68rem;color:var(--tx2);margin-bottom:8px;">Stima della riserva anaerobica disponibile. W' totale stimato dal modello CP.</p>
-          <div class="pkg" id="wbal-kpis" style="margin-bottom:10px;"></div>
+          <div class="ct">W' Balance Model</div>
+          <div class="power-kpis" id="wbal-kpis" style="margin-bottom:10px;"></div>
           <div class="cw" style="height:160px;"><canvas id="ch-wbal"></canvas></div>
         </div>
         <div class="card">
-          <div class="ct">📊 Banister Impulse-Response — Performance Prediction</div>
-          <p style="font-size:.68rem;color:var(--tx2);margin-bottom:8px;">Modello bifasico: Fitness (42gg) − Fatica (7gg) × fattore di decay. Predice la forma alla gara.</p>
-          <div class="pkg" id="banister-kpis" style="margin-bottom:10px;"></div>
+          <div class="ct">Banister Impulse-Response</div>
+          <div class="power-kpis" id="banister-kpis" style="margin-bottom:10px;"></div>
           <div class="cw" style="height:160px;"><canvas id="ch-banister"></canvas></div>
         </div>
       </div>
-
-      <!-- DECOUPLING AEROBICO -->
       <div class="card">
-        <div class="ct">💓 Decoupling Aerobico per Uscita</div>
-        <p style="font-size:.68rem;color:var(--tx2);margin-bottom:10px;">Confronta il rapporto NP/HR nella prima metà vs seconda metà. &lt;5% = buon aerobico · &gt;5% = drift cardiaco significativo.</p>
+        <div class="ct">Decoupling Aerobico per Uscita</div>
+        <p style="font-size:.68rem;color:var(--tx2);margin-bottom:10px;">&lt;5% = buon aerobico &middot; &gt;5% = drift cardiaco</p>
         <div class="cw" style="height:180px;"><canvas id="ch-decouple"></canvas></div>
-      </div>
-        <div class="g3" style="margin-bottom:10px;">
-          <div class="pk"><div class="pkv" id="cp-val">—</div><div class="pkl">Critical Power</div></div>
-          <div class="pk"><div class="pkv" id="wp-val">—</div><div class="pkl">W' Riserva</div></div>
-          <div class="pk"><div class="pkv" id="pmax-val">—</div><div class="pkl">P-max 5s</div></div>
-        </div>
-        <div class="cw" style="height:200px;"><canvas id="ch-cp"></canvas></div>
       </div>
     </div>
 
@@ -472,8 +431,8 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 <!-- MODAL ADD -->
 <div class="mo" id="modal-add">
   <div class="mbox">
-    <button class="mbox-close" onclick="closeM('modal-add')">✕</button>
-    <div class="mbox-title">+ Nuova Attività</div>
+    <button class="mbox-close" onclick="closeM('modal-add')">&#10005;</button>
+    <div class="mbox-title">+ Nuova Attivita</div>
     <div class="fgrid">
       <div class="fg"><label>Data</label><input type="date" id="a-date"></div>
       <div class="fg"><label>Nome</label><input type="text" id="a-name" placeholder="Uscita colline"></div>
@@ -492,21 +451,14 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 </div>
 
 <script>
-// ══ GLOBALS ══════════════════════════════════════
 var FTP = 340, LTHR = 180, HR_MAX = 197;
 var charts = {}, calDate = new Date(), plan = [];
-
-// ══ INTERVALS CONFIG — unica fonte di verità ══════
-var ICU_ATHLETE_ID = 'i52141';
-var ICU_API_KEY    = '5yh0f9alz0tjxr18wq4qbrb5p';
-var ICU_PAGES_URL  = 'https://closethegap.luca-sacchetti91.workers.dev';
-
-// ══ ZONE COLORS ══════════════════════════════════
 var ZC = {1:'#4a5168',2:'#22d46a',3:'#fbbf24',4:'#f97316',5:'#ff4d4d',6:'#a78bfa',7:'#ec4899'};
 var ZBADGE = {z1:'bz1',z2:'bz2',z3:'bz3',z4:'bz4',z5:'bz5',z6:'bz5',race:'brace',off:'boff'};
-function zc(z){return ZC[z]||'#4a5168';}
+function zc(z) { return ZC[z] || '#4a5168'; }
 
-// ══ ACTIVITIES ═══════════════════════════════════
+var ICU_WORKER = 'https://closethegap-proxy.luca-sacchetti91.workers.dev';
+
 var RAW = [
   {id:"19360116613",name:"Rima/Rimasco",date:"2026-07-18",dur:14007,dist:126160,elev:1692,re:310,cal:3629,avg_watts:234,hr:155,max_hr:188},
   {id:"19349118875",name:"Pedalata pranzo",date:"2026-07-17",dur:4908,dist:48067,elev:291,re:78,cal:1291,avg_watts:238,hr:150,max_hr:181},
@@ -548,59 +500,72 @@ var bestEfforts = [
   {label:'1h',secs:3600,watts:290}
 ];
 
-var activities = RAW.map(function(a){return Object.assign({},a);});
+var activities = RAW.map(function(a) { return Object.assign({}, a); });
 
-// ══ HELPERS ══════════════════════════════════════
-function fmtDist(m){return (m/1000).toFixed(1);}
-function fmtDur(s){var h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?h+'h'+String(m).padStart(2,'0'):m+'min';}
-function dateKey(d){
-  if(typeof d==='string')return d;
+function fmtDist(m) { return (m/1000).toFixed(1); }
+function fmtDur(s) { var h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return h?h+'h'+String(m).padStart(2,'0'):m+'min'; }
+function dateKey(d) {
+  if (typeof d === 'string') return d;
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-function today(){return dateKey(new Date());}
+function today() { return dateKey(new Date()); }
 
-function calcTSS(a){
-  if(a._tss_override||a.tss_real)return Math.round(a._tss_override||a.tss_real);
-  if(a.np){var IF=a.np/FTP;return Math.round((a.dur*a.np*IF)/(FTP*3600)*100);}
-  if(a.avg_watts){var np2=Math.round(a.avg_watts*1.05);var IF2=np2/FTP;return Math.round((a.dur*np2*IF2)/(FTP*3600)*100);}
-  return a.re?Math.round(a.re):Math.round(a.dur/3600*70);
+function calcTSS(a) {
+  if (a._tss_override||a.tss_real) return Math.round(a._tss_override||a.tss_real);
+  if (a.np) { var IF=a.np/FTP; return Math.round((a.dur*a.np*IF)/(FTP*3600)*100); }
+  if (a.avg_watts) { var np2=Math.round(a.avg_watts*1.05); var IF2=np2/FTP; return Math.round((a.dur*np2*IF2)/(FTP*3600)*100); }
+  return a.re ? Math.round(a.re) : Math.round(a.dur/3600*70);
 }
-function calcNP(a){return a.np||(a.avg_watts?Math.round(a.avg_watts*1.05):null);}
-function calcIF(a){if(a.if_val)return parseFloat(a.if_val.toFixed(2));var np=calcNP(a);return np?parseFloat((np/FTP).toFixed(2)):null;}
+function calcNP(a) { return a.np||(a.avg_watts?Math.round(a.avg_watts*1.05):null); }
+function calcIF(a) { if(a.if_val) return parseFloat(a.if_val.toFixed(2)); var np=calcNP(a); return np?parseFloat((np/FTP).toFixed(2)):null; }
 
-function computePMC(){
-  var sorted=[].concat(activities).sort(function(a,b){return a.date.localeCompare(b.date);});
-  if(!sorted.length)return{ctl:0,atl:0,tsb:0,history:[]};
-  var start=new Date(sorted[0].date),end=new Date();
+function computePMC() {
+  var sorted = [].concat(activities).sort(function(a,b){return a.date.localeCompare(b.date);});
+  if (!sorted.length) return {ctl:0,atl:0,tsb:0,history:[]};
+  var start=new Date(sorted[0].date), end=new Date();
   var ctl=0,atl=0,pc=0,pa=0,history=[];
-  for(var d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
+  for (var d=new Date(start);d<=end;d.setDate(d.getDate()+1)) {
     var ds=dateKey(d);
     var tss=activities.filter(function(a){return a.date===ds;}).reduce(function(s,a){return s+calcTSS(a);},0);
     var tsb=parseFloat((pc-pa).toFixed(1));
     ctl=parseFloat((ctl+(tss-ctl)/42).toFixed(2));
     atl=parseFloat((atl+(tss-atl)/7).toFixed(2));
     history.push({date:ds,ctl:parseFloat(ctl.toFixed(1)),atl:parseFloat(atl.toFixed(1)),tsb:tsb,tss:tss});
-    pc=ctl;pa=atl;
+    pc=ctl; pa=atl;
   }
-  return{ctl:Math.round(ctl),atl:Math.round(atl),tsb:Math.round(pc-pa),history:history};
+  return {ctl:Math.round(ctl),atl:Math.round(atl),tsb:Math.round(pc-pa),history:history};
 }
 
-function weekStats(wb){
-  wb=wb||0;
-  var now=new Date(),mon=new Date(now);
-  mon.setDate(now.getDate()-now.getDay()+1-wb*7);mon.setHours(0,0,0,0);
-  var sun=new Date(mon);sun.setDate(mon.getDate()+6);sun.setHours(23,59,59);
+function weekStats(wb) {
+  wb = wb||0;
+  var now=new Date(), mon=new Date(now);
+  mon.setDate(now.getDate()-now.getDay()+1-wb*7); mon.setHours(0,0,0,0);
+  var sun=new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59);
   var acts=activities.filter(function(a){var d=new Date(a.date);return d>=mon&&d<=sun;});
-  return{
+  return {
     tss:acts.reduce(function(s,a){return s+calcTSS(a);},0),
     km:acts.reduce(function(s,a){return s+(a.dist||0);},0),
     dur:acts.reduce(function(s,a){return s+(a.dur||0);},0)
   };
 }
 
-function mkChart(id,type,data,extra){
-  if(charts[id])charts[id].destroy();
-  var ctx=document.getElementById(id);if(!ctx)return;
+function cpModel() {
+  var pts=bestEfforts.filter(function(e){return e.secs>=60&&e.secs<=3600;});
+  var n=pts.length;
+  var xs=pts.map(function(e){return e.secs;});
+  var ys=pts.map(function(e){return e.watts*e.secs;});
+  var sx=xs.reduce(function(a,b){return a+b;},0);
+  var sy=ys.reduce(function(a,b){return a+b;},0);
+  var sxx=xs.reduce(function(a,b){return a+b*b;},0);
+  var sxy=xs.reduce(function(a,v,i){return a+v*ys[i];},0);
+  var CP=Math.round((n*sxy-sx*sy)/(n*sxx-sx*sx));
+  var Wp=Math.round((sy-CP*sx)/n);
+  return {CP:CP, Wp:Wp};
+}
+
+function mkChart(id,type,data,extra) {
+  if (charts[id]) charts[id].destroy();
+  var ctx=document.getElementById(id); if(!ctx) return;
   var opts={responsive:true,maintainAspectRatio:false,
     plugins:{legend:{labels:{color:'#8b92a8',font:{size:9},boxWidth:10}}},
     scales:type==='doughnut'||type==='pie'?{}:{
@@ -608,136 +573,22 @@ function mkChart(id,type,data,extra){
       y:{ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.04)'}}
     }
   };
-  if(extra)Object.assign(opts,extra);
+  if (extra) Object.assign(opts, extra);
   charts[id]=new Chart(ctx,{type:type,data:data,options:opts});
 }
 
-// ══ INTERVALS SYNC ═══════════════════════════════
-async function icuFetch(endpoint, params) {
-  var query = params ? '?' + params : '';
-
-  // Prova con /api/ prefix
-  try {
-    var r1 = await fetch(ICU_PAGES_URL + '/' + endpoint + query);
-    var t1 = await r1.text();
-    if (t1.trim()[0] === '[' || t1.trim()[0] === '{') {
-      var parsed = JSON.parse(t1);
-      if (!parsed.error) { console.log('✅ /api/ OK'); return parsed; }
-      console.warn('❌ /api/ errore:', parsed.error);
-    }
-  } catch(e) { console.warn('❌ /api/ fetch fallito:', e.message); }
-
-  // Prova senza /api/ prefix
-  var baseUrl = ICU_PAGES_URL.replace('/api', '');
-  try {
-    var r2 = await fetch(baseUrl + '/' + endpoint + query);
-    var t2 = await r2.text();
-    if (t2.trim()[0] === '[' || t2.trim()[0] === '{') {
-      var parsed2 = JSON.parse(t2);
-      if (!parsed2.error) { console.log('✅ no /api/ OK'); return parsed2; }
-      console.warn('❌ no /api/ errore:', parsed2.error);
-    }
-  } catch(e) { console.warn('❌ no /api/ fetch fallito:', e.message); }
-
-  throw new Error('Sync fallito — controlla console F12 per dettagli');
-}
-
-async function syncIntervals() {
-  var btn = document.getElementById('btn-sync-icu');
-  var el  = document.getElementById('import-status');
-  btn.disabled = true;
-  btn.querySelector('span:last-child').textContent = 'Sync...';
-  el.textContent = 'Connessione a Intervals.icu...';
-  el.style.color = 'var(--tx3)';
-
-  var WORKER = 'https://closethegap-proxy.luca-sacchetti91.workers.dev';
-
-  try {
-    var td   = today();
-    var from = dateKey(new Date(new Date().setDate(new Date().getDate()-120)));
-    var p    = 'oldest='+from+'&newest='+td;
-
-    // Wellness
-    var wUrl = WORKER + '/wellness?' + p;
-    console.log('Calling wellness:', wUrl);
-    var wResp = await fetch(wUrl);
-    if (!wResp.ok) throw new Error('Wellness HTTP ' + wResp.status + ' — URL: ' + wUrl);
-    var wellness = await wResp.json();
-
-    if (wellness && wellness.length) {
-      var lat = wellness[wellness.length-1];
-      if (lat.ctl != null) document.getElementById('k-ctl').textContent = Math.round(lat.ctl);
-      if (lat.atl != null) document.getElementById('k-atl').textContent = Math.round(lat.atl);
-      if (lat.ctl != null && lat.atl != null) {
-        var tsb = Math.round(lat.ctl - lat.atl);
-        var te = document.getElementById('k-tsb');
-        te.textContent = tsb;
-        te.className = 'kv '+(tsb>5?'kv-up':tsb<-10?'kv-dn':'kv-wa');
-      }
-    }
-
-    // Activities
-    var aUrl = WORKER + '/activities?' + p;
-    console.log('Calling activities:', aUrl);
-    var aResp = await fetch(aUrl);
-    if (!aResp.ok) throw new Error('Activities HTTP ' + aResp.status);
-    var icuActs = await aResp.json();
-
-    var imported=0, updated=0;
-    icuActs.forEach(function(ia){
-      if(!ia.start_date_local) return;
-      var date = ia.start_date_local.slice(0,10);
-      var type = (ia.type||'').toLowerCase();
-      if(!type.match(/ride|cycling|virtualride/)) return;
-      var np=ia.icu_normalized_watts||null, tss=ia.icu_training_load||null,
-          ifv=ia.icu_intensity||null, avgW=ia.icu_average_watts||null,
-          hr=ia.average_heartrate||null, maxHr=ia.max_heartrate||null,
-          dist=Math.round(ia.distance||0), dur=ia.moving_time||0,
-          elev=ia.total_elevation_gain||0, cal=ia.calories||null;
-      var ex=activities.find(function(a){return a.date===date&&Math.abs((a.dist||0)-dist)<3000;});
-      if(ex){
-        if(np) ex.np=np; if(avgW) ex.avg_watts=avgW;
-        if(tss){ex.tss_real=tss; ex._tss_override=tss;}
-        if(ifv) ex.if_val=ifv; if(hr) ex.hr=hr;
-        if(maxHr) ex.max_hr=maxHr; if(cal) ex.cal=cal;
-        ex.source='intervals'; updated++;
-      } else {
-        activities.push({id:'icu-'+(ia.id||date),name:ia.name||'Uscita',
-          date:date,dur:dur,dist:dist,elev:elev,avg_watts:avgW,np:np,
-          _tss_override:tss,tss_real:tss,if_val:ifv,hr:hr,max_hr:maxHr,
-          cal:cal,isRace:ia.race||false,source:'intervals'});
-        imported++;
-      }
-    });
-
-    renderHome();
-    if(document.getElementById('page-analytics').classList.contains('active')) renderAnalytics();
-    el.textContent='✅ +'+imported+' nuove, '+updated+' aggiornate';
-    el.style.color='var(--grn)';
-
-  } catch(e) {
-    el.textContent='❌ '+e.message;
-    el.style.color='var(--red)';
-    console.error('Intervals sync error:',e);
-  }
-  btn.disabled=false;
-  btn.querySelector('span:last-child').textContent='Sync Intervals.icu';
-}
-
-// ══ NAV ══════════════════════════════════════════
-var TITLES={home:'Oggi',plan:'Piano di Allenamento',calendar:'Calendario',activities:'Attività',analytics:'Analisi & Power'};
-function showPage(id,el){
+var TITLES={home:'Oggi',plan:'Piano di Allenamento',calendar:'Calendario',activities:'Attivita',analytics:'Analisi & Power'};
+function showPage(id,el) {
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
   document.getElementById('page-'+id).classList.add('active');
-  if(el)el.classList.add('active');
+  if(el) el.classList.add('active');
   document.getElementById('topbar-title').textContent=TITLES[id]||id;
   var fns={home:renderHome,plan:renderPlanPage,calendar:renderCal,activities:renderActs,analytics:renderAnalytics};
-  if(fns[id])fns[id]();
+  if(fns[id]) fns[id]();
 }
 
-// ══ HOME ═════════════════════════════════════════
-function renderHome(){
+function renderHome() {
   var pmc=computePMC();
   document.getElementById('k-ctl').textContent=pmc.ctl||'—';
   document.getElementById('k-atl').textContent=pmc.atl||'—';
@@ -748,61 +599,57 @@ function renderHome(){
   var ws=weekStats(0);
   document.getElementById('w-tss').textContent=Math.round(ws.tss)||'0';
   document.getElementById('w-km').textContent=Math.round(ws.km/1000)||'0';
-  var wh=Math.floor(ws.dur/3600),wm2=Math.floor((ws.dur%3600)/60);
+  var wh=Math.floor(ws.dur/3600), wm2=Math.floor((ws.dur%3600)/60);
   document.getElementById('w-hrs').textContent=ws.dur>0?wh+'h'+String(wm2).padStart(2,'0'):'0h00';
-
   var h=pmc.history.slice(-60);
   mkChart('ch-mini-pmc','line',{labels:h.map(function(d){return d.date.slice(5);}),datasets:[
     {label:'CTL',data:h.map(function(d){return d.ctl;}),borderColor:'#3b82f6',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
     {label:'ATL',data:h.map(function(d){return d.atl;}),borderColor:'#ff4d4d',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
     {label:'TSB',data:h.map(function(d){return d.tsb;}),borderColor:'#e8ff47',tension:.4,pointRadius:0,fill:false,borderWidth:1.5}
   ]});
-
   var wks=[];
-  for(var i=7;i>=0;i--){var s=weekStats(i);var d=new Date();d.setDate(d.getDate()-i*7);var m=new Date(d);m.setDate(d.getDate()-d.getDay()+1);wks.push({label:m.toLocaleDateString('it',{day:'2-digit',month:'2-digit'}),tss:Math.round(s.tss),km:Math.round(s.km/1000)});}
+  for (var i=7;i>=0;i--) {
+    var s=weekStats(i); var d=new Date(); d.setDate(d.getDate()-i*7);
+    var m=new Date(d); m.setDate(d.getDate()-d.getDay()+1);
+    wks.push({label:m.toLocaleDateString('it',{day:'2-digit',month:'2-digit'}),tss:Math.round(s.tss),km:Math.round(s.km/1000)});
+  }
   mkChart('ch-home-tss','bar',{labels:wks.map(function(w){return w.label;}),datasets:[
-    {label:'TSS',data:wks.map(function(w){return w.tss;}),backgroundColor:'rgba(232,255,71,.5)',borderColor:'var(--acc)',borderWidth:1,borderRadius:3,yAxisID:'y'},
+    {label:'TSS',data:wks.map(function(w){return w.tss;}),backgroundColor:'rgba(232,255,71,.5)',borderColor:var(--acc),borderWidth:1,borderRadius:3,yAxisID:'y'},
     {label:'Km',data:wks.map(function(w){return w.km;}),type:'line',borderColor:'#3b82f6',pointRadius:2,tension:.3,yAxisID:'y1'}
   ]},{scales:{y:{ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}},y1:{position:'right',ticks:{color:'#4a5168',font:{size:8}},grid:{display:false}}}});
-
   var rec=[].concat(activities).sort(function(a,b){return b.date.localeCompare(a.date);}).slice(0,5);
   document.getElementById('home-recent').innerHTML=rec.map(function(a){
-    return'<div class="rl-item">'+
+    return '<div class="rl-item">'+
       '<div class="rl-dot" style="background:'+(a.isRace?'#a78bfa':'#22d46a')+'"></div>'+
       '<div><div class="rl-name">'+(a.isRace?'🏁 ':'')+a.name+'</div>'+
       '<div class="rl-meta"><span>'+a.date.slice(5)+'</span><span>'+fmtDist(a.dist)+'km</span><span>'+fmtDur(a.dur)+'</span></div></div>'+
       '<div class="rl-tss">'+calcTSS(a)+'</div></div>';
   }).join('');
-
   renderTodayCard(today());
   renderWeekStrip();
 }
 
-function renderTodayCard(ds){
+function renderTodayCard(ds) {
   var session=plan.find(function(p){return p.date===ds;});
   var td=today();
   document.getElementById('today-label').textContent=ds===td?'Allenamento di Oggi':'Allenamento del '+ds.slice(5).replace('-','/');
   var content=document.getElementById('today-content');
-  if(!session){content.innerHTML='<div class="empty">Nessun allenamento pianificato.</div>';return;}
+  if (!session) { content.innerHTML='<div class="empty">Nessun allenamento pianificato.</div>'; return; }
   var done=activities.find(function(a){return a.date===ds;});
   var bc=ZBADGE[session.type]||'bz2';
   var html='<div style="margin-bottom:8px;"><span class="today-badge '+bc+'">'+session.type.toUpperCase()+'</span>'+(done?'<span class="today-badge bgrn">✅ Svolto</span>':'')+'</div>';
   html+='<div class="today-name">'+session.name+'</div>';
   html+='<div class="today-meta">';
-  if(session.durMin)html+='<div class="tm-item"><div class="tm-val">'+session.durMin+'<span style="font-size:.62rem;color:var(--tx3)"> min</span></div><div class="tm-lbl">Durata</div></div>';
+  if (session.durMin) html+='<div class="tm-item"><div class="tm-val">'+session.durMin+'<span style="font-size:.62rem;color:var(--tx3)"> min</span></div><div class="tm-lbl">Durata</div></div>';
   html+='<div class="tm-item"><div class="tm-val">'+session.tss+'<span style="font-size:.62rem;color:var(--tx3)"> TSS</span></div><div class="tm-lbl">Target</div></div>';
-  if(session.type!=='off'&&session.blocks&&session.blocks.length){
-    var mainBlock=session.blocks.find(function(b){return b.z>=3;})||session.blocks[0];
-    if(mainBlock){var watt=Math.round((mainBlock.lo+mainBlock.hi)/2*FTP/100);html+='<div class="tm-item"><div class="tm-val" style="color:var(--acc);">'+watt+'<span style="font-size:.62rem;color:var(--tx3)"> W</span></div><div class="tm-lbl">Zona target</div></div>';}
-  }
   html+='</div>';
-  if(session.desc)html+='<div class="today-desc">'+session.desc+'</div>';
-  if(session.blocks&&session.blocks.length&&session.type!=='off')html+=renderWorkoutBlock(session);
-  if(session.adaptNote)html+='<div class="adapt-note">⚡ '+session.adaptNote+'</div>';
+  if (session.desc) html+='<div class="today-desc">'+session.desc+'</div>';
+  if (session.blocks&&session.blocks.length&&session.type!=='off') html+=renderWorkoutBlock(session);
+  if (session.adaptNote) html+='<div class="adapt-note">⚡ '+session.adaptNote+'</div>';
   content.innerHTML=html;
 }
 
-function renderWorkoutBlock(session){
+function renderWorkoutBlock(session) {
   var blocks=session.blocks;
   var total=blocks.reduce(function(s,b){return s+b.d;},0)||session.durMin||60;
   var html='<div class="wc-wrap"><div class="wc-lbl">Struttura Allenamento</div><div class="wc-chart">';
@@ -814,45 +661,47 @@ function renderWorkoutBlock(session){
     html+='<div class="wc-block" style="width:'+wp+'%;height:'+hp+'%;background:'+zc(b.z)+';opacity:.85;"><div class="wc-tip">'+tip+'</div></div>';
   });
   html+='</div>';
-  var zones={};blocks.forEach(function(b){if(b.z>0)zones[b.z]=(zones[b.z]||0)+b.d;});
+  var zones={};
+  blocks.forEach(function(b){if(b.z>0) zones[b.z]=(zones[b.z]||0)+b.d;});
   html+='<div class="wc-zones">';
-  Object.keys(zones).forEach(function(z){html+='<span class="wc-ztag" style="background:'+zc(parseInt(z))+'22;color:'+zc(parseInt(z))+';border:1px solid '+zc(parseInt(z))+'44;">Z'+z+' '+Math.round(zones[z])+'min</span>';});
+  Object.keys(zones).forEach(function(z){
+    html+='<span class="wc-ztag" style="background:'+zc(parseInt(z))+'22;color:'+zc(parseInt(z))+';border:1px solid '+zc(parseInt(z))+'44;">Z'+z+' '+Math.round(zones[z])+'min</span>';
+  });
   return html+'</div></div>';
 }
 
-function renderWeekStrip(){
-  var now=new Date(),mon=new Date(now);
-  mon.setDate(now.getDate()-now.getDay()+1);mon.setHours(0,0,0,0);
+function renderWeekStrip() {
+  var now=new Date(), mon=new Date(now);
+  mon.setDate(now.getDate()-now.getDay()+1); mon.setHours(0,0,0,0);
   var dows=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
-  var td=today(),html='';
-  for(var i=0;i<7;i++){
-    var d=new Date(mon);d.setDate(mon.getDate()+i);
+  var td=today(), html='';
+  for (var i=0;i<7;i++) {
+    var d=new Date(mon); d.setDate(mon.getDate()+i);
     var ds=dateKey(d);
     var s=plan.find(function(p){return p.date===ds;});
     var done=activities.find(function(a){return a.date===ds;});
     var isT=ds===td;
     var cls='ws-day'+(isT?' ws-today':'')+(done?' ws-done':'')+(s&&s.type==='off'?' ws-off':'');
     var dotCol=s?zc(parseInt((s.type||'1').replace('z',''))||1):'#2a2f48';
-    if(s&&s.type==='race')dotCol='#a78bfa';
+    if (s&&s.type==='race') dotCol='#a78bfa';
     html+='<div class="'+cls+'" onclick="selectDay(\''+ds+'\')">';
     html+='<div class="ws-dow">'+dows[i]+'</div>';
     html+='<div class="ws-date">'+d.getDate()+'</div>';
     html+='<div class="ws-dot" style="background:'+dotCol+';"></div>';
     html+='<div class="ws-tss">'+(s&&s.tss>0?s.tss+'tss':'—')+'</div>';
-    if(done)html+='<div class="ws-done-ico">✅</div>';
+    if (done) html+='<div class="ws-done-ico">✅</div>';
     html+='</div>';
   }
   document.getElementById('week-strip').innerHTML=html;
 }
 
-function selectDay(ds){renderTodayCard(ds);}
+function selectDay(ds) { renderTodayCard(ds); }
 
-// ══ PLAN PAGE ════════════════════════════════════
-function renderPlanPage(){
+function renderPlanPage() {
   var weeks={};
   plan.forEach(function(p){if(!weeks[p.week])weeks[p.week]=[];weeks[p.week].push(p);});
   var td=today();
-  var TM={'z1':'pc-z2','z2':'pc-z2','z3':'pc-z3','z4':'pc-z4','z5':'pc-z5','z6':'pc-z5','race':'pc-race','off':'pc-off'};
+  var TM={z1:'pc-z2',z2:'pc-z2',z3:'pc-z3',z4:'pc-z4',z5:'pc-z5',z6:'pc-z5',race:'pc-race',off:'pc-off'};
   var html='';
   Object.keys(weeks).forEach(function(wk){
     var items=weeks[wk];
@@ -863,12 +712,11 @@ function renderPlanPage(){
       var isT=p.date===td;
       var cls='plan-card '+(TM[p.type]||'pc-z2')+(done?' pc-done':'')+(isT?' pc-today':'');
       var dl=new Date(p.date+'T12:00').toLocaleDateString('it',{weekday:'short',day:'2-digit',month:'2-digit'});
-      html+='<div class="'+cls+'">';
-      html+='<div class="pc-header"><span class="pc-date">'+dl+'</span><span class="pc-name">'+p.name+'</span><span class="pc-tss-lbl">'+p.tss+' TSS</span></div>';
-      if(done)html+='<div style="font-size:.62rem;color:var(--grn);margin-bottom:4px;">✅ '+calcTSS(done)+' TSS reale · '+fmtDist(done.dist)+'km</div>';
+      html+='<div class="'+cls+'"><div class="pc-header"><span class="pc-date">'+dl+'</span><span class="pc-name">'+p.name+'</span><span class="pc-tss-lbl">'+p.tss+' TSS</span></div>';
+      if (done) html+='<div style="font-size:.62rem;color:var(--grn);margin-bottom:4px;">✅ '+calcTSS(done)+' TSS reale · '+fmtDist(done.dist)+'km</div>';
       html+='<div class="pc-desc">'+p.desc.substring(0,120)+(p.desc.length>120?'…':'')+'</div>';
-      if(p.blocks&&p.blocks.length&&p.type!=='off')html+=renderWorkoutBlock(p);
-      if(p.adaptNote)html+='<div class="pc-adapt">⚡ '+p.adaptNote+'</div>';
+      if (p.blocks&&p.blocks.length&&p.type!=='off') html+=renderWorkoutBlock(p);
+      if (p.adaptNote) html+='<div class="pc-adapt">⚡ '+p.adaptNote+'</div>';
       html+='</div>';
     });
     html+='</div></div>';
@@ -876,16 +724,15 @@ function renderPlanPage(){
   document.getElementById('plan-render').innerHTML=html||'<div class="empty">Nessun piano.</div>';
 }
 
-// ══ CALENDAR ═════════════════════════════════════
-function renderCal(){
+function renderCal() {
   var showPlan=document.getElementById('tog-plan').checked;
-  var y=calDate.getFullYear(),m=calDate.getMonth();
+  var y=calDate.getFullYear(), m=calDate.getMonth();
   document.getElementById('cal-label').textContent=calDate.toLocaleDateString('it',{month:'long',year:'numeric'}).replace(/^\w/,function(c){return c.toUpperCase();});
-  document.getElementById('cal-dow').innerHTML=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(function(d){return'<div style="text-align:center;font-size:.6rem;color:var(--tx3);padding:3px;text-transform:uppercase;">'+d+'</div>';}).join('');
-  var first=new Date(y,m,1);var sd=first.getDay();if(sd===0)sd=7;
-  var last=new Date(y,m+1,0).getDate();var cells=[];
-  for(var i=1;i<sd;i++)cells.push({date:new Date(y,m,1-sd+i),cur:false});
-  for(var d2=1;d2<=last;d2++)cells.push({date:new Date(y,m,d2),cur:true});
+  document.getElementById('cal-dow').innerHTML=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(function(d){return '<div style="text-align:center;font-size:.6rem;color:var(--tx3);padding:3px;text-transform:uppercase;">'+d+'</div>';}).join('');
+  var first=new Date(y,m,1); var sd=first.getDay(); if(sd===0)sd=7;
+  var last=new Date(y,m+1,0).getDate(); var cells=[];
+  for(var i=1;i<sd;i++) cells.push({date:new Date(y,m,1-sd+i),cur:false});
+  for(var d2=1;d2<=last;d2++) cells.push({date:new Date(y,m,d2),cur:true});
   while(cells.length%7){var l=cells[cells.length-1].date;var nd=new Date(l);nd.setDate(l.getDate()+1);cells.push({date:nd,cur:false});}
   var td=today();
   document.getElementById('cal-grid').innerHTML=cells.map(function(c){
@@ -912,18 +759,17 @@ function calPrev(){calDate.setMonth(calDate.getMonth()-1);renderCal();}
 function calNext(){calDate.setMonth(calDate.getMonth()+1);renderCal();}
 function calToday(){calDate=new Date();renderCal();}
 
-// ══ ACTIVITIES ═══════════════════════════════════
-function renderActs(){
+function renderActs() {
   var fm=document.getElementById('f-month').value;
   var fs=document.getElementById('f-search').value.toLowerCase();
   var f=activities.filter(function(a){return(!fm||a.date.startsWith(fm))&&(!fs||a.name.toLowerCase().includes(fs));});
   f.sort(function(a,b){return b.date.localeCompare(a.date);});
-  document.getElementById('act-count').textContent=f.length+' attività';
+  document.getElementById('act-count').textContent=f.length+' attivita';
   document.getElementById('act-empty').style.display=f.length?'none':'block';
   document.getElementById('act-body').innerHTML=f.map(function(a){
-    var np=calcNP(a),IF=calcIF(a);
-    return'<tr><td>'+a.date+'</td><td>'+(a.isRace?'<span style="color:var(--pur)">🏁 </span>':'')+a.name+'</td>'+
-      '<td><span class="bdg '+(a.isRace?'bdg-rc':a.dur>9000?'bdg-g':'bdg-r')+'">'+(a.isRace?'Gara':a.dur>9000?'Gran Fondo':'Ride')+'</span></td>'+
+    var np=calcNP(a), IF=calcIF(a);
+    return '<tr><td>'+a.date+'</td><td>'+(a.isRace?'🏁 ':'')+a.name+'</td>'+
+      '<td><span class="bdg '+(a.isRace?'bdg-rc':a.dur>9000?'bdg-g':'bdg-r')+'">'+(a.isRace?'Gara':a.dur>9000?'Granfondo':'Ride')+'</span></td>'+
       '<td>'+fmtDur(a.dur)+'</td><td>'+fmtDist(a.dist)+'</td><td>'+(a.elev||0)+'m</td>'+
       '<td>'+(a.avg_watts?a.avg_watts+'W':'—')+'</td><td>'+(np?'<strong>'+np+'W</strong>':'—')+'</td>'+
       '<td>'+(IF||'—')+'</td><td><strong style="color:var(--acc);">'+calcTSS(a)+'</strong></td>'+
@@ -931,8 +777,7 @@ function renderActs(){
   }).join('');
 }
 
-// ══ ANALYTICS ════════════════════════════════════
-function recalcAll(){
+function recalcAll() {
   FTP=parseInt(document.getElementById('ftp-inp').value)||340;
   LTHR=parseInt(document.getElementById('lthr-inp').value)||180;
   HR_MAX=parseInt(document.getElementById('hrmax-inp').value)||197;
@@ -942,7 +787,7 @@ function recalcAll(){
   renderAnalytics();
 }
 
-function renderAnalytics(){
+function renderAnalytics() {
   var pmc=computePMC();
   var h=pmc.history.slice(-120);
   mkChart('ch-pmc','line',{labels:h.map(function(d){return d.date.slice(5);}),datasets:[
@@ -955,289 +800,51 @@ function renderAnalytics(){
   var mk=Object.keys(mm).sort();
   mkChart('ch-km','bar',{labels:mk,datasets:[{label:'Km',data:mk.map(function(k){return Math.round(mm[k]/1000);}),backgroundColor:'rgba(34,212,106,.4)',borderColor:'#22d46a',borderWidth:1,borderRadius:3}]});
   mkChart('ch-hours','bar',{labels:mk,datasets:[{label:'Ore',data:mk.map(function(k){return parseFloat((hm[k]/3600).toFixed(1));}),backgroundColor:'rgba(59,130,246,.4)',borderColor:'#3b82f6',borderWidth:1,borderRadius:3}]});
-
   var showBE=['1min','5min','20min','1h'];
   document.getElementById('power-kpis').innerHTML=
     bestEfforts.filter(function(e){return showBE.indexOf(e.label)>=0;}).map(function(e){
-      return'<div class="pk"><div class="pkv">'+e.watts+'W</div><div class="pkl">'+e.label+' · '+Math.round(e.watts/FTP*100)+'%</div></div>';
+      return '<div class="pk"><div class="pkv">'+e.watts+'W</div><div class="pkl">'+e.label+' · '+Math.round(e.watts/FTP*100)+'%</div></div>';
     }).join('')+
     '<div class="pk"><div class="pkv" style="color:var(--acc);">'+FTP+'W</div><div class="pkl">FTP</div></div>'+
     '<div class="pk"><div class="pkv">'+parseFloat((FTP/70.5).toFixed(1))+'</div><div class="pkl">W/kg</div></div>';
-
   mkChart('ch-pc','line',{labels:bestEfforts.map(function(e){return e.label;}),datasets:[
     {label:'Best Power',data:bestEfforts.map(function(e){return e.watts;}),borderColor:'#e8ff47',backgroundColor:'rgba(232,255,71,.07)',tension:.4,pointRadius:3,pointBackgroundColor:'#e8ff47',fill:true,borderWidth:1.5},
     {label:'FTP',data:bestEfforts.map(function(){return FTP;}),borderColor:'rgba(59,130,246,.4)',borderDash:[4,4],pointRadius:0,fill:false,borderWidth:1}
   ]});
-
   document.getElementById('pz-label').textContent=FTP+'W';
   var PZ=[{n:'Z1 Recupero',p:[0,55],c:'#4a5168'},{n:'Z2 Resistenza',p:[55,75],c:'#22d46a'},{n:'Z3 Tempo',p:[75,90],c:'#fbbf24'},{n:'Z4 Soglia',p:[90,105],c:'#f97316'},{n:'Z5 VO2max',p:[105,120],c:'#ff4d4d'},{n:'Z6 Anaerobica',p:[120,150],c:'#a78bfa'},{n:'Z7 Neuro',p:[150,999],c:'#ec4899'}];
   document.getElementById('power-zones').innerHTML=PZ.map(function(z){
-    var lo=Math.round(z.p[0]*FTP/100),hi=z.p[1]===999?'Max':Math.round(z.p[1]*FTP/100);
-    return'<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--br);">'+
+    var lo=Math.round(z.p[0]*FTP/100), hi=z.p[1]===999?'Max':Math.round(z.p[1]*FTP/100);
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--br);">'+
       '<div style="width:8px;height:8px;border-radius:50%;background:'+z.c+';flex-shrink:0;"></div>'+
       '<div style="font-size:.7rem;flex:1;color:var(--tx2);">'+z.n+'</div>'+
       '<div style="font-size:.7rem;font-weight:600;">'+lo+'–'+hi+'W</div></div>';
   }).join('');
-
   var ww=[].concat(activities).filter(function(a){return a.avg_watts;}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-20);
   mkChart('ch-watts','bar',{labels:ww.map(function(a){return a.date.slice(5);}),datasets:[
     {label:'W medi',data:ww.map(function(a){return a.avg_watts;}),backgroundColor:'rgba(232,255,71,.5)',borderColor:'#e8ff47',borderWidth:1,borderRadius:3},
     {label:'FTP',data:ww.map(function(){return FTP;}),type:'line',borderColor:'rgba(59,130,246,.4)',borderDash:[4,4],pointRadius:0,borderWidth:1}
   ]});
-
-  renderHeatmap();renderZoneDist();renderScatter();renderCPModel();
+  try { renderHeatmap(); } catch(e) { console.warn('heatmap:',e.message); }
+  try { renderZoneDist(); } catch(e) { console.warn('zonedist:',e.message); }
+  try { renderScatter(); } catch(e) { console.warn('scatter:',e.message); }
+  try { renderCPModel(); } catch(e) { console.warn('cpmodel:',e.message); }
+  try { renderPDM(); } catch(e) { console.warn('pdm:',e.message); }
+  try { renderEF(); } catch(e) { console.warn('ef:',e.message); }
+  try { renderVI(); } catch(e) { console.warn('vi:',e.message); }
+  try { renderWbal(); } catch(e) { console.warn('wbal:',e.message); }
+  try { renderBanister(); } catch(e) { console.warn('banister:',e.message); }
+  try { renderDecouple(); } catch(e) { console.warn('decouple:',e.message); }
 }
 
-// ══ POWER DURATION MODEL + FTP PREDICTOR ═════════
-function renderPDM() {
-  // Fit CP/W' da best efforts (Morton 2-param)
-  var pts = bestEfforts.filter(function(e){return e.secs>=60&&e.secs<=3600;});
-  var n=pts.length;
-  var xs=pts.map(function(e){return e.secs;});
-  var ys=pts.map(function(e){return e.watts*e.secs;});
-  var sx=xs.reduce(function(a,b){return a+b;},0);
-  var sy=ys.reduce(function(a,b){return a+b;},0);
-  var sxx=xs.reduce(function(a,b){return a+b*b;},0);
-  var sxy=xs.reduce(function(a,v,i){return a+v*ys[i];},0);
-  var CP=Math.round((n*sxy-sx*sy)/(n*sxx-sx*sx));
-  var Wp=Math.round((sy-CP*sx)/n);
-
-  // FTP stimato = potenza sostenibile 60min dal modello
-  var ftpPDM = Math.round(CP + Wp/3600);
-  // FTP alternativo da 95% del 20min power
-  var p20 = bestEfforts.find(function(e){return e.label==='20min';});
-  var ftp20 = p20 ? Math.round(p20.watts * 0.95) : ftpPDM;
-  // Media pesata
-  var ftpEst = Math.round((ftpPDM*0.6 + ftp20*0.4));
-
-  document.getElementById('pdm-ftp').textContent = ftpEst+'W';
-  document.getElementById('pdm-cp').textContent = CP+'W';
-
-  // Progressione FTP: calcola tasso di crescita dai best efforts storici
-  // Stima: ogni sessione intensa porta ~0.3-0.5W di guadagno FTP
-  var gap = 360 - ftpEst;
-  var weeklyGain = 1.5; // W/settimana stima conservativa
-  var weeksNeeded = gap > 0 ? Math.ceil(gap/weeklyGain) : 0;
-  var daysNeeded = weeksNeeded * 7;
-  var targetDate = new Date('2026-09-19');
-  var daysToRace = Math.ceil((targetDate - new Date())/(1000*60*60*24));
-
-  document.getElementById('pdm-eta').textContent = gap>0 ? daysNeeded+'gg' : '✅ Raggiunto';
-
-  var note = 'FTP stimato: '+ftpEst+'W (modello Morton: '+ftpPDM+'W · 95% di 20min: '+ftp20+'W). ';
-  note += gap>0
-    ? 'Gap da colmare: '+gap+'W. Al ritmo attuale (~'+weeklyGain+'W/sett) servono '+weeksNeeded+' settimane. '+(daysNeeded<=daysToRace?'✅ Obiettivo 19 set raggiungibile!':'⚠️ Potrebbe servire accelerare il carico.')
-    : '✅ Obiettivo 360W già raggiunto!';
-  document.getElementById('pdm-note').textContent = note;
-
-  // Curva PDM: modello vs best efforts
-  var tPts=[5,15,30,60,120,180,300,480,600,900,1200,1800,2700,3600,5400,7200];
-  var modelW=tPts.map(function(t){return Math.max(Math.round(CP+Wp/t),0);});
-  // Proiezione a +8 settimane (obiettivo)
-  var projCP=Math.round(CP*(360/ftpEst));
-  var projWp=Math.round(Wp*1.05);
-  var projW=tPts.map(function(t){return Math.max(Math.round(projCP+projWp/t),0);});
-
-  mkChart('ch-pdm','line',{
-    labels:tPts.map(function(t){return t<60?t+'s':t<3600?Math.round(t/60)+'min':Math.round(t/3600)+'h';}),
-    datasets:[
-      {label:'Best Efforts attuali',data:bestEfforts.filter(function(e){return e.secs<=7200;}).map(function(e){return e.watts;}),type:'scatter',backgroundColor:'#e8ff47',pointRadius:6,pointHoverRadius:8},
-      {label:'Modello attuale (CP='+CP+'W)',data:modelW,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.4,pointRadius:0,fill:true,borderWidth:1.5},
-      {label:'Obiettivo 360W FTP',data:projW,borderColor:'rgba(232,255,71,.5)',borderDash:[5,4],pointRadius:0,fill:false,borderWidth:1.5},
-      {label:'FTP attuale '+ftpEst+'W',data:tPts.map(function(){return ftpEst;}),borderColor:'rgba(249,115,22,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1}
-    ]
-  });
-}
-
-// ══ EFFICIENCY FACTOR ════════════════════════════
-function renderEfficiencyFactor() {
-  var acts = [].concat(activities)
-    .filter(function(a){return a.np&&a.hr&&a.dur>2400;})
-    .sort(function(a,b){return a.date.localeCompare(b.date);})
-    .slice(-20);
-
-  if(!acts.length){if(charts['ch-ef'])charts['ch-ef'].destroy();return;}
-
-  var efs=acts.map(function(a){return parseFloat((a.np/a.hr).toFixed(3));});
-  var avg=parseFloat((efs.reduce(function(s,v){return s+v;},0)/efs.length).toFixed(3));
-
-  // Trend line semplice
-  var trend=efs.map(function(_,i){return parseFloat((avg+(i-efs.length/2)*0.002).toFixed(3));});
-
-  mkChart('ch-ef','line',{
-    labels:acts.map(function(a){return a.date.slice(5);}),
-    datasets:[
-      {label:'EF (NP/HR)',data:efs,borderColor:'#22d46a',backgroundColor:'rgba(34,212,106,.1)',tension:.3,pointRadius:3,pointBackgroundColor:'#22d46a',fill:true,borderWidth:1.5},
-      {label:'Trend',data:trend,borderColor:'rgba(232,255,71,.5)',borderDash:[4,3],pointRadius:0,borderWidth:1}
-    ]
-  });
-}
-
-// ══ VARIABILITY INDEX ════════════════════════════
-function renderVariabilityIndex() {
-  var acts=[].concat(activities)
-    .filter(function(a){return a.np&&a.avg_watts&&a.dur>2400;})
-    .sort(function(a,b){return a.date.localeCompare(b.date);})
-    .slice(-20);
-
-  if(!acts.length){if(charts['ch-vi'])charts['ch-vi'].destroy();return;}
-
-  var vis=acts.map(function(a){return parseFloat((a.np/a.avg_watts).toFixed(3));});
-  var colors=vis.map(function(v){return v<1.05?'rgba(34,212,106,.7)':v<1.10?'rgba(251,191,36,.7)':v<1.15?'rgba(249,115,22,.7)':'rgba(255,77,77,.7)';});
-
-  mkChart('ch-vi','bar',{
-    labels:acts.map(function(a){return a.date.slice(5);}),
-    datasets:[{
-      label:'VI (NP/W avg)',
-      data:vis,
-      backgroundColor:colors,
-      borderRadius:3,borderWidth:0
-    },{
-      label:'Soglia 1.05',
-      data:acts.map(function(){return 1.05;}),
-      type:'line',borderColor:'rgba(34,212,106,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1
-    },{
-      label:'Soglia 1.15',
-      data:acts.map(function(){return 1.15;}),
-      type:'line',borderColor:'rgba(255,77,77,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1
-    }]
-  });
-}
-
-// ══ W' BALANCE ═══════════════════════════════════
-function renderWbal() {
-  // Calcola CP e W' dai best efforts
-  var pts=bestEfforts.filter(function(e){return e.secs>=60&&e.secs<=3600;});
-  var n=pts.length;
-  var xs=pts.map(function(e){return e.secs;});
-  var ys=pts.map(function(e){return e.watts*e.secs;});
-  var sx=xs.reduce(function(a,b){return a+b;},0),sy=ys.reduce(function(a,b){return a+b;},0);
-  var sxx=xs.reduce(function(a,b){return a+b*b;},0),sxy=xs.reduce(function(a,v,i){return a+v*ys[i];},0);
-  var CP=Math.round((n*sxy-sx*sy)/(n*sxx-sx*sx));
-  var Wp=Math.round((sy-CP*sx)/n);
-  var WpkJ=Math.round(Wp/1000);
-
-  // W'bal durante le sessioni recenti (simulato da TSS e tipo)
-  var sessions=[].concat(activities)
-    .sort(function(a,b){return a.date.localeCompare(b.date);})
-    .slice(-10);
-
-  var wbalHistory=[];
-  var wbal=Wp;
-  sessions.forEach(function(a){
-    var tss=calcTSS(a);
-    var depletion=tss>80?(tss-80)*150:0; // sforzi sopra soglia consumano W'
-    var recovery=Math.min(Wp*0.15,Wp-wbal); // recupero notturno ~15%
-    wbal=Math.min(Wp,wbal+recovery-depletion);
-    wbal=Math.max(0,wbal);
-    wbalHistory.push({date:a.date,wbal:Math.round(wbal/1000*10)/10});
-  });
-
-  document.getElementById('wbal-kpis').innerHTML=
-    '<div class="pk"><div class="pkv">'+CP+'W</div><div class="pkl">CP</div></div>'+
-    '<div class="pk"><div class="pkv">'+WpkJ+'kJ</div><div class="pkl">W\' totale</div></div>'+
-    '<div class="pk"><div class="pkv" style="color:'+(wbalHistory.length?wbalHistory[wbalHistory.length-1].wbal/WpkJ>0.7?'#22d46a':'#ff4d4d':'#e8ff47')+'">'+(wbalHistory.length?wbalHistory[wbalHistory.length-1].wbal:'—')+'kJ</div><div class="pkl">W\' attuale</div></div>';
-
-  if(!wbalHistory.length){if(charts['ch-wbal'])charts['ch-wbal'].destroy();return;}
-
-  mkChart('ch-wbal','line',{
-    labels:wbalHistory.map(function(w){return w.date.slice(5);}),
-    datasets:[{
-      label:"W' balance (kJ)",
-      data:wbalHistory.map(function(w){return w.wbal;}),
-      borderColor:'#a78bfa',
-      backgroundColor:'rgba(167,139,250,.1)',
-      tension:.4,pointRadius:3,fill:true,borderWidth:1.5
-    },{
-      label:"W' totale "+WpkJ+"kJ",
-      data:wbalHistory.map(function(){return WpkJ;}),
-      borderColor:'rgba(232,255,71,.3)',borderDash:[4,3],pointRadius:0,borderWidth:1
-    }]
-  });
-}
-
-// ══ BANISTER IMPULSE-RESPONSE ════════════════════
-function renderBanister() {
-  var pmc=computePMC();
-  var h=pmc.history.slice(-90);
-  if(!h.length){if(charts['ch-banister'])charts['ch-banister'].destroy();return;}
-
-  // Modello Banister: Performance = k1*fitness - k2*fatigue
-  // k1=1.0 (fitness positivo), k2=1.3 (fatica pesa di più a breve termine)
-  var k1=1.0, k2=1.3;
-  var perf=h.map(function(d){return parseFloat((k1*d.ctl - k2*d.atl).toFixed(1));});
-
-  // Proietta i prossimi 30 giorni basandosi sul piano
-  var projDates=[],projPerf=[];
-  var lastCtl=h[h.length-1].ctl, lastAtl=h[h.length-1].atl;
-  for(var i=1;i<=30;i++){
-    var d=new Date();d.setDate(d.getDate()+i);
-    var ds=dateKey(d);
-    var planSess=plan.find(function(p){return p.date===ds;});
-    var tss=planSess?planSess.tss:0;
-    lastCtl=parseFloat((lastCtl+(tss-lastCtl)/42).toFixed(2));
-    lastAtl=parseFloat((lastAtl+(tss-lastAtl)/7).toFixed(2));
-    projDates.push(ds.slice(5));
-    projPerf.push(parseFloat((k1*lastCtl-k2*lastAtl).toFixed(1)));
-  }
-
-  // Peak performance atteso
-  var maxProj=Math.max.apply(null,projPerf);
-  var maxIdx=projPerf.indexOf(maxProj);
-
-  document.getElementById('banister-kpis').innerHTML=
-    '<div class="pk"><div class="pkv">'+perf[perf.length-1]+'</div><div class="pkl">Form attuale</div></div>'+
-    '<div class="pk"><div class="pkv" style="color:#22d46a;">'+Math.round(maxProj)+'</div><div class="pkl">Peak previsto</div></div>'+
-    '<div class="pk"><div class="pkv">'+projDates[maxIdx]+'</div><div class="pkl">Data peak</div></div>';
-
-  mkChart('ch-banister','line',{
-    labels:h.map(function(d){return d.date.slice(5);}).concat(projDates),
-    datasets:[
-      {label:'Performance reale',data:perf.concat(new Array(30).fill(null)),borderColor:'#3b82f6',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
-      {label:'Proiezione (piano)',data:new Array(h.length).fill(null).concat(projPerf),borderColor:'#e8ff47',borderDash:[4,3],tension:.4,pointRadius:0,fill:false,borderWidth:1.5}
-    ]
-  });
-}
-
-// ══ DECOUPLING AEROBICO ══════════════════════════
-function renderDecoupling() {
-  var acts=[].concat(activities)
-    .filter(function(a){return a.np&&a.hr&&a.dur>3600;})
-    .sort(function(a,b){return a.date.localeCompare(b.date);})
-    .slice(-15);
-
-  if(!acts.length){if(charts['ch-decouple'])charts['ch-decouple'].destroy();return;}
-
-  // Decoupling stimato: uscite più lunghe e mosse hanno più decoupling
-  // Formula approssimata: (VI-1)*10 + (durata/3600-1)*2 come proxy
-  var decouples=acts.map(function(a){
-    var vi=a.np&&a.avg_watts?a.np/a.avg_watts:1.05;
-    var durH=a.dur/3600;
-    var d=parseFloat(((vi-1)*15+(durH-1)*1.5).toFixed(1));
-    return Math.max(0,Math.min(d,15));
-  });
-  var colors=decouples.map(function(d){return d<3?'rgba(34,212,106,.7)':d<5?'rgba(251,191,36,.7)':d<8?'rgba(249,115,22,.7)':'rgba(255,77,77,.7)';});
-
-  mkChart('ch-decouple','bar',{
-    labels:acts.map(function(a){return a.date.slice(5)+' '+a.name.substring(0,8);}),
-    datasets:[{
-      label:'Decoupling %',
-      data:decouples,
-      backgroundColor:colors,
-      borderRadius:3,borderWidth:0
-    },{
-      label:'Soglia 5%',
-      data:acts.map(function(){return 5;}),
-      type:'line',borderColor:'rgba(255,77,77,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1
-    }]
-  });
-}
-  var end=new Date(),start=new Date(end);start.setFullYear(end.getFullYear()-1);
-  var cur=new Date(start);while(cur.getDay()!==1)cur.setDate(cur.getDate()-1);
-  var tssMap={};activities.forEach(function(a){tssMap[a.date]=(tssMap[a.date]||0)+calcTSS(a);});
-  var cols=[],col=[],mCols=[],lastM=-1,ci=0;
+function renderHeatmap() {
+  var end=new Date(), start=new Date(end); start.setFullYear(end.getFullYear()-1);
+  var cur=new Date(start); while(cur.getDay()!==1) cur.setDate(cur.getDate()-1);
+  var tssMap={};
+  activities.forEach(function(a){tssMap[a.date]=(tssMap[a.date]||0)+calcTSS(a);});
+  var cols=[], col=[], mCols=[], lastM=-1, ci=0;
   while(cur<=end){
-    var ds=dateKey(cur);var tss=tssMap[ds]||0;
+    var ds=dateKey(cur); var tss=tssMap[ds]||0;
     var lvl=tss===0?0:tss<50?1:tss<100?2:tss<150?3:4;
     col.push({ds:ds,lvl:lvl,tss:tss});
     var mo=cur.getMonth();
@@ -1245,7 +852,7 @@ function renderDecoupling() {
     cur.setDate(cur.getDate()+1);
     if(cur.getDay()===1){cols.push(col);col=[];ci++;}
   }
-  if(col.length)cols.push(col);
+  if(col.length) cols.push(col);
   var HC=['var(--s3)','rgba(232,255,71,.15)','rgba(232,255,71,.35)','rgba(232,255,71,.6)','var(--acc)'];
   var html='<div style="display:flex;gap:2px;">';
   cols.forEach(function(column,cIdx){
@@ -1253,7 +860,7 @@ function renderDecoupling() {
     html+='<div style="display:flex;flex-direction:column;gap:2px;min-width:11px;">';
     html+='<div style="font-size:.5rem;color:var(--tx3);height:10px;white-space:nowrap;">'+(ml?ml.label:'')+'</div>';
     for(var day=0;day<7;day++){
-      if(column[day])html+='<div style="width:11px;height:11px;border-radius:2px;background:'+HC[column[day].lvl]+'" title="'+column[day].ds+': '+column[day].tss+' TSS"></div>';
+      if(column[day]) html+='<div style="width:11px;height:11px;border-radius:2px;background:'+HC[column[day].lvl]+'" title="'+column[day].ds+': '+column[day].tss+' TSS"></div>';
       else html+='<div style="width:11px;height:11px;"></div>';
     }
     html+='</div>';
@@ -1261,7 +868,7 @@ function renderDecoupling() {
   document.getElementById('hm-wrap').innerHTML=html+'</div>';
 }
 
-function renderZoneDist(){
+function renderZoneDist() {
   var pzB=[0,55,75,90,105,120,150,999].map(function(p){return Math.round(p*FTP/100);});
   var pzL=['Z1','Z2','Z3','Z4','Z5','Z6','Z7'];
   var pzC=['#4a5168','#22d46a','#fbbf24','#f97316','#ff4d4d','#a78bfa','#ec4899'];
@@ -1271,10 +878,9 @@ function renderZoneDist(){
   });
   var pzT=Math.max(pzS.reduce(function(s,v){return s+v;},0),1);
   document.getElementById('zone-dist-power').innerHTML=pzL.map(function(l,i){
-    var lo=pzB[i],hi=i===6?'Max':pzB[i+1],pct=Math.round(pzS[i]/pzT*100);
-    return'<div class="zbar"><span class="zbar-lbl" style="color:'+pzC[i]+';">'+l+' '+lo+'–'+hi+'W</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+pzC[i]+'"></div></div><span class="zbar-pct">'+pct+'%</span></div>';
+    var lo=pzB[i], hi=i===6?'Max':pzB[i+1], pct=Math.round(pzS[i]/pzT*100);
+    return '<div class="zbar"><span class="zbar-lbl" style="color:'+pzC[i]+';">'+l+' '+lo+'–'+hi+'W</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+pzC[i]+'"></div></div><span class="zbar-pct">'+pct+'%</span></div>';
   }).join('');
-
   var hrB=[0,Math.round(LTHR*.81),Math.round(LTHR*.90),Math.round(LTHR*.94),LTHR,220];
   var hrL=['Z1 Rec','Z2 Aerob','Z3 Tempo','Z4 Soglia','Z5 VO2'];
   var hrC=['#4a5168','#22d46a','#fbbf24','#f97316','#ff4d4d'];
@@ -1285,68 +891,259 @@ function renderZoneDist(){
   var hrT=Math.max(hrS.reduce(function(s,v){return s+v;},0),1);
   document.getElementById('lthr-label').textContent=LTHR;
   document.getElementById('zone-dist-hr').innerHTML=hrL.map(function(l,i){
-    var lo=hrB[i],hi=hrB[i+1]===220?HR_MAX:hrB[i+1]-1,pct=Math.round(hrS[i]/hrT*100);
-    return'<div class="zbar"><span class="zbar-lbl" style="color:'+hrC[i]+';">'+l+' '+lo+'–'+hi+'bpm</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+hrC[i]+'"></div></div><span class="zbar-pct">'+pct+'%</span></div>';
+    var lo=hrB[i], hi=hrB[i+1]===220?HR_MAX:hrB[i+1]-1, pct=Math.round(hrS[i]/hrT*100);
+    return '<div class="zbar"><span class="zbar-lbl" style="color:'+hrC[i]+';">'+l+' '+lo+'–'+hi+'bpm</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+hrC[i]+'"></div></div><span class="zbar-pct">'+pct+'%</span></div>';
   }).join('');
 }
 
-function renderScatter(){
+function renderScatter() {
   var pts=activities.filter(function(a){return calcTSS(a)>10;}).map(function(a){
-    var IF=calcIF(a)||0.65;return{x:IF,y:calcTSS(a),name:a.name,date:a.date,isRace:a.isRace};
+    var IF=calcIF(a)||0.65; return {x:IF,y:calcTSS(a),name:a.name,date:a.date,isRace:a.isRace};
   });
-  var colors=pts.map(function(p){return p.isRace?'rgba(167,139,250,.85)':p.y>150&&p.x>0.75?'rgba(255,77,77,.75)':p.y>150?'rgba(34,212,106,.75)':p.x>0.75?'rgba(249,115,22,.75)':'rgba(59,130,246,.65)';});
+  var colors=pts.map(function(p){
+    return p.isRace?'rgba(167,139,250,.85)':p.y>150&&p.x>0.75?'rgba(255,77,77,.75)':p.y>150?'rgba(34,212,106,.75)':p.x>0.75?'rgba(249,115,22,.75)':'rgba(59,130,246,.65)';
+  });
   mkChart('ch-scatter','scatter',{datasets:[
-    {label:'Attività',data:pts.map(function(p){return{x:p.x,y:p.y};}),backgroundColor:colors,pointRadius:5,pointHoverRadius:7},
+    {label:'Attivita',data:pts.map(function(p){return{x:p.x,y:p.y};}),backgroundColor:colors,pointRadius:5,pointHoverRadius:7},
     {label:'IF=0.75',type:'line',data:[{x:0.75,y:0},{x:0.75,y:400}],borderColor:'rgba(255,255,255,.08)',borderDash:[3,3],pointRadius:0},
     {label:'TSS=150',type:'line',data:[{x:0,y:150},{x:1.3,y:150}],borderColor:'rgba(255,255,255,.08)',borderDash:[3,3],pointRadius:0}
-  ]},{plugins:{tooltip:{callbacks:{label:function(c){var p=pts[c.dataIndex];return p?p.date+' '+p.name.substring(0,16)+' IF:'+c.parsed.x.toFixed(2)+' TSS:'+c.parsed.y:'';}}},legend:{display:false}},scales:{x:{min:0.4,max:1.3},y:{min:0}}});
+  ]},{plugins:{tooltip:{callbacks:{label:function(c){var p=pts[c.dataIndex];return p?p.date+' '+p.name.substring(0,16)+' IF:'+c.parsed.x.toFixed(2)+' TSS:'+c.parsed.y:'';}}}},scales:{x:{min:0.4,max:1.3},y:{min:0}}});
 }
 
-function renderCPModel(){
-  var pts=bestEfforts.filter(function(e){return e.secs>=60&&e.secs<=3600;});
-  var n=pts.length,xs=pts.map(function(e){return e.secs;}),ys=pts.map(function(e){return e.watts*e.secs;});
-  var sx=xs.reduce(function(a,b){return a+b;},0),sy=ys.reduce(function(a,b){return a+b;},0);
-  var sxx=xs.reduce(function(a,b){return a+b*b;},0),sxy=xs.reduce(function(a,v,i){return a+v*ys[i];},0);
-  var CP=Math.round((n*sxy-sx*sy)/(n*sxx-sx*sx));
-  var Wp=Math.round((sy-CP*sx)/n);
+function renderCPModel() {
+  var cp=cpModel();
+  var CP=cp.CP, Wp=cp.Wp;
   document.getElementById('cp-val').textContent=CP+'W';
   document.getElementById('wp-val').textContent=Math.round(Wp/1000)+'kJ';
   document.getElementById('pmax-val').textContent=bestEfforts[0].watts+'W';
   var tP=[5,10,20,30,60,120,180,300,480,600,900,1200,1800,2700,3600];
   mkChart('ch-cp','line',{labels:tP.map(function(t){return t<60?t+'s':t<3600?Math.round(t/60)+'min':'1h';}),datasets:[
     {label:'Best Efforts',data:bestEfforts.map(function(e){return e.watts;}),type:'scatter',backgroundColor:'#e8ff47',pointRadius:5},
-    {label:"CP="+CP+"W W'="+Math.round(Wp/1000)+"kJ",data:tP.map(function(t){return Math.round(CP+Wp/t);}),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.4,pointRadius:0,fill:true,borderWidth:1.5},
+    {label:'CP='+CP+'W W\'='+Math.round(Wp/1000)+'kJ',data:tP.map(function(t){return Math.round(CP+Wp/t);}),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.4,pointRadius:0,fill:true,borderWidth:1.5},
     {label:'FTP',data:tP.map(function(){return FTP;}),borderColor:'rgba(232,255,71,.4)',borderDash:[4,4],pointRadius:0,borderWidth:1}
   ]});
 }
 
-// ══ PLAN ADAPT ═══════════════════════════════════
-function adaptPlan(){
+function renderPDM() {
+  var cp=cpModel();
+  var CP=cp.CP, Wp=cp.Wp;
+  var ftpMorton=Math.round(CP+Wp/3600);
+  var p20=bestEfforts.find(function(e){return e.label==='20min';});
+  var ftp20=p20?Math.round(p20.watts*0.95):ftpMorton;
+  var ftpEst=Math.round(ftpMorton*0.6+ftp20*0.4);
+  var gap=360-ftpEst;
+  var weeksNeeded=gap>0?Math.ceil(gap/1.5):0;
+  var daysNeeded=weeksNeeded*7;
+  document.getElementById('pdm-ftp').textContent=ftpEst+'W';
+  document.getElementById('pdm-cp').textContent=CP+'W';
+  document.getElementById('pdm-eta').textContent=gap>0?daysNeeded+'gg':'Raggiunto';
+  document.getElementById('pdm-note').textContent='FTP stimato: '+ftpEst+'W (Morton: '+ftpMorton+'W · 95% 20min: '+ftp20+'W). Gap: '+gap+'W. '+
+    (gap>0?'Al ritmo ~1.5W/sett servono '+weeksNeeded+' sett. '+(daysNeeded<=59?'Obiettivo 19 set raggiungibile!':'Accelerare il carico.'):'Obiettivo 360W raggiunto!');
+  var tPts=[5,15,30,60,120,180,300,480,600,900,1200,1800,2700,3600,5400,7200];
+  var modelW=tPts.map(function(t){return Math.max(Math.round(CP+Wp/t),0);});
+  var projCP=Math.round(CP*(360/Math.max(ftpEst,1)));
+  var projWp=Math.round(Wp*1.05);
+  var projW=tPts.map(function(t){return Math.max(Math.round(projCP+projWp/t),0);});
+  mkChart('ch-pdm','line',{
+    labels:tPts.map(function(t){return t<60?t+'s':t<3600?Math.round(t/60)+'min':Math.round(t/3600)+'h';}),
+    datasets:[
+      {label:'Best Efforts',data:bestEfforts.filter(function(e){return e.secs<=7200;}).map(function(e){return e.watts;}),type:'scatter',backgroundColor:'#e8ff47',pointRadius:6},
+      {label:'Modello attuale (FTP est. '+ftpEst+'W)',data:modelW,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.4,pointRadius:0,fill:true,borderWidth:1.5},
+      {label:'Obiettivo 360W FTP',data:projW,borderColor:'rgba(232,255,71,.5)',borderDash:[5,4],pointRadius:0,fill:false,borderWidth:1.5},
+      {label:'FTP corrente '+FTP+'W',data:tPts.map(function(){return FTP;}),borderColor:'rgba(249,115,22,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1}
+    ]
+  });
+}
+
+function renderEF() {
+  var acts=[].concat(activities).filter(function(a){return a.np&&a.hr&&a.dur>2400;}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-20);
+  if(!acts.length) return;
+  var efs=acts.map(function(a){return parseFloat((a.np/a.hr).toFixed(3));});
+  mkChart('ch-ef','line',{
+    labels:acts.map(function(a){return a.date.slice(5);}),
+    datasets:[{label:'EF (NP/HR)',data:efs,borderColor:'#22d46a',backgroundColor:'rgba(34,212,106,.1)',tension:.3,pointRadius:3,pointBackgroundColor:'#22d46a',fill:true,borderWidth:1.5}]
+  });
+}
+
+function renderVI() {
+  var acts=[].concat(activities).filter(function(a){return a.np&&a.avg_watts&&a.dur>2400;}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-20);
+  if(!acts.length) return;
+  var vis=acts.map(function(a){return parseFloat((a.np/a.avg_watts).toFixed(3));});
+  var colors=vis.map(function(v){return v<1.05?'rgba(34,212,106,.7)':v<1.10?'rgba(251,191,36,.7)':v<1.15?'rgba(249,115,22,.7)':'rgba(255,77,77,.7)';});
+  mkChart('ch-vi','bar',{
+    labels:acts.map(function(a){return a.date.slice(5);}),
+    datasets:[
+      {label:'VI',data:vis,backgroundColor:colors,borderRadius:3,borderWidth:0},
+      {label:'1.05',data:acts.map(function(){return 1.05;}),type:'line',borderColor:'rgba(34,212,106,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1},
+      {label:'1.15',data:acts.map(function(){return 1.15;}),type:'line',borderColor:'rgba(255,77,77,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1}
+    ]
+  });
+}
+
+function renderWbal() {
+  var cp=cpModel();
+  var CP=cp.CP, Wp=cp.Wp, WpkJ=Math.round(Wp/1000);
+  var sessions=[].concat(activities).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-10);
+  var wbal=Wp, wbalHistory=[];
+  sessions.forEach(function(a){
+    var tss=calcTSS(a);
+    var depletion=tss>80?(tss-80)*150:0;
+    var recovery=Math.min(Wp*0.15,Wp-wbal);
+    wbal=Math.max(0,Math.min(Wp,wbal+recovery-depletion));
+    wbalHistory.push({date:a.date,wbal:Math.round(wbal/1000*10)/10});
+  });
+  var curr=wbalHistory.length?wbalHistory[wbalHistory.length-1].wbal:WpkJ;
+  var col=curr/WpkJ>0.7?'#22d46a':'#ff4d4d';
+  document.getElementById('wbal-kpis').innerHTML=
+    '<div class="pk"><div class="pkv">'+CP+'W</div><div class="pkl">CP</div></div>'+
+    '<div class="pk"><div class="pkv">'+WpkJ+'kJ</div><div class="pkl">W\' totale</div></div>'+
+    '<div class="pk"><div class="pkv" style="color:'+col+';">'+curr+'kJ</div><div class="pkl">W\' attuale</div></div>';
+  if(!wbalHistory.length) return;
+  mkChart('ch-wbal','line',{
+    labels:wbalHistory.map(function(w){return w.date.slice(5);}),
+    datasets:[
+      {label:"W' balance (kJ)",data:wbalHistory.map(function(w){return w.wbal;}),borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.1)',tension:.4,pointRadius:3,fill:true,borderWidth:1.5},
+      {label:"W' totale "+WpkJ+"kJ",data:wbalHistory.map(function(){return WpkJ;}),borderColor:'rgba(232,255,71,.3)',borderDash:[4,3],pointRadius:0,borderWidth:1}
+    ]
+  });
+}
+
+function renderBanister() {
   var pmc=computePMC();
-  var tsb=pmc.tsb,ctl=pmc.ctl,atl=pmc.atl,td=today();
+  var h=pmc.history.slice(-90);
+  if(!h.length) return;
+  var k1=1.0, k2=1.3;
+  var perf=h.map(function(d){return parseFloat((k1*d.ctl-k2*d.atl).toFixed(1));});
+  var projDates=[], projPerf=[];
+  var lastCtl=h[h.length-1].ctl, lastAtl=h[h.length-1].atl;
+  for(var i=1;i<=30;i++){
+    var d=new Date(); d.setDate(d.getDate()+i);
+    var ds=dateKey(d);
+    var ps=plan.find(function(p){return p.date===ds;});
+    var tss=ps?ps.tss:0;
+    lastCtl=parseFloat((lastCtl+(tss-lastCtl)/42).toFixed(2));
+    lastAtl=parseFloat((lastAtl+(tss-lastAtl)/7).toFixed(2));
+    projDates.push(ds.slice(5));
+    projPerf.push(parseFloat((k1*lastCtl-k2*lastAtl).toFixed(1)));
+  }
+  var maxProj=Math.max.apply(null,projPerf);
+  var maxIdx=projPerf.indexOf(maxProj);
+  document.getElementById('banister-kpis').innerHTML=
+    '<div class="pk"><div class="pkv">'+perf[perf.length-1]+'</div><div class="pkl">Form attuale</div></div>'+
+    '<div class="pk"><div class="pkv" style="color:#22d46a;">'+Math.round(maxProj)+'</div><div class="pkl">Peak previsto</div></div>'+
+    '<div class="pk"><div class="pkv">'+projDates[maxIdx]+'</div><div class="pkl">Data peak</div></div>';
+  mkChart('ch-banister','line',{
+    labels:h.map(function(d){return d.date.slice(5);}).concat(projDates),
+    datasets:[
+      {label:'Performance reale',data:perf.concat(new Array(30).fill(null)),borderColor:'#3b82f6',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
+      {label:'Proiezione piano',data:new Array(h.length).fill(null).concat(projPerf),borderColor:'#e8ff47',borderDash:[4,3],tension:.4,pointRadius:0,fill:false,borderWidth:1.5}
+    ]
+  });
+}
+
+function renderDecouple() {
+  var acts=[].concat(activities).filter(function(a){return a.np&&a.avg_watts&&a.dur>3600;}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-15);
+  if(!acts.length) return;
+  var decouples=acts.map(function(a){
+    var vi=a.np/a.avg_watts;
+    var durH=a.dur/3600;
+    return Math.max(0,Math.min(parseFloat(((vi-1)*15+(durH-1)*1.5).toFixed(1)),15));
+  });
+  var colors=decouples.map(function(d){return d<3?'rgba(34,212,106,.7)':d<5?'rgba(251,191,36,.7)':d<8?'rgba(249,115,22,.7)':'rgba(255,77,77,.7)';});
+  mkChart('ch-decouple','bar',{
+    labels:acts.map(function(a){return a.date.slice(5)+' '+a.name.substring(0,8);}),
+    datasets:[
+      {label:'Decoupling %',data:decouples,backgroundColor:colors,borderRadius:3,borderWidth:0},
+      {label:'Soglia 5%',data:acts.map(function(){return 5;}),type:'line',borderColor:'rgba(255,77,77,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1}
+    ]
+  });
+}
+
+async function syncIntervals() {
+  var btn=document.getElementById('btn-sync-icu');
+  var el=document.getElementById('import-status');
+  btn.disabled=true;
+  btn.querySelector('span:last-child').textContent='Sync...';
+  el.textContent='Connessione...'; el.style.color='var(--tx3)';
+  try {
+    var td=today();
+    var from=dateKey(new Date(new Date().setDate(new Date().getDate()-120)));
+    var p='oldest='+from+'&newest='+td;
+    var wResp=await fetch(ICU_WORKER+'/wellness?'+p);
+    if(!wResp.ok) throw new Error('Wellness HTTP '+wResp.status);
+    var wellness=await wResp.json();
+    if(wellness&&wellness.length){
+      var lat=wellness[wellness.length-1];
+      if(lat.ctl!=null) document.getElementById('k-ctl').textContent=Math.round(lat.ctl);
+      if(lat.atl!=null) document.getElementById('k-atl').textContent=Math.round(lat.atl);
+      if(lat.ctl!=null&&lat.atl!=null){
+        var tsb=Math.round(lat.ctl-lat.atl);
+        var te=document.getElementById('k-tsb');
+        te.textContent=tsb;
+        te.className='kv '+(tsb>5?'kv-up':tsb<-10?'kv-dn':'kv-wa');
+      }
+    }
+    var aResp=await fetch(ICU_WORKER+'/activities?'+p);
+    if(!aResp.ok) throw new Error('Activities HTTP '+aResp.status);
+    var icuActs=await aResp.json();
+    var imported=0, updated=0;
+    icuActs.forEach(function(ia){
+      if(!ia.start_date_local) return;
+      var date=ia.start_date_local.slice(0,10);
+      var type=(ia.type||'').toLowerCase();
+      if(!type.match(/ride|cycling|virtualride/)) return;
+      var np=ia.icu_normalized_watts||null, tss=ia.icu_training_load||null,
+          ifv=ia.icu_intensity||null, avgW=ia.icu_average_watts||null,
+          hr=ia.average_heartrate||null, maxHr=ia.max_heartrate||null,
+          dist=Math.round(ia.distance||0), dur=ia.moving_time||0,
+          elev=ia.total_elevation_gain||0, cal=ia.calories||null;
+      var ex=activities.find(function(a){return a.date===date&&Math.abs((a.dist||0)-dist)<3000;});
+      if(ex){
+        if(np) ex.np=np; if(avgW) ex.avg_watts=avgW;
+        if(tss){ex.tss_real=tss;ex._tss_override=tss;}
+        if(ifv) ex.if_val=ifv; if(hr) ex.hr=hr; if(maxHr) ex.max_hr=maxHr; if(cal) ex.cal=cal;
+        ex.source='intervals'; updated++;
+      } else {
+        activities.push({id:'icu-'+(ia.id||date),name:ia.name||'Uscita',date:date,dur:dur,dist:dist,
+          elev:elev,avg_watts:avgW,np:np,_tss_override:tss,tss_real:tss,if_val:ifv,
+          hr:hr,max_hr:maxHr,cal:cal,isRace:ia.race||false,source:'intervals'});
+        imported++;
+      }
+    });
+    renderHome();
+    el.textContent='✅ +'+imported+' nuove, '+updated+' aggiornate'; el.style.color='var(--grn)';
+  } catch(e) {
+    el.textContent='❌ '+e.message; el.style.color='var(--red)';
+    console.error('Intervals sync error:',e);
+  }
+  btn.disabled=false;
+  btn.querySelector('span:last-child').textContent='Sync Intervals.icu';
+}
+
+function adaptPlan() {
+  var pmc=computePMC();
+  var tsb=pmc.tsb, ctl=pmc.ctl, atl=pmc.atl, td=today();
   var last3=0;
   for(var i=1;i<=3;i++){var d=new Date();d.setDate(d.getDate()-i);last3+=activities.filter(function(a){return a.date===dateKey(d);}).reduce(function(s,a){return s+calcTSS(a);},0);}
   var adapted=0;
   plan.forEach(function(p){
-    if(p.date<=td)return;
+    if(p.date<=td) return;
     delete p.adaptNote;
-    if(tsb<-20&&(p.type==='z4'||p.type==='z5')){p.tss=Math.max(Math.round(p.tss*.8),20);p.adaptNote='TSB '+tsb+': intensità ridotta del 20%.';adapted++;}
+    if(tsb<-20&&(p.type==='z4'||p.type==='z5')){p.tss=Math.max(Math.round(p.tss*.8),20);p.adaptNote='TSB '+tsb+': intensita ridotta del 20%.';adapted++;}
     if(tsb>10&&p.type==='z4'){p.tss=Math.round(p.tss*1.1);p.adaptNote='Ottima forma (TSB +'+tsb+'): carico +10%.';adapted++;}
-    if(atl>ctl+15&&p.type==='z2'&&!p.adaptNote){p.adaptNote='Fatica elevata (ATL '+Math.round(atl)+'): considera di ridurre il volume.';adapted++;}
-    if(last3>200){var tom=dateKey(new Date(new Date().setDate(new Date().getDate()+1)));if(p.date===tom&&p.type!=='off'&&!p.adaptNote){p.adaptNote='Ultimi 3gg: '+last3+' TSS. Domani mantieni Z2 o riposa.';adapted++;}}
+    if(atl>ctl+15&&p.type==='z2'&&!p.adaptNote){p.adaptNote='Fatica elevata: valuta di ridurre il volume.';adapted++;}
+    if(last3>200){var tom=dateKey(new Date(new Date().setDate(new Date().getDate()+1)));if(p.date===tom&&p.type!=='off'&&!p.adaptNote){p.adaptNote='Ultimi 3gg: '+last3+' TSS. Considera Z2 o riposo.';adapted++;}}
   });
   var col=tsb<-10?'#ff4d4d':tsb>5?'#22d46a':'#fbbf24';
   var msg='<strong style="color:'+col+';">TSB '+tsb+'</strong> · CTL '+Math.round(ctl)+' · ATL '+Math.round(atl)+'.<br>';
   msg+=adapted>0?'<strong>'+adapted+' sessioni adattate.</strong>':'Piano ottimale per la forma attuale.';
-  var el=document.getElementById('adapt-msg');
-  el.innerHTML=msg;el.style.display='block';
-  renderTodayCard(today());renderWeekStrip();
-  if(document.getElementById('page-plan').classList.contains('active'))renderPlanPage();
+  var el=document.getElementById('adapt-msg'); el.innerHTML=msg; el.style.display='block';
+  renderTodayCard(today()); renderWeekStrip();
+  if(document.getElementById('page-plan').classList.contains('active')) renderPlanPage();
 }
 
-// ══ GARMIN CSV IMPORT ════════════════════════════
 function importGarminFile(evt){
-  var file=evt.target.files[0];if(!file)return;
+  var file=evt.target.files[0]; if(!file) return;
   var reader=new FileReader();
   reader.onload=function(e){parseGarminCSV(e.target.result);};
   reader.readAsText(file,'utf-8');
@@ -1358,35 +1155,34 @@ function parseGarminCSV(raw){
   function idx(k){return headers.findIndex(function(h){return h===k;});}
   function cn(v){if(!v||v===''||v==='--')return null;var n=parseFloat(v.replace(/\./g,'').replace(',','.').replace(/[^0-9.\-]/g,''));return isNaN(n)?null:n;}
   function pd(v){if(!v)return 0;var p=v.trim().split(':').map(Number);if(p.length===3)return p[0]*3600+p[1]*60+p[2];if(p.length===2)return p[0]*60+p[1];return 0;}
-  var COL={tipo:'Tipo di attività',data:'Data',titolo:'Titolo',dist:'Distanza',cal:'Calorie',tempo:'Tempo',hr:'FC Media',hrmax:'FC max',asc:'Ascesa totale',np:'Normalized Power® (NP®)',tss:'Training Stress Score®',pavg:'Potenza media'};
-  var imported=0,updated=0;
+  var COL={tipo:'Tipo di attivita',data:'Data',titolo:'Titolo',dist:'Distanza',cal:'Calorie',tempo:'Tempo',hr:'FC Media',hrmax:'FC max',asc:'Ascesa totale',np:'Normalized Power® (NP®)',tss:'Training Stress Score®',pavg:'Potenza media'};
+  var imported=0, updated=0;
   for(var i=1;i<lines.length;i++){
     var vals=parseRow(lines[i]);
     function get(k){return vals[idx(COL[k])]?vals[idx(COL[k])].trim():null;}
-    if(!(get('tipo')||'').match(/ciclismo|cycling|ride|bici/i))continue;
-    var rawDate=get('data');if(!rawDate)continue;
+    if(!(get('tipo')||'').match(/ciclismo|cycling|ride|bici/i)) continue;
+    var rawDate=get('data'); if(!rawDate) continue;
     var date=rawDate.trim().slice(0,10);
-    var distKm=cn(get('dist'))||0,dist=Math.round(distKm*1000);
-    var np=cn(get('np')),pavg=cn(get('pavg')),tss_r=cn(get('tss'));
+    var distKm=cn(get('dist'))||0, dist=Math.round(distKm*1000);
+    var np=cn(get('np')), pavg=cn(get('pavg')), tss_r=cn(get('tss'));
     var ex=activities.find(function(a){return a.date===date&&Math.abs((a.dist||0)-dist)<2000;});
     if(ex){
-      if(np)ex.np=np;if(pavg)ex.avg_watts=pavg;
+      if(np)ex.np=np; if(pavg)ex.avg_watts=pavg;
       if(tss_r){ex.tss_real=tss_r;ex._tss_override=tss_r;}
       var hr2=cn(get('hr')),mhr=cn(get('hrmax')),cal2=cn(get('cal'));
-      if(hr2)ex.hr=hr2;if(mhr)ex.max_hr=mhr;if(cal2)ex.cal=cal2;
-      ex.source='garmin';updated++;
-    }else{
+      if(hr2)ex.hr=hr2; if(mhr)ex.max_hr=mhr; if(cal2)ex.cal=cal2;
+      ex.source='garmin'; updated++;
+    } else {
       activities.push({id:'garmin-'+date+'-'+i,name:get('titolo')||'Uscita',date:date,dur:pd(get('tempo')),dist:dist,elev:cn(get('asc'))||0,avg_watts:pavg,np:np,_tss_override:tss_r,tss_real:tss_r,hr:cn(get('hr')),max_hr:cn(get('hrmax')),cal:cn(get('cal')),source:'garmin'});
       imported++;
     }
   }
   var el=document.getElementById('import-status');
-  el.textContent='✅ CSV: +'+imported+' nuove, '+updated+' aggiornate';el.style.color='var(--grn)';
+  el.textContent='✅ CSV: +'+imported+' nuove, '+updated+' aggiornate'; el.style.color='var(--grn)';
   renderHome();
 }
 
-// ══ MISC ═════════════════════════════════════════
-function syncStrava(){alert('Per sincronizzare le nuove attività da Strava,\nscrivi in chat a Claude: "Sincronizza Strava"');}
+function syncStrava(){alert('Per sincronizzare le nuove attivita da Strava,\nscrivi in chat a Claude: "Sincronizza Strava"');}
 function openAdd(){document.getElementById('a-date').value=dateKey(new Date());document.getElementById('modal-add').classList.add('open');}
 function saveAct(){
   var a={id:'manual-'+Date.now(),name:document.getElementById('a-name').value||'Allenamento',date:document.getElementById('a-date').value,
@@ -1394,88 +1190,46 @@ function saveAct(){
     np:parseInt(document.getElementById('a-np').value)||null,_tss_override:parseInt(document.getElementById('a-tss').value)||null,
     elev:parseInt(document.getElementById('a-elev').value)||0,hr:parseInt(document.getElementById('a-hr').value)||null};
   if(!a.date){alert('Inserisci la data!');return;}
-  activities.push(a);closeM('modal-add');renderHome();
+  activities.push(a); closeM('modal-add'); renderHome();
 }
 function closeM(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.mo').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
 
-// ══ PLAN DATA ════════════════════════════════════
 function makePlan(){
   plan=[
-    {date:"2026-07-19",week:"Sett. 3 · Recupero (14–20 lug)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo completo.",blocks:[]},
-    {date:"2026-07-20",week:"Sett. 3 · Recupero (14–20 lug)",name:"Recupero Z1",type:"z1",tss:22,durMin:45,desc:"45' Z1 puro. Spin legs.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:45}]},
-    {date:"2026-07-21",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-07-22",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"Soglia 2×15'",type:"z4",tss:85,durMin:80,desc:"WU 15', poi 2×15' a 323–340W (95–100% FTP), rec 5' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:95,hi:100,d:15},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:4,l:"Soglia",lo:95,hi:100,d:15},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-07-23",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"Z2 Aerobico",type:"z2",tss:70,durMin:90,desc:"90' Z2 225–238W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:70},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-07-23",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"Z2 Aerobico",type:"z2",tss:70,durMin:90,desc:"90' Z2 225-238W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:70},{z:1,l:"CD",lo:0,hi:55,d:10}]},
     {date:"2026-07-24",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"Riposo + Carb Loading",type:"off",tss:0,durMin:0,desc:"Riposo. Carboidrati, idratazione, sonno.",blocks:[]},
-    {date:"2026-07-25",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"🏁 GARA — 25 Luglio",type:"race",tss:160,durMin:180,desc:"Parti controllato nei primi 20'. Usa la gara come stimolo FTP.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Gara",lo:90,hi:105,d:150},{z:1,l:"CD",lo:0,hi:55,d:15}]},
+    {date:"2026-07-25",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"GARA — 25 Luglio",type:"race",tss:160,durMin:180,desc:"Parti controllato nei primi 20'. Usa la gara come stimolo FTP.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Gara",lo:90,hi:105,d:150},{z:1,l:"CD",lo:0,hi:55,d:15}]},
     {date:"2026-07-26",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"Recupero Z1",type:"z1",tss:20,durMin:45,desc:"45' Z1 leggero post-gara.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:45}]},
-    {date:"2026-07-27",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"VO2max 5×4'",type:"z5",tss:88,durMin:70,desc:"WU 15', poi 5×4' a 357–374W (105–110% FTP), rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"CD",lo:0,hi:55,d:5}]},
-    {date:"2026-07-28",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-07-29",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"Soglia 3×12'",type:"z4",tss:92,durMin:85,desc:"WU 15', poi 3×12' a 326–340W (96–100% FTP), rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:96,hi:100,d:12},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:4,l:"Soglia",lo:96,hi:100,d:12},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:4,l:"Soglia",lo:96,hi:100,d:12},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-07-30",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"Z2 Lungo",type:"z2",tss:78,durMin:100,desc:"100' Z2 228–242W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:80},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-07-31",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"VO2max 4×5'",type:"z5",tss:90,durMin:75,desc:"WU 15', poi 4×5' a 352–368W (103–108% FTP), rec 5' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:103,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:5,l:"VO2",lo:103,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:5,l:"VO2",lo:103,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:5,l:"VO2",lo:103,hi:108,d:5},{z:1,l:"CD",lo:0,hi:55,d:5}]},
-    {date:"2026-08-01",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-08-02",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"Lungo Z2 + Soglia",type:"z2",tss:135,durMin:180,desc:"2h30 Z2, poi 20' a 323–340W. Simula la fatica di gara.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:130},{z:4,l:"Soglia",lo:95,hi:100,d:20},{z:1,l:"CD",lo:0,hi:55,d:15}]},
-    {date:"2026-08-03",week:"Sett. 5 · Carico FTP (28 lug–3 ago)",name:"Recupero Z1",type:"z1",tss:25,durMin:50,desc:"50' Z1.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:50}]},
-    {date:"2026-08-04",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-08-05",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"Soglia 2×20'",type:"z4",tss:98,durMin:90,desc:"WU 15', poi 2×20' a 330–348W (97–102% FTP), rec 6' Z1, CD 10'. Sessione chiave.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:97,hi:102,d:20},{z:1,l:"Rec",lo:0,hi:55,d:6},{z:4,l:"Soglia",lo:97,hi:102,d:20},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-08-06",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"Z2 Aerobico",type:"z2",tss:72,durMin:90,desc:"90' Z2 230–245W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:70},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-08-07",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"VO2max 6×4'",type:"z5",tss:96,durMin:80,desc:"WU 15', poi 6×4' a 357–374W (105–110% FTP), rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"CD",lo:0,hi:55,d:5}]},
-    {date:"2026-08-08",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"Z2 Recupero",type:"z2",tss:45,durMin:60,desc:"60' Z2 leggero.",blocks:[{z:2,l:"Z2",lo:55,hi:75,d:60}]},
-    {date:"2026-08-09",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"Lungo Z2 3h",type:"z2",tss:128,durMin:180,desc:"3h Z2 228–242W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:150},{z:1,l:"CD",lo:0,hi:55,d:15}]},
-    {date:"2026-08-10",week:"Sett. 6 · Picco Carico (4–10 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-08-11",week:"Sett. 7 · Scarico (11–17 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-08-12",week:"Sett. 7 · Scarico (11–17 ago)",name:"Z1-Z2 Leggero",type:"z2",tss:42,durMin:60,desc:"60' Z1-Z2 sotto 220W.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:40},{z:1,l:"CD",lo:0,hi:55,d:5}]},
-    {date:"2026-08-13",week:"Sett. 7 · Scarico (11–17 ago)",name:"Sweet Spot 2×10'",type:"z3",tss:62,durMin:65,desc:"WU 15', poi 2×10' a 285–298W, rec 5' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:3,l:"SS",lo:83,hi:87,d:10},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:3,l:"SS",lo:83,hi:87,d:10},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-08-14",week:"Sett. 7 · Scarico (11–17 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-08-15",week:"Sett. 7 · Scarico (11–17 ago)",name:"Z2 Moderato",type:"z2",tss:38,durMin:50,desc:"50' Z2.",blocks:[{z:2,l:"Z2",lo:55,hi:75,d:50}]},
-    {date:"2026-08-16",week:"Sett. 7 · Scarico (11–17 ago)",name:"Z2 Libero",type:"z2",tss:65,durMin:90,desc:"90' Z2.",blocks:[{z:2,l:"Z2",lo:55,hi:75,d:90}]},
-    {date:"2026-08-17",week:"Sett. 7 · Scarico (11–17 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-08-18",week:"Sett. 8 · Affilatura (18–24 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-08-19",week:"Sett. 8 · Affilatura (18–24 ago)",name:"Soglia 3×10'",type:"z4",tss:88,durMin:80,desc:"WU 15', poi 3×10' a 330–348W, rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:97,hi:102,d:10},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:4,l:"Soglia",lo:97,hi:102,d:10},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:4,l:"Soglia",lo:97,hi:102,d:10},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-08-20",week:"Sett. 8 · Affilatura (18–24 ago)",name:"Z2 Aerobico",type:"z2",tss:66,durMin:85,desc:"85' Z2.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:65},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-08-21",week:"Sett. 8 · Affilatura (18–24 ago)",name:"VO2max 5×3'",type:"z5",tss:82,durMin:70,desc:"WU 15', poi 5×3' a 357–374W, rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"CD",lo:0,hi:55,d:5}]},
-    {date:"2026-08-22",week:"Sett. 8 · Affilatura (18–24 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-08-23",week:"Sett. 8 · Affilatura (18–24 ago)",name:"Lungo Z2",type:"z2",tss:105,durMin:150,desc:"2h30 Z2.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:120},{z:1,l:"CD",lo:0,hi:55,d:15}]},
-    {date:"2026-08-24",week:"Sett. 8 · Affilatura (18–24 ago)",name:"Recupero Z1",type:"z1",tss:18,durMin:40,desc:"40' Z1.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:40}]},
-    {date:"2026-08-25",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-08-26",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"Soglia 2×15' — Test FTP",type:"z4",tss:85,durMin:75,desc:"WU 15', poi 2×15' a 333–348W. Usa questa sessione per stimare la nuova FTP.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:98,hi:102,d:15},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:4,l:"Soglia",lo:98,hi:102,d:15},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-08-27",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"Z2 Moderato",type:"z2",tss:58,durMin:75,desc:"75' Z2.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:55},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-08-28",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"VO2max 4×3'",type:"z5",tss:72,durMin:60,desc:"WU 15', poi 4×3' a 360–378W, rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:106,hi:111,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:106,hi:111,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:106,hi:111,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:106,hi:111,d:3},{z:1,l:"CD",lo:0,hi:55,d:5}]},
-    {date:"2026-08-29",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-08-30",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"Z2 con Sweet Spot",type:"z3",tss:95,durMin:120,desc:"2h: Z2 poi 2×10' Sweet Spot a 285–298W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:60},{z:3,l:"SS",lo:83,hi:87,d:10},{z:2,l:"Z2",lo:55,hi:75,d:20},{z:3,l:"SS",lo:83,hi:87,d:10},{z:1,l:"CD",lo:0,hi:55,d:5}]},
-    {date:"2026-08-31",week:"Sett. 9 · Picco di Forma (25–31 ago)",name:"Z2 Leggero",type:"z2",tss:45,durMin:60,desc:"60' Z2.",blocks:[{z:2,l:"Z2",lo:55,hi:75,d:60}]},
-    {date:"2026-09-01",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-09-02",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Soglia 2×12'",type:"z4",tss:78,durMin:70,desc:"WU 15', poi 2×12' a 340–357W (100–105% FTP), rec 5' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:100,hi:105,d:12},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:4,l:"Soglia",lo:100,hi:105,d:12},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-09-03",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Z2 Aerobico",type:"z2",tss:58,durMin:75,desc:"75' Z2.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:55},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-09-04",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Qualità 3×5'",type:"z5",tss:70,durMin:60,desc:"WU 15', poi 3×5' a 349–368W, rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"Q",lo:102,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"Q",lo:102,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"Q",lo:102,hi:108,d:5},{z:1,l:"CD",lo:0,hi:55,d:5}]},
-    {date:"2026-09-05",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Z2 Leggero",type:"z2",tss:38,durMin:50,desc:"50' Z2.",blocks:[{z:2,l:"Z2",lo:55,hi:75,d:50}]},
-    {date:"2026-09-06",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Z2 con Strappi",type:"z2",tss:72,durMin:90,desc:"90' Z2 con 4×30'' strappi a >400W.",blocks:[{z:2,l:"Z2",lo:55,hi:75,d:40},{z:6,l:"St",lo:120,hi:150,d:0.5},{z:2,l:"Z2",lo:55,hi:75,d:12},{z:6,l:"St",lo:120,hi:150,d:0.5},{z:2,l:"Z2",lo:55,hi:75,d:12},{z:6,l:"St",lo:120,hi:150,d:0.5},{z:2,l:"Z2",lo:55,hi:75,d:12},{z:6,l:"St",lo:120,hi:150,d:0.5},{z:2,l:"Z2",lo:55,hi:75,d:12}]},
-    {date:"2026-09-07",week:"Sett. 10 · Pre-tapering (1–7 set)",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-09-08",week:"Sett. 11 · Tapering Finale — 19 set",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-09-09",week:"Sett. 11 · Tapering Finale — 19 set",name:"Z1-Z2 Leggero",type:"z2",tss:38,durMin:55,desc:"55' Z1-Z2, cadenza alta.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:35},{z:1,l:"CD",lo:0,hi:55,d:5}]},
-    {date:"2026-09-10",week:"Sett. 11 · Tapering Finale — 19 set",name:"Attivazione Soglia 2×8'",type:"z4",tss:58,durMin:65,desc:"WU 15', poi 2×8' a 323–348W, rec 5' Z1, CD 10'. Ultima sessione di qualità.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:95,hi:102,d:8},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:4,l:"Soglia",lo:95,hi:102,d:8},{z:1,l:"CD",lo:0,hi:55,d:10}]},
-    {date:"2026-09-11",week:"Sett. 11 · Tapering Finale — 19 set",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-09-12",week:"Sett. 11 · Tapering Finale — 19 set",name:"Scarico con Strappi",type:"z2",tss:32,durMin:45,desc:"45' Z1 con 3×1' a 340–360W, rec 3'.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:15},{z:4,l:"St",lo:100,hi:106,d:1},{z:1,l:"Rec",lo:0,hi:55,d:3},{z:4,l:"St",lo:100,hi:106,d:1},{z:1,l:"Rec",lo:0,hi:55,d:3},{z:4,l:"St",lo:100,hi:106,d:1},{z:1,l:"Z1",lo:0,hi:55,d:14}]},
-    {date:"2026-09-13",week:"Sett. 11 · Tapering Finale — 19 set",name:"Z1 Gambe libere",type:"z1",tss:15,durMin:30,desc:"30' Z1.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:30}]},
-    {date:"2026-09-14",week:"Sett. 11 · Tapering Finale — 19 set",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Carb loading.",blocks:[]},
-    {date:"2026-09-15",week:"Sett. 11 · Tapering Finale — 19 set",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Idratazione.",blocks:[]},
-    {date:"2026-09-16",week:"Sett. 11 · Tapering Finale — 19 set",name:"Attivazione 20'",type:"z2",tss:14,durMin:20,desc:"20': Z1 poi 2×45'' progressivi fino a 289W.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:10},{z:3,l:"Prog",lo:70,hi:85,d:0.75},{z:1,l:"Rec",lo:0,hi:55,d:2},{z:3,l:"Prog",lo:70,hi:85,d:0.75},{z:1,l:"Z1",lo:0,hi:55,d:5}]},
-    {date:"2026-09-17",week:"Sett. 11 · Tapering Finale — 19 set",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
-    {date:"2026-09-18",week:"Sett. 11 · Tapering Finale — 19 set",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Prepara kit e bici.",blocks:[]},
-    {date:"2026-09-19",week:"Sett. 11 · Tapering Finale — 19 set",name:"🏆 GARA — 19 Settembre",type:"race",tss:200,durMin:240,desc:"OBIETTIVO STAGIONALE. WU 15' con 2-3 strappi a 289W. Mai sopra 360W nelle prime salite. 60-70g carbo/ora. TSB atteso +15/+20.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:60},{z:4,l:"Climb",lo:90,hi:106,d:120},{z:5,l:"Finale",lo:105,hi:112,d:30},{z:1,l:"CD",lo:0,hi:55,d:15}]}
+    {date:"2026-07-27",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"VO2max 5x4'",type:"z5",tss:88,durMin:70,desc:"WU 15', poi 5x4' a 357-374W (105-110% FTP), rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-07-28",week:"Sett. 5 · Carico FTP",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-07-29",week:"Sett. 5 · Carico FTP",name:"Soglia 3x12'",type:"z4",tss:92,durMin:85,desc:"WU 15', poi 3x12' a 326-340W (96-100% FTP), rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:96,hi:100,d:12},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:4,l:"Soglia",lo:96,hi:100,d:12},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:4,l:"Soglia",lo:96,hi:100,d:12},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-07-30",week:"Sett. 5 · Carico FTP",name:"Z2 Lungo",type:"z2",tss:78,durMin:100,desc:"100' Z2 228-242W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:80},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-07-31",week:"Sett. 5 · Carico FTP",name:"VO2max 4x5'",type:"z5",tss:90,durMin:75,desc:"WU 15', poi 4x5' a 352-368W (103-108% FTP), rec 5' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:103,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:5,l:"VO2",lo:103,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:5,l:"VO2",lo:103,hi:108,d:5},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:5,l:"VO2",lo:103,hi:108,d:5},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-08-01",week:"Sett. 5 · Carico FTP",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-08-02",week:"Sett. 5 · Carico FTP",name:"Lungo Z2 + Soglia",type:"z2",tss:135,durMin:180,desc:"2h30 Z2, poi 20' a 323-340W. Simula la fatica di gara.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:130},{z:4,l:"Soglia",lo:95,hi:100,d:20},{z:1,l:"CD",lo:0,hi:55,d:15}]},
+    {date:"2026-08-03",week:"Sett. 5 · Carico FTP",name:"Recupero Z1",type:"z1",tss:25,durMin:50,desc:"50' Z1.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:50}]},
+    {date:"2026-08-04",week:"Sett. 6 · Picco Carico",name:"Riposo",type:"off",tss:0,durMin:0,desc:"Riposo.",blocks:[]},
+    {date:"2026-08-05",week:"Sett. 6 · Picco Carico",name:"Soglia 2x20'",type:"z4",tss:98,durMin:90,desc:"WU 15', poi 2x20' a 330-348W (97-102% FTP), rec 6' Z1, CD 10'. Sessione chiave.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:97,hi:102,d:20},{z:1,l:"Rec",lo:0,hi:55,d:6},{z:4,l:"Soglia",lo:97,hi:102,d:20},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-08-06",week:"Sett. 6 · Picco Carico",name:"Z2 Aerobico",type:"z2",tss:72,durMin:90,desc:"90' Z2 230-245W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:70},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-08-07",week:"Sett. 6 · Picco Carico",name:"VO2max 6x4'",type:"z5",tss:96,durMin:80,desc:"WU 15', poi 6x4' a 357-374W (105-110% FTP), rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:4},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-08-09",week:"Sett. 6 · Picco Carico",name:"Lungo Z2 3h",type:"z2",tss:128,durMin:180,desc:"3h Z2 228-242W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:150},{z:1,l:"CD",lo:0,hi:55,d:15}]},
+    {date:"2026-08-12",week:"Sett. 7 · Scarico",name:"Z1-Z2 Leggero",type:"z2",tss:42,durMin:60,desc:"60' Z1-Z2 sotto 220W.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:40},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-08-13",week:"Sett. 7 · Scarico",name:"Sweet Spot 2x10'",type:"z3",tss:62,durMin:65,desc:"WU 15', poi 2x10' a 285-298W, rec 5' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:3,l:"SS",lo:83,hi:87,d:10},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:3,l:"SS",lo:83,hi:87,d:10},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-08-19",week:"Sett. 8 · Affilatura",name:"Soglia 3x10'",type:"z4",tss:88,durMin:80,desc:"WU 15', poi 3x10' a 330-348W, rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:97,hi:102,d:10},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:4,l:"Soglia",lo:97,hi:102,d:10},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:4,l:"Soglia",lo:97,hi:102,d:10},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-08-21",week:"Sett. 8 · Affilatura",name:"VO2max 5x3'",type:"z5",tss:82,durMin:70,desc:"WU 15', poi 5x3' a 357-374W, rec 4' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"Rec",lo:0,hi:55,d:4},{z:5,l:"VO2",lo:105,hi:110,d:3},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-08-26",week:"Sett. 9 · Picco Forma",name:"Soglia 2x15' Test FTP",type:"z4",tss:85,durMin:75,desc:"WU 15', poi 2x15' a 333-348W. Usa questa sessione per stimare la nuova FTP.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:98,hi:102,d:15},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:4,l:"Soglia",lo:98,hi:102,d:15},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-09-02",week:"Sett. 10 · Pre-tapering",name:"Soglia 2x12'",type:"z4",tss:78,durMin:70,desc:"WU 15', poi 2x12' a 340-357W (100-105% FTP), rec 5' Z1, CD 10'.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:100,hi:105,d:12},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:4,l:"Soglia",lo:100,hi:105,d:12},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-09-09",week:"Sett. 11 · Tapering Finale",name:"Z1-Z2 Leggero",type:"z2",tss:38,durMin:55,desc:"55' Z1-Z2.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:35},{z:1,l:"CD",lo:0,hi:55,d:5}]},
+    {date:"2026-09-10",week:"Sett. 11 · Tapering Finale",name:"Attivazione Soglia 2x8'",type:"z4",tss:58,durMin:65,desc:"WU 15', poi 2x8' a 323-348W, rec 5' Z1, CD 10'. Ultima sessione di qualita.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:95,hi:102,d:8},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:4,l:"Soglia",lo:95,hi:102,d:8},{z:1,l:"CD",lo:0,hi:55,d:10}]},
+    {date:"2026-09-16",week:"Sett. 11 · Tapering Finale",name:"Attivazione 20'",type:"z2",tss:14,durMin:20,desc:"20': Z1 poi 2x45'' progressivi fino a 289W.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:10},{z:3,l:"Prog",lo:70,hi:85,d:0.75},{z:1,l:"Rec",lo:0,hi:55,d:2},{z:3,l:"Prog",lo:70,hi:85,d:0.75},{z:1,l:"Z1",lo:0,hi:55,d:5}]},
+    {date:"2026-09-19",week:"Sett. 11 · Tapering Finale",name:"GARA — 19 Settembre",type:"race",tss:200,durMin:240,desc:"OBIETTIVO STAGIONALE. WU 15' con 2-3 strappi a 289W. Mai sopra 360W nelle prime salite. 60-70g carbo/ora. TSB atteso +15/+20.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:60},{z:4,l:"Climb",lo:90,hi:106,d:120},{z:5,l:"Finale",lo:105,hi:112,d:30},{z:1,l:"CD",lo:0,hi:55,d:15}]}
   ];
 }
 
-// ══ PWA ══════════════════════════════════════════
 if('serviceWorker' in navigator){
-  window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/sw.js').catch(function(){});
-  });
+  window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});
 }
-
-// ══ INIT ═════════════════════════════════════════
 document.getElementById('topbar-date').textContent=new Date().toLocaleDateString('it',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 makePlan();
 renderHome();
