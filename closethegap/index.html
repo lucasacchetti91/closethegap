@@ -566,42 +566,31 @@ function mkChart(id,type,data,extra){
 // ══ INTERVALS SYNC ═══════════════════════════════
 async function icuFetch(endpoint, params) {
   var query = params ? '?' + params : '';
-  var directUrl = 'https://intervals.icu/api/v1/athlete/' + ICU_ATHLETE_ID + '/' + endpoint + query;
-  var auth = 'Basic ' + btoa('API_KEY:' + ICU_API_KEY);
 
-  // Tentativo 1: Cloudflare Pages proxy (no auth header, gestita dal worker)
+  // Prova con /api/ prefix
   try {
-    var r1 = await fetch(ICU_PAGES_URL + '/' + endpoint + query, { method: 'GET' });
+    var r1 = await fetch(ICU_PAGES_URL + '/' + endpoint + query);
     var t1 = await r1.text();
-    if (t1.trim()[0] === '[' || t1.trim()[0] === '{') { console.log('✅ Cloudflare proxy OK'); return JSON.parse(t1); }
-    console.warn('Cloudflare proxy risposta non JSON:', t1.substring(0, 100));
-  } catch(e) { console.warn('Cloudflare proxy errore:', e.message); }
+    if (t1.trim()[0] === '[' || t1.trim()[0] === '{') {
+      var parsed = JSON.parse(t1);
+      if (!parsed.error) { console.log('✅ /api/ OK'); return parsed; }
+      console.warn('❌ /api/ errore:', parsed.error);
+    }
+  } catch(e) { console.warn('❌ /api/ fetch fallito:', e.message); }
 
-  // Tentativo 2: corsproxy.io
+  // Prova senza /api/ prefix
+  var baseUrl = ICU_PAGES_URL.replace('/api', '');
   try {
-    var r2 = await fetch('https://corsproxy.io/?' + encodeURIComponent(directUrl), { headers: { 'Authorization': auth } });
+    var r2 = await fetch(baseUrl + '/' + endpoint + query);
     var t2 = await r2.text();
-    if (t2.trim()[0] === '[' || t2.trim()[0] === '{') { console.log('✅ corsproxy.io OK'); return JSON.parse(t2); }
-    console.warn('corsproxy.io risposta non JSON:', t2.substring(0, 100));
-  } catch(e) { console.warn('corsproxy.io errore:', e.message); }
+    if (t2.trim()[0] === '[' || t2.trim()[0] === '{') {
+      var parsed2 = JSON.parse(t2);
+      if (!parsed2.error) { console.log('✅ no /api/ OK'); return parsed2; }
+      console.warn('❌ no /api/ errore:', parsed2.error);
+    }
+  } catch(e) { console.warn('❌ no /api/ fetch fallito:', e.message); }
 
-  // Tentativo 3: api.allorigins.win
-  try {
-    var r3 = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(directUrl), { headers: { 'Authorization': auth } });
-    var t3 = await r3.text();
-    if (t3.trim()[0] === '[' || t3.trim()[0] === '{') { console.log('✅ allorigins OK'); return JSON.parse(t3); }
-    console.warn('allorigins risposta non JSON:', t3.substring(0, 100));
-  } catch(e) { console.warn('allorigins errore:', e.message); }
-
-  // Tentativo 4: thingproxy.freeboard.io
-  try {
-    var r4 = await fetch('https://thingproxy.freeboard.io/fetch/' + directUrl, { headers: { 'Authorization': auth } });
-    var t4 = await r4.text();
-    if (t4.trim()[0] === '[' || t4.trim()[0] === '{') { console.log('✅ thingproxy OK'); return JSON.parse(t4); }
-    console.warn('thingproxy risposta non JSON:', t4.substring(0, 100));
-  } catch(e) { console.warn('thingproxy errore:', e.message); }
-
-  throw new Error('Tutti i proxy hanno fallito. Controlla la console F12 per i dettagli.');
+  throw new Error('Sync fallito — controlla console F12 per dettagli');
 }
 
 async function syncIntervals() {
