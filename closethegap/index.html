@@ -1,4 +1,4 @@
-<!-- Close the Gap v2.0 - BUILD 20260723  -->
+<!-- Close the Gap v2.0 - BUILD 20260723 -->
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -597,16 +597,25 @@ async function icuFetch(endpoint, params) {
 async function syncIntervals() {
   var btn = document.getElementById('btn-sync-icu');
   var el  = document.getElementById('import-status');
-  btn.disabled = true; btn.querySelector('span:last-child').textContent = 'Sync...';
-  el.textContent = 'Connessione a Intervals.icu...'; el.style.color = 'var(--tx3)';
+  btn.disabled = true;
+  btn.querySelector('span:last-child').textContent = 'Sync...';
+  el.textContent = 'Connessione a Intervals.icu...';
+  el.style.color = 'var(--tx3)';
+
+  var WORKER = 'https://closethegap.luca-sacchetti91.workers.dev';
 
   try {
     var td   = today();
     var from = dateKey(new Date(new Date().setDate(new Date().getDate()-120)));
     var p    = 'oldest='+from+'&newest='+td;
 
-    // Wellness → CTL/ATL/TSB reali
-    var wellness = await icuFetch('wellness', p);
+    // Wellness
+    var wUrl = WORKER + '/wellness?' + p;
+    console.log('Calling wellness:', wUrl);
+    var wResp = await fetch(wUrl);
+    if (!wResp.ok) throw new Error('Wellness HTTP ' + wResp.status + ' — URL: ' + wUrl);
+    var wellness = await wResp.json();
+
     if (wellness && wellness.length) {
       var lat = wellness[wellness.length-1];
       if (lat.ctl != null) document.getElementById('k-ctl').textContent = Math.round(lat.ctl);
@@ -619,42 +628,52 @@ async function syncIntervals() {
       }
     }
 
-    // Attività → NP, TSS, IF reali
-    var icuActs = await icuFetch('activities', p);
+    // Activities
+    var aUrl = WORKER + '/activities?' + p;
+    console.log('Calling activities:', aUrl);
+    var aResp = await fetch(aUrl);
+    if (!aResp.ok) throw new Error('Activities HTTP ' + aResp.status);
+    var icuActs = await aResp.json();
+
     var imported=0, updated=0;
     icuActs.forEach(function(ia){
-      if(!ia.start_date_local)return;
+      if(!ia.start_date_local) return;
       var date = ia.start_date_local.slice(0,10);
       var type = (ia.type||'').toLowerCase();
-      if(!type.match(/ride|cycling|virtualride/))return;
+      if(!type.match(/ride|cycling|virtualride/)) return;
       var np=ia.icu_normalized_watts||null, tss=ia.icu_training_load||null,
           ifv=ia.icu_intensity||null, avgW=ia.icu_average_watts||null,
           hr=ia.average_heartrate||null, maxHr=ia.max_heartrate||null,
           dist=Math.round(ia.distance||0), dur=ia.moving_time||0,
           elev=ia.total_elevation_gain||0, cal=ia.calories||null;
-      var ex = activities.find(function(a){return a.date===date&&Math.abs((a.dist||0)-dist)<3000;});
+      var ex=activities.find(function(a){return a.date===date&&Math.abs((a.dist||0)-dist)<3000;});
       if(ex){
-        if(np)ex.np=np; if(avgW)ex.avg_watts=avgW;
-        if(tss){ex.tss_real=tss;ex._tss_override=tss;}
-        if(ifv)ex.if_val=ifv; if(hr)ex.hr=hr; if(maxHr)ex.max_hr=maxHr; if(cal)ex.cal=cal;
+        if(np) ex.np=np; if(avgW) ex.avg_watts=avgW;
+        if(tss){ex.tss_real=tss; ex._tss_override=tss;}
+        if(ifv) ex.if_val=ifv; if(hr) ex.hr=hr;
+        if(maxHr) ex.max_hr=maxHr; if(cal) ex.cal=cal;
         ex.source='intervals'; updated++;
       } else {
-        activities.push({id:'icu-'+(ia.id||date),name:ia.name||'Uscita',date:date,dur:dur,dist:dist,
-          elev:elev,avg_watts:avgW,np:np,_tss_override:tss,tss_real:tss,if_val:ifv,
-          hr:hr,max_hr:maxHr,cal:cal,isRace:ia.race||false,source:'intervals'});
+        activities.push({id:'icu-'+(ia.id||date),name:ia.name||'Uscita',
+          date:date,dur:dur,dist:dist,elev:elev,avg_watts:avgW,np:np,
+          _tss_override:tss,tss_real:tss,if_val:ifv,hr:hr,max_hr:maxHr,
+          cal:cal,isRace:ia.race||false,source:'intervals'});
         imported++;
       }
     });
 
     renderHome();
-    if(document.getElementById('page-analytics').classList.contains('active'))renderAnalytics();
-    el.textContent='✅ +'+imported+' nuove, '+updated+' aggiornate'; el.style.color='var(--grn)';
+    if(document.getElementById('page-analytics').classList.contains('active')) renderAnalytics();
+    el.textContent='✅ +'+imported+' nuove, '+updated+' aggiornate';
+    el.style.color='var(--grn)';
 
   } catch(e) {
-    el.textContent='❌ '+e.message; el.style.color='var(--red)';
+    el.textContent='❌ '+e.message;
+    el.style.color='var(--red)';
     console.error('Intervals sync error:',e);
   }
-  btn.disabled=false; btn.querySelector('span:last-child').textContent='Sync Intervals.icu';
+  btn.disabled=false;
+  btn.querySelector('span:last-child').textContent='Sync Intervals.icu';
 }
 
 // ══ NAV ══════════════════════════════════════════
