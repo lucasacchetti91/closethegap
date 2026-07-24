@@ -170,6 +170,8 @@
         <input type="number" id="hrrest-inp" value="48" class="act-input" style="width:52px;">
         <span style="font-size:.7rem;color:var(--tx3);">bpm</span>
         <button onclick="recalcAll()" class="tb tb-acc" style="padding:5px 12px;">&#10003; Aggiorna</button>
+        <button onclick="syncICUAdvanced()" class="tb tb-pur" style="padding:5px 12px;">🔬 Sync metriche avanzate ICU</button>
+        <span id="icu-advanced-status" style="font-size:.63rem;color:var(--tx3);white-space:nowrap;"></span>
       </div>
       <div class="card"><div class="ct">PMC &mdash; CTL / ATL / TSB (120gg)</div><div class="cw" style="height:230px;"><canvas id="ch-pmc"></canvas></div></div>
       <div class="g2">
@@ -292,6 +294,7 @@
      Ordine di caricamento importante: config -> metrics -> models -> charts
      -> moduli UI (home/plan/calendar/activities) -> sync -> app (bootstrap) -->
 <script src="js/config.js"></script>
+<script src="js/icu-native.js"></script>
 <script src="js/metrics.js"></script>
 <script src="js/models.js"></script>
 <script src="js/charts.js"></script>

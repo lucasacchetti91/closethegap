@@ -123,6 +123,59 @@ riserva cardiaca. I due modelli (PMC su TSS, Banister su TRIMP) possono
 ora divergere leggermente — se lo fanno in modo consistente è un segnale
 utile (es. potenza in salita ma FC che non segue, o viceversa).
 
+## 3bis. v2 — Metriche native da Intervals.icu (invece di ricalcolarle)
+
+Intervals.icu calcola già internamente quasi tutti i modelli sopra, e li
+espone come campi delle attività o dentro i record di wellness. Invece di
+ricostruire tutto da stream grezzi (rumoroso, limitato dalla risoluzione),
+ora si leggono direttamente:
+
+| Metrica | Campo Intervals.icu | Dove |
+|---|---|---|
+| Decoupling reale (Pw:Hr) | `power_hr` / `icu_power_hr` | per attività, via `/activities?fields=...` |
+| W'bal minimo raggiunto | `max_wbal_depletion` / `icu_max_wbal_depletion` | idem |
+| Variability Index | `variability_index` / `icu_variability_index` | idem |
+| Efficiency Factor | `efficiency` / `icu_efficiency` | idem |
+| TRIMP (Banister) | `trimp` / `icu_trimp` | idem |
+| CP / W' / Pmax (Morton 3-param) | `sportInfo[].eftp/wPrime/pMax` | dentro i record di `/wellness` |
+
+**Nota onestà sui nomi dei campi**: la documentazione pubblica conferma
+questi nomi come identificatori di filtro (`ActivityFilter.field_id`), ma
+non è certo al 100% che il JSON di risposta di `/activities?fields=...`
+usi esattamente questi nomi invece della variante `icu_`-prefissata (come
+`icu_training_load`). Per questo `js/icu-native.js` richiede **entrambe le
+varianti** e sceglie quella che esiste. **Dopo il primo sync reale**, apri
+la console del browser: viene loggato `icuNativeLastRawSample` con
+un'attività grezza — se vuoi, incollamelo così ripulisco il codice dai
+nomi che non servono davvero.
+
+### Nuovi file
+- `functions/api/[[path]].js` — esteso per proxare anche gli endpoint
+  "per singola attività" di Intervals.icu (`/activity/{id}/streams`,
+  `/power-vs-hr`, `/best-efforts`), che vivono sotto un path diverso da
+  quelli scoperti sull'atleta. Solo GET permesso. L'API key può ora
+  vivere in una variabile d'ambiente Cloudflare (`ICU_API_KEY`, Settings
+  → Environment variables → aggiungi come **secret**) invece che in
+  chiaro nel codice — se non la imposti continua a funzionare col valore
+  hardcoded esistente come fallback, ma è consigliato migrare **quanto
+  prima dato che la chiave API è visibile in chiaro nel file caricato**.
+- `js/icu-native.js` — sincronizza le metriche native (bottone "🔬 Sync
+  metriche avanzate ICU" nella tab Analisi) e le fonde nel dataset
+  locale con lo stesso matching data+distanza già usato per Strava/Garmin.
+  Espone anche `fetchICUActivityStreams()` e `fetchICUPowerVsHR()` per
+  eventuali grafici di dettaglio su una singola uscita in futuro.
+
+### Priorità nei grafici (dal più affidabile al meno)
+1. **● nativo Intervals.icu** — calcolato da loro sullo stream reale
+2. **○ stream Strava** — le 4 uscite pre-calcolate manualmente nella v1
+3. **nessun simbolo** — approssimazione a livello di sessione (fallback
+   per attività non ancora sincronizzate o senza dati sufficienti)
+
+Testato in ambiente headless (jsdom) con risposte API simulate: il
+merge, il fallback a 3 livelli e tutti i render funzionano senza errori.
+Il test reale contro l'API vera va fatto dopo il deploy, premendo il
+bottone "🔬 Sync metriche avanzate ICU" nella tab Analisi.
+
 ## 4. Prossimi passi possibili
 - Costruire il Cloudflare Worker OAuth per Strava e rendere W'bal/Decoupling
   reali automatici su ogni sync, non solo sulle 4 uscite pre-calcolate.
