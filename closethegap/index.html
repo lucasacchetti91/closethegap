@@ -56,16 +56,20 @@
 
 <div class="main">
   <div class="topbar">
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
     <div>
       <div class="topbar-title" id="topbar-title">Oggi</div>
       <div class="topbar-date" id="topbar-date"></div>
     </div>
     <div class="topbar-right">
       <span id="import-status" style="font-size:.63rem;color:var(--tx3);white-space:nowrap;"></span>
-      <button class="tb tb-pur" onclick="adaptPlan()">🧠 Adatta Piano</button>
-      <button class="tb tb-acc" onclick="openAdd()">+ Attività</button>
+      <button class="tb tb-pur" onclick="adaptPlan()">🧠 <span class="tb-label">Adatta Piano</span></button>
+      <button class="tb tb-acc" onclick="openAdd()">+ <span class="tb-label">Attività</span></button>
     </div>
   </div>
+  <div class="sidebar-backdrop" onclick="toggleSidebar()"></div>
   <div class="content">
 
     <!-- HOME -->
