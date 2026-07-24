@@ -14,6 +14,18 @@ function showPage(id,el) {
   document.getElementById('topbar-title').textContent=TITLES[id]||id;
   var fns={home:renderHome,plan:renderPlanPage,calendar:renderCal,activities:renderActs,analytics:renderAnalytics};
   if(fns[id]) fns[id]();
+  closeSidebar(); // su mobile il drawer si chiude da solo dopo aver scelto una tab
+}
+
+/* Drawer di navigazione per mobile/tablet (<=900px): il markup della
+   sidebar è lo stesso di desktop, qui gestiamo solo apertura/chiusura. */
+function toggleSidebar() {
+  document.querySelector('.sidebar').classList.toggle('open');
+  document.querySelector('.sidebar-backdrop').classList.toggle('open');
+}
+function closeSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  document.querySelector('.sidebar-backdrop').classList.remove('open');
 }
 
 if('serviceWorker' in navigator){
