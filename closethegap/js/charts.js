@@ -156,13 +156,14 @@ function renderScatter() {
 function renderCPModel() {
   var cp=cpModel();
   var CP=cp.CP, Wp=cp.Wp;
-  document.getElementById('cp-val').textContent=CP+'W';
+  document.getElementById('cp-val').textContent=CP+'W'+(cp.native?' ●':'');
   document.getElementById('wp-val').textContent=Math.round(Wp/1000)+'kJ';
-  document.getElementById('pmax-val').textContent=bestEfforts[0].watts+'W';
+  document.getElementById('pmax-val').textContent=(cp.native&&cp.pMax?Math.round(cp.pMax):bestEfforts[0].watts)+'W';
+  var srcLabel = cp.native ? "CP="+CP+"W W'="+Math.round(Wp/1000)+"kJ (● modello nativo Morton 3P di Intervals.icu)" : "CP="+CP+"W W'="+Math.round(Wp/1000)+"kJ (fit locale su "+cp.fitPoints+" punti 3-20min)";
   var tP=[5,10,20,30,60,120,180,300,480,600,900,1200,1800,2700,3600];
   mkChart('ch-cp','line',{labels:tP.map(function(t){return t<60?t+'s':t<3600?Math.round(t/60)+'min':'1h';}),datasets:[
     {label:'Best Efforts',data:bestEfforts.map(function(e){return e.watts;}),type:'scatter',backgroundColor:'#e8ff47',pointRadius:5},
-    {label:'CP='+CP+'W W\'='+Math.round(Wp/1000)+'kJ (fit su '+cp.fitPoints+' punti 3-20min)',data:tP.map(function(t){return Math.round(CP+Wp/t);}),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.4,pointRadius:0,fill:true,borderWidth:1.5},
+    {label:srcLabel,data:tP.map(function(t){return Math.round(CP+Wp/t);}),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.4,pointRadius:0,fill:true,borderWidth:1.5},
     {label:'FTP',data:tP.map(function(){return FTP;}),borderColor:'rgba(232,255,71,.4)',borderDash:[4,4],pointRadius:0,borderWidth:1}
   ]});
 }
@@ -197,8 +198,8 @@ function renderEF() {
   var series=efSeries(activities,20);
   if(!series.length) return;
   mkChart('ch-ef','line',{
-    labels:series.map(function(s){return s.date.slice(5);}),
-    datasets:[{label:'EF (NP/HR)',data:series.map(function(s){return s.ef;}),borderColor:'#22d46a',backgroundColor:'rgba(34,212,106,.1)',tension:.3,pointRadius:3,pointBackgroundColor:'#22d46a',fill:true,borderWidth:1.5}]
+    labels:series.map(function(s){return s.date.slice(5)+(s.native?' ●':'');}),
+    datasets:[{label:'EF (NP/HR, ● = nativo Intervals.icu)',data:series.map(function(s){return s.ef;}),borderColor:'#22d46a',backgroundColor:'rgba(34,212,106,.1)',tension:.3,pointRadius:series.map(function(s){return s.native?4:3;}),pointBackgroundColor:'#22d46a',fill:true,borderWidth:1.5}]
   });
 }
 
@@ -207,7 +208,7 @@ function renderVI() {
   if(!series.length) return;
   var colors=series.map(function(s){return s.vi<1.05?'rgba(34,212,106,.7)':s.vi<1.10?'rgba(251,191,36,.7)':s.vi<1.15?'rgba(249,115,22,.7)':'rgba(255,77,77,.7)';});
   mkChart('ch-vi','bar',{
-    labels:series.map(function(s){return s.date.slice(5);}),
+    labels:series.map(function(s){return s.date.slice(5)+(s.native?' ●':'');}),
     datasets:[
       {label:'VI',data:series.map(function(s){return s.vi;}),backgroundColor:colors,borderRadius:3,borderWidth:0},
       {label:'1.05',data:series.map(function(){return 1.05;}),type:'line',borderColor:'rgba(34,212,106,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1},
@@ -223,15 +224,16 @@ function renderWbal() {
   if(!timeline.length) return;
   var curr=timeline[timeline.length-1].wbalKJ;
   var col=curr/WpkJ>0.7?'#22d46a':'#ff4d4d';
-  var realCount=timeline.filter(function(t){return t.real;}).length;
+  var nativeCount=timeline.filter(function(t){return t.source==='icu-native';}).length;
+  var streamCount=timeline.filter(function(t){return t.source==='strava-stream';}).length;
   document.getElementById('wbal-kpis').innerHTML=
-    '<div class="pk"><div class="pkv">'+cp.CP+'W</div><div class="pkl">CP</div></div>'+
+    '<div class="pk"><div class="pkv">'+cp.CP+'W</div><div class="pkl">CP'+(cp.native?' (nativo)':'')+'</div></div>'+
     '<div class="pk"><div class="pkv">'+WpkJ+'kJ</div><div class="pkl">W\' totale</div></div>'+
-    '<div class="pk"><div class="pkv" style="color:'+col+';">'+curr+'kJ</div><div class="pkl">W\' attuale'+(realCount?' ('+realCount+' da stream reali)':'')+'</div></div>';
+    '<div class="pk"><div class="pkv" style="color:'+col+';">'+curr+'kJ</div><div class="pkl">W\' attuale'+(nativeCount?' ('+nativeCount+' native ICU'+(streamCount?', '+streamCount+' stream Strava':'')+')':'')+'</div></div>';
   mkChart('ch-wbal','line',{
-    labels:timeline.map(function(w){return w.date.slice(5)+(w.real?' ●':'');}),
+    labels:timeline.map(function(w){return w.date.slice(5)+(w.source==='icu-native'?' ●':w.source==='strava-stream'?' ○':'');}),
     datasets:[
-      {label:"W' balance (kJ)",data:timeline.map(function(w){return w.wbalKJ;}),borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.1)',tension:.4,pointRadius:timeline.map(function(w){return w.real?5:2;}),pointBackgroundColor:timeline.map(function(w){return w.real?'#e8ff47':'#a78bfa';}),fill:true,borderWidth:1.5},
+      {label:"W' balance (kJ) — ● nativo ICU · ○ stream Strava · senza simbolo = stima",data:timeline.map(function(w){return w.wbalKJ;}),borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.1)',tension:.4,pointRadius:timeline.map(function(w){return w.source==='icu-native'?6:w.source==='strava-stream'?5:2;}),pointBackgroundColor:timeline.map(function(w){return w.source==='icu-native'?'#22d46a':w.source==='strava-stream'?'#e8ff47':'#a78bfa';}),fill:true,borderWidth:1.5},
       {label:"W' totale "+WpkJ+"kJ",data:timeline.map(function(){return WpkJ;}),borderColor:'rgba(232,255,71,.3)',borderDash:[4,3],pointRadius:0,borderWidth:1}
     ]
   });
@@ -260,9 +262,9 @@ function renderDecouple() {
   if(!timeline.length) return;
   var colors=timeline.map(function(d){return d.pct<3?'rgba(34,212,106,.7)':d.pct<5?'rgba(251,191,36,.7)':d.pct<8?'rgba(249,115,22,.7)':'rgba(255,77,77,.7)';});
   mkChart('ch-decouple','bar',{
-    labels:timeline.map(function(d){return d.date.slice(5)+' '+d.name.substring(0,8)+(d.real?' ●':'');}),
+    labels:timeline.map(function(d){return d.date.slice(5)+' '+d.name.substring(0,8)+(d.source==='icu-native'?' ●':d.source==='strava-stream'?' ○':'');}),
     datasets:[
-      {label:'Decoupling % (● = da stream reale Strava)',data:timeline.map(function(d){return d.pct;}),backgroundColor:colors,borderRadius:3,borderWidth:0},
+      {label:'Decoupling % (● = nativo Intervals.icu · ○ = stream Strava)',data:timeline.map(function(d){return d.pct;}),backgroundColor:colors,borderRadius:3,borderWidth:0},
       {label:'Soglia 5%',data:timeline.map(function(){return 5;}),type:'line',borderColor:'rgba(255,77,77,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1}
     ]
   });

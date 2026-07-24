@@ -25,6 +25,13 @@
    come nella build precedente, sottostima CP (contaminato da pacing/
    decoupling aerobico sui sforzi lunghi) - qui viene evitato. */
 function cpModel() {
+  /* Preferisce il modello nativo di Intervals.icu (Morton 3-parametri,
+     calcolato su TUTTO lo storico attività, non solo su 11 best-effort
+     statici) quando disponibile - vedi js/icu-native.js. */
+  if (typeof ICU_NATIVE_CP !== 'undefined' && ICU_NATIVE_CP && ICU_NATIVE_CP.eftp) {
+    var WpNative = Math.round((ICU_NATIVE_CP.wPrime||0));
+    return {CP: Math.round(ICU_NATIVE_CP.eftp), Wp: WpNative || 8000, fitPoints: -1, native: true, pMax: ICU_NATIVE_CP.pMax};
+  }
   var STANDARD_LO = 165, STANDARD_HI = 1260; // 2:45 - 21min
   var pts = bestEfforts.filter(function(e){return e.secs>=STANDARD_LO && e.secs<=STANDARD_HI;});
   if (pts.length < 2) pts = bestEfforts.filter(function(e){return e.secs>=120 && e.secs<=3600;});
@@ -49,7 +56,7 @@ function pdmModel() {
   var cp=cpModel();
   var CP=cp.CP, Wp=cp.Wp;
   var pmaxEff = bestEfforts.reduce(function(best,e){return e.secs<=15&&e.watts>(best?best.watts:0)?e:best;}, null);
-  var Pmax = pmaxEff ? pmaxEff.watts : bestEfforts[0].watts;
+  var Pmax = cp.native && cp.pMax ? Math.round(cp.pMax) : (pmaxEff ? pmaxEff.watts : bestEfforts[0].watts);
   var ftpMorton=Math.round(CP+Wp/3600);
   var p20=bestEfforts.find(function(e){return e.label==='20min';});
   var ftp20=p20?Math.round(p20.watts*0.95):ftpMorton;
@@ -66,12 +73,12 @@ function pdmCurve(t, CP, Wp, Pmax) {
 
 /* ---------- Efficiency Factor & Variability Index ---------- */
 function efSeries(acts, n) {
-  var f=[].concat(acts).filter(function(a){return a.np&&a.hr&&a.dur>2400;}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-(n||20));
-  return f.map(function(a){return {date:a.date, ef:parseFloat((a.np/a.hr).toFixed(3))};});
+  var f=[].concat(acts).filter(function(a){return (a.icu_ef!=null)||(a.np&&a.hr&&a.dur>2400);}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-(n||20));
+  return f.map(function(a){return {date:a.date, ef: a.icu_ef!=null?parseFloat(a.icu_ef.toFixed(3)):parseFloat((a.np/a.hr).toFixed(3)), native: a.icu_ef!=null};});
 }
 function viSeries(acts, n) {
-  var f=[].concat(acts).filter(function(a){return a.np&&a.avg_watts&&a.dur>2400;}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-(n||20));
-  return f.map(function(a){return {date:a.date, vi:parseFloat((a.np/a.avg_watts).toFixed(3))};});
+  var f=[].concat(acts).filter(function(a){return (a.icu_vi!=null)||(a.np&&a.avg_watts&&a.dur>2400);}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-(n||20));
+  return f.map(function(a){return {date:a.date, vi: a.icu_vi!=null?parseFloat(a.icu_vi.toFixed(3)):parseFloat((a.np/a.avg_watts).toFixed(3)), native: a.icu_vi!=null};});
 }
 
 /* ---------- W'bal ---------- */
@@ -116,12 +123,21 @@ function wbalSessionApprox(sortedActs, WpJ) {
 /* Combina: per le attività che hanno uno stream reale pre-calcolato
    (config.js) usa quel valore; per le altre usa l'approssimazione. */
 function buildWbalTimeline() {
-  var cp=cpModel(); var WpJ=cp.Wp*1000/1000; // Wp è già in Joule (watts*sec)
+  var cp=cpModel(); var WpJ=cp.Wp;
   var sorted=[].concat(activities).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-15);
   var approx = wbalSessionApprox(sorted, cp.Wp);
   return approx.map(function(row,i){
     var a=sorted[i];
-    if (a.stream_wbal_end_kj!=null) return {date:a.date, wbalKJ:a.stream_wbal_end_kj, real:true, minKJ:a.stream_wbal_min_kj};
+    /* Priorità: 1) max_wbal_depletion nativo Intervals.icu (calcolato su
+       tutto lo stream reale della singola uscita) 2) stream Strava
+       pre-calcolato a mano (le 4 uscite di validazione) 3) approssimazione
+       a livello di sessione. */
+    if (a.icu_wbal_depletion_kj!=null) {
+      var wbalLeft = Math.max(0, parseFloat((WpJ/1000 - Math.abs(a.icu_wbal_depletion_kj)).toFixed(2)));
+      return {date:a.date, wbalKJ:wbalLeft, real:true, source:'icu-native'};
+    }
+    if (a.stream_wbal_end_kj!=null) return {date:a.date, wbalKJ:a.stream_wbal_end_kj, real:true, minKJ:a.stream_wbal_min_kj, source:'strava-stream'};
+    row.source = 'approx';
     return row;
   });
 }
@@ -148,11 +164,12 @@ function decoupleSessionApprox(a) {
   return Math.max(0, Math.min(parseFloat(((vi-1)*15+(durH-1)*1.5).toFixed(1)), 15));
 }
 function buildDecoupleTimeline() {
-  var acts=[].concat(activities).filter(function(a){return (a.np&&a.avg_watts&&a.dur>3600)||a.stream_decoupling_pct!=null;})
+  var acts=[].concat(activities).filter(function(a){return a.icu_decoupling!=null||(a.np&&a.avg_watts&&a.dur>3600)||a.stream_decoupling_pct!=null;})
     .sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-15);
   return acts.map(function(a){
-    if (a.stream_decoupling_pct!=null) return {date:a.date,name:a.name,pct:a.stream_decoupling_pct,real:true};
-    return {date:a.date,name:a.name,pct:decoupleSessionApprox(a),real:false};
+    if (a.icu_decoupling!=null) return {date:a.date,name:a.name,pct:parseFloat(a.icu_decoupling.toFixed(1)),real:true,source:'icu-native'};
+    if (a.stream_decoupling_pct!=null) return {date:a.date,name:a.name,pct:a.stream_decoupling_pct,real:true,source:'strava-stream'};
+    return {date:a.date,name:a.name,pct:decoupleSessionApprox(a),real:false,source:'approx'};
   });
 }
 
@@ -164,6 +181,7 @@ function buildDecoupleTimeline() {
    dove HRr = (HRmedia - HRriposo) / (HRmax - HRriposo). */
 var HR_REST = 48;
 function calcTRIMP(a) {
+  if (a.icu_trimp!=null) return a.icu_trimp;
   if (!a.hr) return 0;
   var hrr = (a.hr-HR_REST)/(HR_MAX-HR_REST);
   if (hrr<=0) return 0;
