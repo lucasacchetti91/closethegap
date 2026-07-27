@@ -176,7 +176,69 @@ merge, il fallback a 3 livelli e tutti i render funzionano senza errori.
 Il test reale contro l'API vera va fatto dopo il deploy, premendo il
 bottone "🔬 Sync metriche avanzate ICU" nella tab Analisi.
 
-## 4. Prossimi passi possibili
+## 5. v3 — Generatore di piano + zone individualizzate
+
+### Zone potenza e FC "vere" (come richiesto, sullo stile Intervals.icu)
+Nuovo file `js/zones.js`:
+- **Potenza**: Z1-Z4 restano % di CP (Coggan classico, funzionano bene
+  sotto soglia), ma **Z5-Z7 sono ancorate a durate fisiologiche reali**
+  usando il tuo W' e Pmax: confine Z5/Z6 = potenza sostenibile ~5min
+  (CP+W'/300), Z6/Z7 = potenza sostenibile ~60s (CP+W'/60), cima Z7 =
+  il tuo Pmax neuromuscolare reale. Due persone con la stessa CP ma W'
+  diverso avranno zone anaerobiche diverse — corretto, perché la loro
+  fisiologia è diversa.
+- **FC**: LTHR può essere **stimata dai dati reali** (cerca lo sforzo
+  continuativo più duro vicino soglia, 20-75min con IF≥0.78, e usa la
+  sua FC media) invece di restare un numero fisso inserito una volta.
+  Resta comunque modificabile a mano nell'header Analisi.
+- `applyDataDrivenZones()` gira al bootstrap e dopo ogni sync ICU,
+  aggiornando FTP/LTHR globali (e i campi nell'header) automaticamente
+  — lo stesso comportamento dell'eFTP di Intervals.icu.
+
+### Generatore di piano (non più un array statico)
+Nuovo file `js/plan-generator.js`. Le settimane **passate** restano un
+registro storico invariato; le settimane **future** (da oggi alla gara
+obiettivo) sono generate da `generateFuturePlan()` usando:
+
+1. **CP/W'/Pmax reali** per dimensionare ogni ripetuta (formula
+   tempo-di-esaurimento `t = W'/(potenza-CP)`, non tabelle %FTP fisse)
+2. **Ramp rate dimostrato**: guarda il tuo storico CTL e trova quanto
+   incremento settimanale hai già retto senza far crollare il TSB sotto
+   -28 nei 14gg successivi (logica ispirata a Gabbett/ACWR), clampato
+   3-8 CTL/settimana per sicurezza
+3. **Polarizzazione reale** (Seiler 80/20): calcola quanto tempo hai
+   passato davvero in bassa/alta intensità negli ultimi 42gg: se sei
+   sbilanciato verso l'alta intensità, riduce le sessioni qualità quella
+   settimana
+4. **Profilo delle gare analizzate**: usa durata/decoupling medi delle 4
+   gare con stream reali per calibrare una sessione "specifica gara"
+   nella fase di Picco Forma (principio di specificità)
+5. **Fasi di periodizzazione** (Costruzione → Picco Forma → Affilatura →
+   Tapering Finale) in base alle settimane rimanenti alla data obiettivo
+
+`adaptPlan()` ora chiama `makePlan()` per intero (rigenerazione vera),
+non più +/-10-20% su un piano fisso. La tab Piano mostra in cima un
+pannello con tutti i numeri usati per la generazione (CP, W', ramp rate,
+polarizzazione, profilo gare) — trasparente, non è una scatola nera.
+
+**Testato** in ambiente headless con lo storico reale delle 280 attività:
+59 sessioni generate, nessuna data duplicata, nessun NaN, la gara del 19
+settembre resta sempre l'evento fisso finale corretto.
+
+### Onestà sui limiti
+- Il ramp rate "dimostrato" usa una euristica semplice (percentile 75 dei
+  delta CTL settimanali "sicuri"), non un vero modello ACWR con acute:
+  chronic ratio giorno per giorno - è un'approssimazione ragionevole, non
+  letteratura clinica applicata pedissequamente.
+- Il "profilo gara" usa la media delle 4 gare già analizzate con stream
+  Strava/ICU nativi - se in futuro sincronizzi più gare con dati nativi,
+  il profilo si affina automaticamente.
+- La sessione Z2 lunga del weekend e la sessione qualità del martedì/
+  giovedì seguono un microciclo settimanale fisso (Friel-style) - non
+  varia la struttura settimanale in base al tuo calendario lavorativo o
+  preferenze di giorni liberi, che non ho.
+
+## 6. Prossimi passi possibili
 - Costruire il Cloudflare Worker OAuth per Strava e rendere W'bal/Decoupling
   reali automatici su ogni sync, non solo sulle 4 uscite pre-calcolate.
 - Ricalcolare `bestEfforts` dinamicamente dagli stream reali (best mean

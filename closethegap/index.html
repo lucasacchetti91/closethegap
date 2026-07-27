@@ -123,6 +123,7 @@
 
     <!-- PLAN -->
     <div class="page" id="page-plan">
+      <div id="plan-gen-meta" class="card" style="font-size:.72rem;color:var(--tx2);line-height:1.7;"></div>
       <div id="plan-render"></div>
     </div>
 
@@ -208,7 +209,7 @@
       </div>
       <div class="g2">
         <div class="card"><div class="ct">Distribuzione Zona Potenza</div><div id="zone-dist-power"></div></div>
-        <div class="card"><div class="ct">Distribuzione Zona HR &mdash; LTHR <span id="lthr-label">180</span>bpm</div><div id="zone-dist-hr"></div></div>
+        <div class="card"><div class="ct">Distribuzione Zona HR &mdash; LTHR <span id="lthr-label">180</span>bpm</div><div id="zone-dist-hr"></div><div id="lthr-estimate-note" style="font-size:.62rem;color:var(--tx3);margin-top:8px;"></div></div>
       </div>
       <div class="card">
         <div class="ct">Scatterplot TSS vs IF</div>
@@ -301,6 +302,8 @@
 <script src="js/icu-native.js"></script>
 <script src="js/metrics.js"></script>
 <script src="js/models.js"></script>
+<script src="js/zones.js"></script>
+<script src="js/plan-generator.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/home.js"></script>
 <script src="js/plan.js"></script>
