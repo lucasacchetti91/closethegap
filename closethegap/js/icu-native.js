@@ -151,13 +151,16 @@ async function syncICUAdvanced() {
   try {
     var res = await syncICUNativeMetrics(400);
     await syncICUNativeCP();
+    applyDataDrivenZones();
     if (el) {
       el.textContent = '✅ ' + res.matched + '/' + res.total + ' attività arricchite con metriche native'
         + (ICU_NATIVE_CP ? ' · CP nativo: ' + Math.round(ICU_NATIVE_CP.eftp) + 'W' : '');
       el.style.color = 'var(--grn)';
     }
     console.log('Esempio attività grezza ICU (per verificare i nomi dei campi):', icuNativeLastRawSample);
+    makePlan();
     renderAnalytics();
+    if (document.getElementById('page-plan').classList.contains('active')) renderPlanPage();
   } catch (e) {
     if (el) { el.textContent = '❌ ' + e.message; el.style.color = 'var(--red)'; }
     console.error('Sync metriche avanzate ICU:', e);

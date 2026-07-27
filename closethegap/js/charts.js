@@ -55,13 +55,13 @@ function renderAnalytics() {
     {label:'FTP',data:bestEfforts.map(function(){return FTP;}),borderColor:'rgba(59,130,246,.4)',borderDash:[4,4],pointRadius:0,fill:false,borderWidth:1}
   ]});
   document.getElementById('pz-label').textContent=FTP+'W';
-  var PZ=[{n:'Z1 Recupero',p:[0,55],c:'#4a5168'},{n:'Z2 Resistenza',p:[55,75],c:'#22d46a'},{n:'Z3 Tempo',p:[75,90],c:'#fbbf24'},{n:'Z4 Soglia',p:[90,105],c:'#f97316'},{n:'Z5 VO2max',p:[105,120],c:'#ff4d4d'},{n:'Z6 Anaerobica',p:[120,150],c:'#a78bfa'},{n:'Z7 Neuro',p:[150,999],c:'#ec4899'}];
+  var zoneColors={1:'#4a5168',2:'#22d46a',3:'#fbbf24',4:'#f97316',5:'#ff4d4d',6:'#a78bfa',7:'#ec4899'};
+  var PZ=computePowerZones().map(function(z){return {n:z.label,lo:z.lo,hi:z.hi,c:zoneColors[z.z]};});
   document.getElementById('power-zones').innerHTML=PZ.map(function(z){
-    var lo=Math.round(z.p[0]*FTP/100), hi=z.p[1]===999?'Max':Math.round(z.p[1]*FTP/100);
     return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--br);">'+
       '<div style="width:8px;height:8px;border-radius:50%;background:'+z.c+';flex-shrink:0;"></div>'+
       '<div style="font-size:.7rem;flex:1;color:var(--tx2);">'+z.n+'</div>'+
-      '<div style="font-size:.7rem;font-weight:600;">'+lo+'–'+hi+'W</div></div>';
+      '<div style="font-size:.7rem;font-weight:600;">'+z.lo+'–'+z.hi+'W</div></div>';
   }).join('');
   var ww=[].concat(activities).filter(function(a){return a.avg_watts;}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-20);
   mkChart('ch-watts','bar',{labels:ww.map(function(a){return a.date.slice(5);}),datasets:[
@@ -112,7 +112,8 @@ function renderHeatmap() {
 }
 
 function renderZoneDist() {
-  var pzB=[0,55,75,90,105,120,150,999].map(function(p){return Math.round(p*FTP/100);});
+  var pzZones = computePowerZones();
+  var pzB = pzZones.map(function(z){return z.lo;}).concat([pzZones[pzZones.length-1].hi]);
   var pzL=['Z1','Z2','Z3','Z4','Z5','Z6','Z7'];
   var pzC=['#4a5168','#22d46a','#fbbf24','#f97316','#ff4d4d','#a78bfa','#ec4899'];
   var pzS=new Array(7).fill(0);
@@ -124,7 +125,8 @@ function renderZoneDist() {
     var lo=pzB[i], hi=i===6?'Max':pzB[i+1], pct=Math.round(pzS[i]/pzT*100);
     return '<div class="zbar"><span class="zbar-lbl" style="color:'+pzC[i]+';">'+l+' '+lo+'–'+hi+'W</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+pzC[i]+'"></div></div><span class="zbar-pct">'+pct+'%</span></div>';
   }).join('');
-  var hrB=[0,Math.round(LTHR*.81),Math.round(LTHR*.90),Math.round(LTHR*.94),LTHR,220];
+  var hrZones = computeHRZones(LTHR);
+  var hrB = hrZones.map(function(z){return z.lo;}).concat([HR_MAX]);
   var hrL=['Z1 Rec','Z2 Aerob','Z3 Tempo','Z4 Soglia','Z5 VO2'];
   var hrC=['#4a5168','#22d46a','#fbbf24','#f97316','#ff4d4d'];
   var hrS=new Array(5).fill(0);
@@ -133,8 +135,13 @@ function renderZoneDist() {
   });
   var hrT=Math.max(hrS.reduce(function(s,v){return s+v;},0),1);
   document.getElementById('lthr-label').textContent=LTHR;
+  var lthrEst = estimateLTHRFromHistory();
+  var lthrNoteEl = document.getElementById('lthr-estimate-note');
+  if (lthrNoteEl) {
+    lthrNoteEl.innerHTML = lthrEst ? ('LTHR stimata dai dati reali: <strong>'+lthrEst.lthr+'bpm</strong> (da "'+lthrEst.source+'", '+lthrEst.date+') — quella in uso ora è '+LTHR+'bpm.') : '';
+  }
   document.getElementById('zone-dist-hr').innerHTML=hrL.map(function(l,i){
-    var lo=hrB[i], hi=hrB[i+1]===220?HR_MAX:hrB[i+1]-1, pct=Math.round(hrS[i]/hrT*100);
+    var lo=hrB[i], hi=hrB[i+1]===HR_MAX?HR_MAX:hrB[i+1]-1, pct=Math.round(hrS[i]/hrT*100);
     return '<div class="zbar"><span class="zbar-lbl" style="color:'+hrC[i]+';">'+l+' '+lo+'–'+hi+'bpm</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+hrC[i]+'"></div></div><span class="zbar-pct">'+pct+'%</span></div>';
   }).join('');
 }

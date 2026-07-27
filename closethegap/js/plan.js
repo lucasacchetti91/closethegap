@@ -4,8 +4,17 @@
    render tab Piano, e adattamento automatico basato su TSB/ATL/CTL.
    ============================================================ */
 
-function makePlan(){
-  plan=[
+/* ============================================================
+   PLAN.JS
+   Piano di allenamento: le settimane PASSATE restano un registro
+   storico fisso (quello che è stato davvero prescritto), le settimane
+   FUTURE sono generate algoritmicamente da plan-generator.js usando i
+   tuoi dati reali (CP/W'/Pmax, ramp rate dimostrato, polarizzazione,
+   profilo delle gare analizzate). adaptPlan() ora rigenera per intero
+   la parte futura invece di applicare piccoli +/- percentuali.
+   ============================================================ */
+
+var HISTORICAL_PLAN=[
     {date:"2026-07-23",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"Z2 Aerobico",type:"z2",tss:70,durMin:90,desc:"90' Z2 225-238W.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:10},{z:2,l:"Z2",lo:55,hi:75,d:70},{z:1,l:"CD",lo:0,hi:55,d:10}]},
     {date:"2026-07-24",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"Riposo + Carb Loading",type:"off",tss:0,durMin:0,desc:"Riposo. Carboidrati, idratazione, sonno.",blocks:[]},
     {date:"2026-07-25",week:"Sett. 4 · Carico FTP + Gara 25 lug",name:"GARA — 25 Luglio",type:"race",tss:160,durMin:180,desc:"Parti controllato nei primi 20'. Usa la gara come stimolo FTP.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Gara",lo:90,hi:105,d:150},{z:1,l:"CD",lo:0,hi:55,d:15}]},
@@ -33,10 +42,40 @@ function makePlan(){
     {date:"2026-09-10",week:"Sett. 11 · Tapering Finale",name:"Attivazione Soglia 2x8'",type:"z4",tss:58,durMin:65,desc:"WU 15', poi 2x8' a 323-348W, rec 5' Z1, CD 10'. Ultima sessione di qualita.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:4,l:"Soglia",lo:95,hi:102,d:8},{z:1,l:"Rec",lo:0,hi:55,d:5},{z:4,l:"Soglia",lo:95,hi:102,d:8},{z:1,l:"CD",lo:0,hi:55,d:10}]},
     {date:"2026-09-16",week:"Sett. 11 · Tapering Finale",name:"Attivazione 20'",type:"z2",tss:14,durMin:20,desc:"20': Z1 poi 2x45'' progressivi fino a 289W.",blocks:[{z:1,l:"Z1",lo:0,hi:55,d:10},{z:3,l:"Prog",lo:70,hi:85,d:0.75},{z:1,l:"Rec",lo:0,hi:55,d:2},{z:3,l:"Prog",lo:70,hi:85,d:0.75},{z:1,l:"Z1",lo:0,hi:55,d:5}]},
     {date:"2026-09-19",week:"Sett. 11 · Tapering Finale",name:"GARA — 19 Settembre",type:"race",tss:200,durMin:240,desc:"OBIETTIVO STAGIONALE. WU 15' con 2-3 strappi a 289W. Mai sopra 360W nelle prime salite. 60-70g carbo/ora. TSB atteso +15/+20.",blocks:[{z:1,l:"WU",lo:0,hi:55,d:15},{z:2,l:"Z2",lo:55,hi:75,d:60},{z:4,l:"Climb",lo:90,hi:106,d:120},{z:5,l:"Finale",lo:105,hi:112,d:30},{z:1,l:"CD",lo:0,hi:55,d:15}]}
-  ];
+];
+
+/* Metadati dell'ultima generazione (mostrati nella tab Piano: ramp
+   rate usato, se sei polarizzato, profilo gare) - per trasparenza,
+   non è una scatola nera. */
+var lastPlanGenMeta = null;
+
+function makePlan(){
+  var td = today();
+  // Registro storico: solo ciò che è già passato, invariato.
+  var past = HISTORICAL_PLAN.filter(function(p){ return p.date < td && p.date !== GOAL_DATE; });
+  // Evento fisso: il giorno della gara obiettivo resta sempre quello
+  // scritto a mano (non va rigenerato).
+  var goalEntry = HISTORICAL_PLAN.find(function(p){ return p.date === GOAL_DATE; });
+  // Tutto il resto (da oggi al giorno prima della gara) è rigenerato
+  // sui dati reali.
+  var gen = generateFuturePlan(td < GOAL_DATE ? td : GOAL_DATE, GOAL_DATE);
+  lastPlanGenMeta = gen.meta;
+  plan = past.concat(gen.sessions);
+  if (goalEntry) plan.push(goalEntry);
+  plan.sort(function(a,b){ return a.date.localeCompare(b.date); });
 }
 
 function renderPlanPage() {
+  var meta = lastPlanGenMeta;
+  var metaEl = document.getElementById('plan-gen-meta');
+  if (metaEl && meta) {
+    metaEl.innerHTML =
+      '<strong style="color:var(--acc);">Generazione piano futuro — metodi usati</strong><br>'+
+      'CP attuale: <strong>'+meta.CP+'W</strong> · W\': <strong>'+Math.round(meta.Wp/1000)+'kJ</strong> (individualizza tutte le zone qui sotto)<br>'+
+      'Ramp rate applicato: <strong>'+meta.rampRate+' CTL/settimana</strong> (dal tuo storico, clampato 3-8 per sicurezza)<br>'+
+      (meta.polarization ? ('Polarizzazione ultimi 42gg: <strong>'+meta.polarization.lowPct+'% bassa / '+meta.polarization.highPct+'% alta intensità</strong> ('+(meta.polarization.polarized?'80/20 rispettato':'sbilanciata verso l\'alta intensità — sessioni qualità ridotte questa settimana')+')<br>') : '') +
+      (meta.raceProfile ? ('Profilo gare analizzate: <strong>'+meta.raceProfile.count+' gare</strong>, '+meta.raceProfile.avgDurMin+"' medi, decoupling medio "+meta.raceProfile.avgDecoupling+'%<br>') : '');
+  }
   var weeks={};
   plan.forEach(function(p){if(!weeks[p.week])weeks[p.week]=[];weeks[p.week].push(p);});
   var td=today();
@@ -64,22 +103,28 @@ function renderPlanPage() {
 }
 
 function adaptPlan() {
+  makePlan(); // rigenerazione completa della parte futura sui dati reali attuali
   var pmc=computePMC();
   var tsb=pmc.tsb, ctl=pmc.ctl, atl=pmc.atl, td=today();
+
+  // Controllo di sicurezza a breve termine (3gg) che il generatore
+  // settimanale non copre: se hai appena incassato un carico enorme,
+  // segnala di alleggerire la prossima sessione qualità anche se il
+  // piano rigenerato non lo prevedeva già.
   var last3=0;
   for(var i=1;i<=3;i++){var d=new Date();d.setDate(d.getDate()-i);last3+=activities.filter(function(a){return a.date===dateKey(d);}).reduce(function(s,a){return s+calcTSS(a);},0);}
   var adapted=0;
-  plan.forEach(function(p){
-    if(p.date<=td) return;
-    delete p.adaptNote;
-    if(tsb<-20&&(p.type==='z4'||p.type==='z5')){p.tss=Math.max(Math.round(p.tss*.8),20);p.adaptNote='TSB '+tsb+': intensita ridotta del 20%.';adapted++;}
-    if(tsb>10&&p.type==='z4'){p.tss=Math.round(p.tss*1.1);p.adaptNote='Ottima forma (TSB +'+tsb+'): carico +10%.';adapted++;}
-    if(atl>ctl+15&&p.type==='z2'&&!p.adaptNote){p.adaptNote='Fatica elevata: valuta di ridurre il volume.';adapted++;}
-    if(last3>200){var tom=dateKey(new Date(new Date().setDate(new Date().getDate()+1)));if(p.date===tom&&p.type!=='off'&&!p.adaptNote){p.adaptNote='Ultimi 3gg: '+last3+' TSS. Considera Z2 o riposo.';adapted++;}}
-  });
+  if (last3>200) {
+    var nextQuality = plan.find(function(p){ return p.date>td && (p.type==='z4'||p.type==='z5'); });
+    if (nextQuality) { nextQuality.tss=Math.max(Math.round(nextQuality.tss*.8),20); nextQuality.adaptNote='Ultimi 3gg: '+last3+' TSS. Intensità ridotta del 20% per sicurezza.'; adapted++; }
+  }
+
+  var meta = lastPlanGenMeta || {};
   var col=tsb<-10?'#ff4d4d':tsb>5?'#22d46a':'#fbbf24';
   var msg='<strong style="color:'+col+';">TSB '+tsb+'</strong> · CTL '+Math.round(ctl)+' · ATL '+Math.round(atl)+'.<br>';
-  msg+=adapted>0?'<strong>'+adapted+' sessioni adattate.</strong>':'Piano ottimale per la forma attuale.';
+  msg+='Piano futuro rigenerato: ramp rate '+(meta.rampRate||'—')+' CTL/sett (dal tuo storico) · ';
+  msg+=meta.polarization ? ('polarizzazione '+meta.polarization.lowPct+'% bassa/'+meta.polarization.highPct+'% alta intensità ('+(meta.polarization.polarized?'ok, 80/20 rispettato':'sbilanciata, ridotte le sessioni qualità questa settimana')+')') : '';
+  if (adapted>0) msg+='<br><strong>⚡ '+adapted+' sessione ravvicinata alleggerita per fatica accumulata.</strong>';
   var el=document.getElementById('adapt-msg'); el.innerHTML=msg; el.style.display='block';
   renderTodayCard(today()); renderWeekStrip();
   if(document.getElementById('page-plan').classList.contains('active')) renderPlanPage();
