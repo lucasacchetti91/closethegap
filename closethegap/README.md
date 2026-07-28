@@ -238,6 +238,22 @@ settembre resta sempre l'evento fisso finale corretto.
   varia la struttura settimanale in base al tuo calendario lavorativo o
   preferenze di giorni liberi, che non ho.
 
+### Struttura settimanale (vincoli espliciti)
+- **3-4 uscite a settimana** (3 nelle fasi Affilatura/Tapering, 4 in
+  Costruzione/Picco Forma)
+- **Sabato = uscita lunga del weekend** (o simulazione gara in Picco
+  Forma): qui vanno i lavori più lunghi (soglia 1-2x12-18'), incorporati
+  dentro il giro lungo Z2 — mai isolati a sé
+- **Infrasettimanali (martedì/giovedì/domenica) sempre ≤2h**, solo
+  formati corti: VO2max a ripetute brevi (3-5min, ci sta comodamente) o
+  Z2 breve — mai ripetute lunghe di soglia
+- Se la polarizzazione reale è sbilanciata, il martedì diventa Z2 invece
+  di VO2max invece di saltare la seduta
+
+Testato: su tutte le settimane generate, nessuna infrasettimanale sopra
+i 120 minuti, sempre 3 o 4 uscite/settimana, il lavoro lungo sempre e
+solo nell'uscita del sabato.
+
 ## 6. Prossimi passi possibili
 - Costruire il Cloudflare Worker OAuth per Strava e rendere W'bal/Decoupling
   reali automatici su ogni sync, non solo sulle 4 uscite pre-calcolate.
