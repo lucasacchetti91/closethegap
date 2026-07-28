@@ -155,6 +155,41 @@ function buildRaceSpecificSession(date, week, CP, pz, raceProfile) {
     desc:'WU 15\', poi '+coreMin+"' continuativi "+z3.lo+'-'+z4top+'W (Tempo/soglia), CD 15\'.'+note, blocks:blocks};
 }
 
+/* Uscita lunga del weekend: qui vanno i lavori più lunghi (es. soglia
+   2x15-20') per esplicita preferenza - nelle uscite infrasettimanali
+   (max 2h) restano solo formati corti che ci stanno comodamente. */
+function buildWeekendLongSession(date, week, CP, pz, phase) {
+  var z2 = pz[1], z4 = pz[3];
+  var totalMin = phase==='Tapering Finale'?90:phase==='Affilatura'?150:phase==='Picco Forma'?195:170;
+  var includeThreshold = phase!=='Tapering Finale';
+  var reps = phase==='Affilatura'?1:2;
+  var repMin = phase==='Picco Forma'?18:phase==='Affilatura'?12:15;
+
+  var blocks=[mkBlock(1,'WU',0,Math.round(CP*0.5),CP,15)];
+  var thresholdBlockMin = includeThreshold ? reps*repMin + (reps-1)*5 : 0;
+  var z2Min = Math.max(30, totalMin - 15 - 15 - thresholdBlockMin);
+  var z2First = includeThreshold ? Math.round(z2Min*0.6) : z2Min;
+  var z2Second = z2Min - z2First;
+  blocks.push(mkBlock(2,'Z2',z2.lo,z2.hi,CP,z2First));
+  if (includeThreshold) {
+    for (var i=0;i<reps;i++){
+      blocks.push(mkBlock(4,'Soglia',z4.lo,z4.hi,CP,repMin));
+      if (i<reps-1) blocks.push(mkBlock(1,'Rec',0,Math.round(CP*0.5),CP,5));
+    }
+    if (z2Second>0) blocks.push(mkBlock(2,'Z2',z2.lo,z2.hi,CP,z2Second));
+  }
+  blocks.push(mkBlock(1,'CD',0,Math.round(CP*0.5),CP,15));
+  var durMin = blocks.reduce(function(s,b){return s+b.d;},0);
+  var midZ2 = Math.round((z2.lo+z2.hi)/2), midZ4 = Math.round((z4.lo+z4.hi)/2);
+  var tss = Math.round((durMin-thresholdBlockMin)*Math.pow(midZ2/CP,2)*100/60 + reps*repMin*Math.pow(midZ4/CP,2)*100/60);
+  var hrs = Math.round(durMin/60*10)/10;
+  var name = includeThreshold ? ('Lungo + Soglia '+reps+'x'+repMin+"'") : 'Z2 Lungo';
+  var desc = includeThreshold
+    ? (hrs+"h totali: Z2 con "+reps+'x'+repMin+"' a "+z4.lo+'-'+z4.hi+"W (90-105% CP) incorporati - il lavoro lungo va qui nel weekend, come richiesto.")
+    : (hrs+'h Z2 continuativo '+z2.lo+'-'+z2.hi+'W.');
+  return {date:date, week:week, name:name, type: includeThreshold?'z4':'z2', tss:tss, durMin:durMin, desc:desc, blocks:blocks};
+}
+
 function phaseForWeeksToGoal(w) {
   if (w<=1) return 'Tapering Finale';
   if (w<=2) return 'Affilatura';
@@ -186,20 +221,44 @@ function generateFuturePlan(fromDate, toDateExclusive) {
     projectedCTL = Math.max(10, projectedCTL + ctlDelta);
     var weeklyTSS = Math.round(projectedCTL * 7 * (phase==='Tapering Finale'?0.55:phase==='Affilatura'?0.8:1));
 
-    var qualitySessions = (!polarization.polarized && polarization.sampleDays>10) ? 1 : 2;
+    // Vincoli richiesti: 3-4 uscite/settimana, una uscita lunga (o gara)
+    // nel weekend dove vanno i lavori più lunghi, le infrasettimanali
+    // sempre <=2h e senza ripetute lunghe di soglia.
+    var ridesPerWeek = (phase==='Tapering Finale' || phase==='Affilatura') ? 3 : 4;
+    var midweekQuality = !(!polarization.polarized && polarization.sampleDays>10); // se sbilanciato verso alta intensità, martedì diventa Z2 invece di VO2max
 
     var daysLeftInWindow = Math.min(7, Math.round((new Date(toDateExclusive+'T12:00')-new Date(cur+'T12:00'))/86400000));
     for (var d=0; d<daysLeftInWindow; d++) {
       var date = addDays(cur, d);
       if (date >= toDateExclusive) break;
-      var dow = new Date(date+'T12:00').getDay();
-      var session;
-      if (dow===1) session = buildOffDay(date, weekLabel);
-      else if (dow===2 && qualitySessions>=1) session = buildThresholdSession(date, weekLabel, CP, pz, phase);
-      else if (dow===4 && qualitySessions>=2) session = buildVO2Session(date, weekLabel, CP, Wp, pz, phase);
-      else if (dow===6 && phase==='Picco Forma' && raceProfile && !raceSpecificUsed) { session = buildRaceSpecificSession(date, weekLabel, CP, pz, raceProfile); raceSpecificUsed = true; }
-      else if (dow===6 || dow===0) session = buildZ2Session(date, weekLabel, CP, pz, phase==='Tapering Finale'?60:phase==='Affilatura'?90:120, dow===6?'Z2 Lungo':'Z2 Aerobico');
-      else session = buildZ2Session(date, weekLabel, CP, pz, phase==='Tapering Finale'?45:60, 'Z2 Aerobico');
+      var dow = new Date(date+'T12:00').getDay(); // 0=Dom..6=Sab
+      var session = null;
+
+      if (dow===6) {
+        // Sabato: uscita lunga del weekend - qui i lavori più lunghi,
+        // oppure la simulazione gara nella fase di Picco Forma.
+        if (phase==='Picco Forma' && raceProfile && !raceSpecificUsed) {
+          session = buildRaceSpecificSession(date, weekLabel, CP, pz, raceProfile);
+          raceSpecificUsed = true;
+        } else {
+          session = buildWeekendLongSession(date, weekLabel, CP, pz, phase);
+        }
+      } else if (dow===2) {
+        // Martedì: qualità corta infrasettimanale (VO2max, sempre <2h);
+        // se la polarizzazione reale è già sbilanciata verso l'alta
+        // intensità, diventa un Z2 corto per riequilibrare (Seiler 80/20).
+        session = midweekQuality ? buildVO2Session(date, weekLabel, CP, Wp, pz, phase) : buildZ2Session(date, weekLabel, CP, pz, 75, 'Z2 Aerobico');
+      } else if (dow===4 && ridesPerWeek>=3) {
+        // Giovedì: Z2 corto, mai oltre 2h
+        session = buildZ2Session(date, weekLabel, CP, pz, 75, 'Z2 Aerobico');
+      } else if (dow===0 && ridesPerWeek>=4) {
+        // Domenica (solo se 4 uscite/settimana): Z2 breve di scarico, <2h
+        session = buildZ2Session(date, weekLabel, CP, pz, 60, 'Z2 Recupero');
+      } else {
+        session = buildOffDay(date, weekLabel);
+      }
+      // Sicurezza: nessuna uscita infrasettimanale sopra le 2h.
+      if (dow!==6 && session && session.durMin>120) session.durMin=120;
       sessions.push(session);
     }
 
