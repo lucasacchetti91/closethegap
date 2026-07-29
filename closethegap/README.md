@@ -297,6 +297,79 @@ ha meno sessioni). Ora il fattore è **clampato a ±15%**: se il target
 settimanale non è raggiungibile con la struttura data, resta non
 raggiunto — la struttura viene prima del numero.
 
+## 5ter. v5 — Persistenza, layout, e correzione bug nei grafici
+
+### Persistenza locale + auto-sync (`js/storage.js`)
+All'apertura l'app carica **istantaneamente** l'ultimo stato da
+localStorage e disegna tutto, poi lancia il sync in background. Non devi
+più premere niente. Se sei offline o il sync fallisce, continui a
+lavorare sui dati in cache invece di trovare l'app vuota (testato).
+Un indicatore discreto in topbar dice a quando risalgono i dati.
+Il sync automatico non riparte se l'ultimo è più recente di 30 minuti,
+per non sprecare chiamate a ogni reload. I bottoni manuali restano per
+forzare un aggiornamento.
+
+Non ho aggiunto un database perché **Intervals.icu è già il tuo
+database**: duplicare la fonte di verità creerebbe problemi di
+allineamento che oggi non hai. Il passo successivo sensato è Cloudflare
+KV, ma solo quando servirà persistere qualcosa che *non* vive su
+Intervals.icu — il candidato naturale sono i piani generati, che oggi
+vengono sovrascritti a ogni rigenerazione.
+
+### Layout
+- **Home**: la colonna centrale (KPI, PMC, recenti) ora è larga `1fr` e
+  quella di destra (allenamento di oggi + settimana) è fissa a 330px.
+- **Box "Questa Settimana"**: ora mostra svolto/pianificato con barre di
+  avanzamento (es. `TSS 82 / 370`, `mancano 288`), più ore e conteggio
+  uscite. Nuova funzione `weekPlanned()` in `metrics.js`.
+- **Piano**: nuova vista macrociclo in stile ATP di TrainingPeaks —
+  banda delle fasi in alto, sotto una colonna per settimana con il TSS
+  pianificato; per le settimane passate/corrente la barra piena mostra
+  quanto è stato **davvero svolto** sovrapposto al pianificato. Il
+  dettaglio sotto mostra **solo le settimane con giorni futuri**, con un
+  toggle per rivelare le passate; i giorni già passati dentro la
+  settimana corrente restano visibili ma sbiaditi (così non perdi il
+  contesto di dove sei nella settimana).
+- **Calendario**: celle da 82px a 124px, testo e pillole più grandi.
+
+### I quattro bug nei grafici (tutti reali, uno serio)
+
+**1. Curva Critical Power fino a 8000W.** Causa: il modello iperbolico
+`CP + W'/t` veniva disegnato fino a t=5 secondi. Con il W' nativo di
+Intervals.icu (38.000 J nei miei test) dà `338 + 38000/5 = 7938W`.
+Il modello CP è valido solo nella finestra ~2-30 minuti: estrapolarlo a
+5 secondi è matematicamente lecito ma fisiologicamente assurdo. Ora la
+curva parte da 120s. **In più** ho aggiunto un controllo di
+plausibilità: se il W' nativo predice per 1 minuto una potenza >25%
+sopra il tuo miglior minuto reale, viene scartato e si usa il W'
+stimato localmente (mantenendo il CP nativo, che è affidabile) — con
+nota esplicita nella legenda del grafico.
+
+**2. Best effort disegnati sulle durate sbagliate** (CP e PDM). I punti
+erano un array di 11 valori allineato *per indice* a 15 etichette di
+durata: il tuo 1min a 460W finiva sopra l'etichetta "30s". Ora entrambi
+i grafici usano coordinate `{x,y}` reali su asse logaritmico.
+
+**3. Distribuzione zone — il bug più serio, ed era concettuale.** Il
+codice classificava **ogni uscita** in base alla sua potenza *media* e
+sommava l'**intera durata** in quell'unica zona. Non era affatto una
+distribuzione del tempo in zona: una gran fondo di 4h con media 234W
+finiva 100% in Z2 anche se conteneva 40' sopra soglia. Ora si usano i
+tempi per zona che Intervals.icu calcola sullo stream reale
+(`icu_zone_times` / `icu_hr_zone_times`, aggiunti al sync). Se non
+disponibili, il vecchio metodo resta come fallback ma **etichettato per
+quello che è** ("stima per potenza media — non è il tempo reale in
+zona"), senza spacciarlo per una cosa che non è.
+
+**4. Scatterplot TSS vs IF con punti inventati.** Il codice faceva
+`calcIF(a) || 0.65`: per ogni uscita **senza misuratore di potenza**
+inventava un IF di 0.65 e disegnava il punto lo stesso, creando una
+colonna verticale di dati fittizi. Ora entrano solo le uscite con IF
+realmente calcolabile (14 su 30 nel dataset attuale). Corretti anche il
+clipping degli assi, che tagliava fuori le uscite agli estremi, e il
+tooltip, che indicizzava l'array delle attività anche per le linee di
+riferimento.
+
 ## 6. Prossimi passi possibili
 - Costruire il Cloudflare Worker OAuth per Strava e rendere W'bal/Decoupling
   reali automatici su ogni sync, non solo sulle 4 uscite pre-calcolate.

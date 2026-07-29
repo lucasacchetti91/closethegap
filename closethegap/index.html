@@ -64,6 +64,7 @@
       <div class="topbar-date" id="topbar-date"></div>
     </div>
     <div class="topbar-right">
+      <span id="sync-status" style="font-size:.6rem;color:var(--tx3);white-space:nowrap;"></span>
       <span id="import-status" style="font-size:.63rem;color:var(--tx3);white-space:nowrap;"></span>
       <button class="tb tb-pur" onclick="adaptPlan()">🧠 <span class="tb-label">Adatta Piano</span></button>
       <button class="tb tb-acc" onclick="openAdd()">+ <span class="tb-label">Attività</span></button>
@@ -88,11 +89,7 @@
           </div>
           <div class="card">
             <div class="ct">Questa Settimana</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
-              <div><div style="font-size:1.1rem;font-weight:700;" id="w-tss">—</div><div style="font-size:.6rem;color:var(--tx3);">TSS</div></div>
-              <div><div style="font-size:1.1rem;font-weight:700;" id="w-km">—</div><div style="font-size:.6rem;color:var(--tx3);">km</div></div>
-              <div><div style="font-size:1.1rem;font-weight:700;" id="w-hrs">—</div><div style="font-size:.6rem;color:var(--tx3);">ore</div></div>
-            </div>
+            <div id="week-progress"></div>
           </div>
           <div class="card">
             <div class="ct">PMC — Ultimi 60 giorni</div>
@@ -208,7 +205,7 @@
         </div>
       </div>
       <div class="g2">
-        <div class="card"><div class="ct">Distribuzione Zona Potenza</div><div id="zone-dist-power"></div></div>
+        <div class="card"><div class="ct">Distribuzione Zona Potenza</div><div id="zone-dist-power"></div><div id="zone-dist-power-note" style="font-size:.62rem;color:var(--tx3);margin-top:8px;"></div></div>
         <div class="card"><div class="ct">Distribuzione Zona HR &mdash; LTHR <span id="lthr-label">180</span>bpm</div><div id="zone-dist-hr"></div><div id="lthr-estimate-note" style="font-size:.62rem;color:var(--tx3);margin-top:8px;"></div></div>
       </div>
       <div class="card">
@@ -311,6 +308,7 @@
 <script src="js/calendar.js"></script>
 <script src="js/activities.js"></script>
 <script src="js/sync.js"></script>
+<script src="js/storage.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
