@@ -29,9 +29,31 @@ function cpModel() {
      calcolato su TUTTO lo storico attività, non solo su 11 best-effort
      statici) quando disponibile - vedi js/icu-native.js. */
   if (typeof ICU_NATIVE_CP !== 'undefined' && ICU_NATIVE_CP && ICU_NATIVE_CP.eftp) {
-    var WpNative = Math.round((ICU_NATIVE_CP.wPrime||0));
-    return {CP: Math.round(ICU_NATIVE_CP.eftp), Wp: WpNative || 8000, fitPoints: -1, native: true, pMax: ICU_NATIVE_CP.pMax};
+    var CPn = Math.round(ICU_NATIVE_CP.eftp);
+    var WpN = Math.round(ICU_NATIVE_CP.wPrime||0);
+    /* CONTROLLO DI PLAUSIBILITÀ sul W' nativo.
+       Il modello Morton a 3 parametri di ICU può restituire un W' molto
+       diverso dal nostro (unità diverse, oppure fit su un dominio più
+       ampio). Se con quel W' il modello predice per 1 minuto una potenza
+       molto superiore al tuo miglior minuto REALE, il valore non è
+       utilizzabile per disegnare la curva: teniamo il CP nativo (che è
+       affidabile) ma ricadiamo sul W' stimato localmente.
+       È esattamente il caso che generava la curva a ~8000W. */
+    var best1min = bestEfforts.find(function(e){return e.secs===60;});
+    var localWp = fitLocalCP().Wp;
+    if (WpN>0 && best1min) {
+      var predicted1min = CPn + WpN/60;
+      if (predicted1min > best1min.watts*1.25) {
+        return {CP:CPn, Wp:localWp, fitPoints:-1, native:true, pMax:ICU_NATIVE_CP.pMax, wpFallback:true};
+      }
+    }
+    return {CP:CPn, Wp:WpN||localWp, fitPoints:-1, native:true, pMax:ICU_NATIVE_CP.pMax};
   }
+  return fitLocalCP();
+}
+
+/* Fit lineare locale di Monod-Scherrer sugli sforzi 3-20 minuti. */
+function fitLocalCP() {
   var STANDARD_LO = 165, STANDARD_HI = 1260; // 2:45 - 21min
   var pts = bestEfforts.filter(function(e){return e.secs>=STANDARD_LO && e.secs<=STANDARD_HI;});
   if (pts.length < 2) pts = bestEfforts.filter(function(e){return e.secs>=120 && e.secs<=3600;});

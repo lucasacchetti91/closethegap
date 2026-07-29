@@ -111,53 +111,119 @@ function renderHeatmap() {
   document.getElementById('hm-wrap').innerHTML=html+'</div>';
 }
 
+/* ============================================================
+   DISTRIBUZIONE ZONE
+   BUG CORRETTO: la versione precedente classificava OGNI USCITA in base
+   alla sua potenza MEDIA e poi sommava l'INTERA durata dell'uscita in
+   quell'unica zona. Non era affatto una distribuzione del tempo in zona:
+   una gran fondo di 4h con media 234W finiva 100% in Z2 anche se dentro
+   c'erano 40' sopra soglia. Per questo i numeri sembravano sbagliati -
+   lo erano.
+
+   Ora, se Intervals.icu ha fornito i tempi per zona calcolati sullo
+   stream reale (icu_zone_times), si usano quelli: è la distribuzione
+   vera. Altrimenti si ricade sul vecchio metodo, ma etichettato per
+   quello che è ("per potenza media"), senza spacciarlo per tempo in zona.
+   ============================================================ */
 function renderZoneDist() {
   var pzZones = computePowerZones();
-  var pzB = pzZones.map(function(z){return z.lo;}).concat([pzZones[pzZones.length-1].hi]);
   var pzL=['Z1','Z2','Z3','Z4','Z5','Z6','Z7'];
   var pzC=['#4a5168','#22d46a','#fbbf24','#f97316','#ff4d4d','#a78bfa','#ec4899'];
-  var pzS=new Array(7).fill(0);
-  activities.filter(function(a){return a.avg_watts;}).forEach(function(a){
-    for(var i=0;i<7;i++){if(a.avg_watts>=pzB[i]&&a.avg_watts<pzB[i+1]){pzS[i]+=a.dur;break;}}
-  });
+
+  var withNative = activities.filter(function(a){return a.icu_zone_times && a.icu_zone_times.length;});
+  var pzS=new Array(7).fill(0), powerMode;
+  if (withNative.length) {
+    powerMode = 'native';
+    withNative.forEach(function(a){
+      a.icu_zone_times.forEach(function(secs,i){ if(i<7) pzS[i]+=(secs||0); });
+    });
+  } else {
+    powerMode = 'approx';
+    var pzB = pzZones.map(function(z){return z.lo;}).concat([Infinity]);
+    activities.filter(function(a){return a.avg_watts;}).forEach(function(a){
+      for(var i=0;i<7;i++){ if(a.avg_watts>=pzB[i]&&a.avg_watts<pzB[i+1]){ pzS[i]+=a.dur; break; } }
+    });
+  }
   var pzT=Math.max(pzS.reduce(function(s,v){return s+v;},0),1);
   document.getElementById('zone-dist-power').innerHTML=pzL.map(function(l,i){
-    var lo=pzB[i], hi=i===6?'Max':pzB[i+1], pct=Math.round(pzS[i]/pzT*100);
-    return '<div class="zbar"><span class="zbar-lbl" style="color:'+pzC[i]+';">'+l+' '+lo+'–'+hi+'W</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+pzC[i]+'"></div></div><span class="zbar-pct">'+pct+'%</span></div>';
+    var z=pzZones[i];
+    var hi = i===6 ? 'Max' : z.hi;
+    var pct=Math.round(pzS[i]/pzT*100);
+    return '<div class="zbar"><span class="zbar-lbl" style="color:'+pzC[i]+';">'+l+' '+z.lo+'–'+hi+'W</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+pzC[i]+'"></div></div><span class="zbar-pct">'+pct+'%</span></div>';
   }).join('');
+  var pNote=document.getElementById('zone-dist-power-note');
+  if (pNote) pNote.textContent = powerMode==='native'
+    ? 'Tempo reale in zona da Intervals.icu ('+withNative.length+' uscite con dati nativi).'
+    : 'Stima per potenza media dell\'uscita — non è il tempo reale in zona. Premi "Sync metriche avanzate ICU" per avere la distribuzione vera.';
+
   var hrZones = computeHRZones(LTHR);
-  var hrB = hrZones.map(function(z){return z.lo;}).concat([HR_MAX]);
   var hrL=['Z1 Rec','Z2 Aerob','Z3 Tempo','Z4 Soglia','Z5 VO2'];
   var hrC=['#4a5168','#22d46a','#fbbf24','#f97316','#ff4d4d'];
-  var hrS=new Array(5).fill(0);
-  activities.filter(function(a){return a.hr;}).forEach(function(a){
-    for(var i=0;i<5;i++){if(a.hr>=hrB[i]&&a.hr<hrB[i+1]){hrS[i]+=a.dur;break;}}
-  });
+  var hrWithNative = activities.filter(function(a){return a.icu_hr_zone_times && a.icu_hr_zone_times.length;});
+  var hrS=new Array(5).fill(0), hrMode;
+  if (hrWithNative.length) {
+    hrMode='native';
+    hrWithNative.forEach(function(a){ a.icu_hr_zone_times.forEach(function(secs,i){ if(i<5) hrS[i]+=(secs||0); }); });
+  } else {
+    hrMode='approx';
+    var hrB = hrZones.map(function(z){return z.lo;}).concat([Infinity]);
+    activities.filter(function(a){return a.hr;}).forEach(function(a){
+      for(var i=0;i<5;i++){ if(a.hr>=hrB[i]&&a.hr<hrB[i+1]){ hrS[i]+=a.dur; break; } }
+    });
+  }
   var hrT=Math.max(hrS.reduce(function(s,v){return s+v;},0),1);
   document.getElementById('lthr-label').textContent=LTHR;
   var lthrEst = estimateLTHRFromHistory();
   var lthrNoteEl = document.getElementById('lthr-estimate-note');
   if (lthrNoteEl) {
-    lthrNoteEl.innerHTML = lthrEst ? ('LTHR stimata dai dati reali: <strong>'+lthrEst.lthr+'bpm</strong> (da "'+lthrEst.source+'", '+lthrEst.date+') — quella in uso ora è '+LTHR+'bpm.') : '';
+    var modeTxt = hrMode==='native'
+      ? 'Tempo reale in zona da Intervals.icu ('+hrWithNative.length+' uscite).'
+      : 'Stima per FC media dell\'uscita — non è il tempo reale in zona.';
+    lthrNoteEl.innerHTML = modeTxt + (lthrEst ? '<br>LTHR stimata dai dati reali: <strong>'+lthrEst.lthr+'bpm</strong> (da "'+lthrEst.source+'", '+lthrEst.date+') — in uso ora: '+LTHR+'bpm.' : '');
   }
   document.getElementById('zone-dist-hr').innerHTML=hrL.map(function(l,i){
-    var lo=hrB[i], hi=hrB[i+1]===HR_MAX?HR_MAX:hrB[i+1]-1, pct=Math.round(hrS[i]/hrT*100);
-    return '<div class="zbar"><span class="zbar-lbl" style="color:'+hrC[i]+';">'+l+' '+lo+'–'+hi+'bpm</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+hrC[i]+'"></div></div><span class="zbar-pct">'+pct+'%</span></div>';
+    var z=hrZones[i];
+    var hi = i===4 ? HR_MAX : z.hi;
+    var pct=Math.round(hrS[i]/hrT*100);
+    return '<div class="zbar"><span class="zbar-lbl" style="color:'+hrC[i]+';">'+l+' '+z.lo+'–'+hi+'bpm</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+hrC[i]+'"></div></div><span class="zbar-pct">'+pct+'%</span></div>';
   }).join('');
 }
 
 function renderScatter() {
-  var pts=activities.filter(function(a){return calcTSS(a)>10;}).map(function(a){
-    var IF=calcIF(a)||0.65; return {x:IF,y:calcTSS(a),name:a.name,date:a.date,isRace:a.isRace};
-  });
+  /* BUG CORRETTO: prima si usava `calcIF(a)||0.65`, cioè per ogni uscita
+     SENZA misuratore di potenza veniva inventato un IF di 0.65 e il punto
+     veniva disegnato lo stesso. Il grafico mostrava quindi una colonna
+     verticale di punti fittizi a IF 0.65 che non corrispondevano a nulla.
+     Ora entrano solo le uscite con un IF realmente calcolabile.
+     Corretto anche il clipping degli assi (min 0.4 / max 1.3 tagliava
+     fuori le uscite vere agli estremi) e il tooltip, che indicizzava
+     `pts` anche per le due linee di riferimento. */
+  var pts=activities.filter(function(a){ return calcTSS(a)>10 && calcIF(a)!=null; })
+    .map(function(a){ return {x:calcIF(a), y:calcTSS(a), name:a.name, date:a.date, isRace:a.isRace}; });
+  if (!pts.length) return;
   var colors=pts.map(function(p){
     return p.isRace?'rgba(167,139,250,.85)':p.y>150&&p.x>0.75?'rgba(255,77,77,.75)':p.y>150?'rgba(34,212,106,.75)':p.x>0.75?'rgba(249,115,22,.75)':'rgba(59,130,246,.65)';
   });
+  var maxIF=Math.max.apply(null,pts.map(function(p){return p.x;}));
+  var minIF=Math.min.apply(null,pts.map(function(p){return p.x;}));
+  var maxTSS=Math.max.apply(null,pts.map(function(p){return p.y;}));
+  var xLo=Math.min(0.45, Math.floor(minIF*20)/20), xHi=Math.max(1.05, Math.ceil(maxIF*20)/20);
+  var yHi=Math.ceil(maxTSS/50)*50;
   mkChart('ch-scatter','scatter',{datasets:[
-    {label:'Attivita',data:pts.map(function(p){return{x:p.x,y:p.y};}),backgroundColor:colors,pointRadius:5,pointHoverRadius:7},
-    {label:'IF=0.75',type:'line',data:[{x:0.75,y:0},{x:0.75,y:400}],borderColor:'rgba(255,255,255,.08)',borderDash:[3,3],pointRadius:0},
-    {label:'TSS=150',type:'line',data:[{x:0,y:150},{x:1.3,y:150}],borderColor:'rgba(255,255,255,.08)',borderDash:[3,3],pointRadius:0}
-  ]},{plugins:{tooltip:{callbacks:{label:function(c){var p=pts[c.dataIndex];return p?p.date+' '+p.name.substring(0,16)+' IF:'+c.parsed.x.toFixed(2)+' TSS:'+c.parsed.y:'';}}}},scales:{x:{min:0.4,max:1.3},y:{min:0}}});
+    {label:'Attività ('+pts.length+' con dati di potenza)',data:pts.map(function(p){return{x:p.x,y:p.y};}),backgroundColor:colors,pointRadius:5,pointHoverRadius:7},
+    {label:'IF=0.75',type:'line',data:[{x:0.75,y:0},{x:0.75,y:yHi}],borderColor:'rgba(255,255,255,.10)',borderDash:[3,3],pointRadius:0,borderWidth:1},
+    {label:'TSS=150',type:'line',data:[{x:xLo,y:150},{x:xHi,y:150}],borderColor:'rgba(255,255,255,.10)',borderDash:[3,3],pointRadius:0,borderWidth:1}
+  ]},{
+    plugins:{tooltip:{callbacks:{label:function(c){
+      if (c.datasetIndex!==0) return null; // le linee di riferimento non hanno un'attività associata
+      var p=pts[c.dataIndex];
+      return p ? p.date+' · '+p.name.substring(0,20)+' · IF '+c.parsed.x.toFixed(2)+' · TSS '+Math.round(c.parsed.y) : '';
+    }}}},
+    scales:{
+      x:{min:xLo,max:xHi,title:{display:true,text:'Intensity Factor',color:'#4a5168',font:{size:9}},ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}},
+      y:{min:0,max:yHi,title:{display:true,text:'TSS',color:'#4a5168',font:{size:9}},ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.04)'}}
+    }
+  });
 }
 
 function renderCPModel() {
@@ -166,13 +232,53 @@ function renderCPModel() {
   document.getElementById('cp-val').textContent=CP+'W'+(cp.native?' ●':'');
   document.getElementById('wp-val').textContent=Math.round(Wp/1000)+'kJ';
   document.getElementById('pmax-val').textContent=(cp.native&&cp.pMax?Math.round(cp.pMax):bestEfforts[0].watts)+'W';
-  var srcLabel = cp.native ? "CP="+CP+"W W'="+Math.round(Wp/1000)+"kJ (● modello nativo Morton 3P di Intervals.icu)" : "CP="+CP+"W W'="+Math.round(Wp/1000)+"kJ (fit locale su "+cp.fitPoints+" punti 3-20min)";
-  var tP=[5,10,20,30,60,120,180,300,480,600,900,1200,1800,2700,3600];
-  mkChart('ch-cp','line',{labels:tP.map(function(t){return t<60?t+'s':t<3600?Math.round(t/60)+'min':'1h';}),datasets:[
-    {label:'Best Efforts',data:bestEfforts.map(function(e){return e.watts;}),type:'scatter',backgroundColor:'#e8ff47',pointRadius:5},
-    {label:srcLabel,data:tP.map(function(t){return Math.round(CP+Wp/t);}),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.4,pointRadius:0,fill:true,borderWidth:1.5},
-    {label:'FTP',data:tP.map(function(){return FTP;}),borderColor:'rgba(232,255,71,.4)',borderDash:[4,4],pointRadius:0,borderWidth:1}
-  ]});
+  var srcLabel = cp.native
+    ? (cp.wpFallback
+        ? "Modello CP (● CP nativo ICU, W' da fit locale — quello nativo era implausibile)"
+        : "Modello CP (● nativo Morton 3P di Intervals.icu)")
+    : "Modello CP (fit locale su "+cp.fitPoints+" punti 3-20min)";
+
+  /* FIX 1 — il modello iperbolico CP + W'/t è valido solo nella finestra
+     ~2-30 minuti. Estrapolarlo a 5 secondi è matematicamente lecito ma
+     fisiologicamente assurdo: con W' nativo ICU dava CP + W'/5 ≈ 8000W.
+     Ora la curva del modello parte da 120s e si ferma a 3600s, cioè dove
+     il modello ha senso. Fuori da quella finestra restano solo i best
+     effort reali, senza curva inventata.
+     FIX 2 — prima i best effort erano un array di 11 valori disegnato
+     contro 15 etichette di durata: ogni punto finiva sulla durata
+     sbagliata (il tuo 1min a 460W appariva a "30s"). Ora entrambi i
+     dataset usano coordinate {x,y} reali su asse logaritmico. */
+  var MODEL_LO = 120, MODEL_HI = 3600;
+  var tModel=[120,150,180,240,300,420,600,900,1200,1800,2400,3000,3600];
+  var modelPts = tModel.filter(function(t){return t>=MODEL_LO && t<=MODEL_HI;})
+                       .map(function(t){ return {x:t, y:Math.round(CP+Wp/t)}; });
+  var effortPts = bestEfforts.map(function(e){ return {x:e.secs, y:e.watts}; });
+
+  mkChart('ch-cp','line',{datasets:[
+    {label:'Best Effort reali',data:effortPts,type:'scatter',backgroundColor:'#e8ff47',pointRadius:5,pointHoverRadius:7,showLine:false},
+    {label:srcLabel,data:modelPts,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.3,pointRadius:0,fill:true,borderWidth:1.5},
+    {label:'CP '+CP+'W',data:[{x:MODEL_LO,y:CP},{x:MODEL_HI,y:CP}],borderColor:'rgba(34,212,106,.45)',borderDash:[5,4],pointRadius:0,borderWidth:1},
+    {label:'FTP '+FTP+'W',data:[{x:5,y:FTP},{x:3600,y:FTP}],borderColor:'rgba(232,255,71,.4)',borderDash:[4,4],pointRadius:0,borderWidth:1}
+  ]},{
+    plugins:{tooltip:{callbacks:{label:function(c){ return fmtSecs(c.parsed.x)+' · '+Math.round(c.parsed.y)+'W'; }}}},
+    scales:{
+      x:{type:'logarithmic',min:5,max:3600,
+         title:{display:true,text:'Durata (scala logaritmica)',color:'#4a5168',font:{size:9}},
+         ticks:{color:'#4a5168',font:{size:8},callback:function(v){
+           var allowed=[5,15,30,60,300,600,1200,1800,3600];
+           return allowed.indexOf(v)>=0 ? fmtSecs(v) : '';
+         }},
+         grid:{color:'rgba(255,255,255,.03)'}},
+      y:{title:{display:true,text:'Potenza (W)',color:'#4a5168',font:{size:9}},
+         ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.04)'}}
+    }
+  });
+}
+
+function fmtSecs(s) {
+  if (s<60) return s+'s';
+  if (s<3600) return Math.round(s/60)+'min';
+  return Math.round(s/3600*10)/10+'h';
 }
 
 function renderPDM() {
@@ -186,18 +292,29 @@ function renderPDM() {
   document.getElementById('pdm-note').textContent='FTP stimato: '+m.ftpEst+'W (Morton: '+m.ftpMorton+'W · 95% 20min: '+m.ftp20+'W · Pmax neuromuscolare: '+m.Pmax+'W). Gap: '+gap+'W. '+
     (gap>0?'Al ritmo ~1.5W/sett servono '+weeksNeeded+' sett. '+(daysNeeded<=59?'Obiettivo 19 set raggiungibile!':'Accelerare il carico.'):'Obiettivo 360W raggiunto!');
   var tPts=[5,15,30,60,120,180,300,480,600,900,1200,1800,2700,3600,5400,7200];
-  var modelW=tPts.map(function(t){return Math.max(pdmCurve(t,m.CP,m.Wp,m.Pmax),0);});
   var projCP=Math.round(m.CP*(360/Math.max(m.ftpEst,1)));
   var projWp=Math.round(m.Wp*1.05);
-  var projW=tPts.map(function(t){return Math.max(pdmCurve(t,projCP,projWp,m.Pmax),0);});
-  mkChart('ch-pdm','line',{
-    labels:tPts.map(function(t){return t<60?t+'s':t<3600?Math.round(t/60)+'min':Math.round(t/3600)+'h';}),
-    datasets:[
-      {label:'Best Efforts',data:bestEfforts.filter(function(e){return e.secs<=7200;}).map(function(e){return e.watts;}),type:'scatter',backgroundColor:'#e8ff47',pointRadius:6},
-      {label:'Modello attuale (FTP est. '+m.ftpEst+'W)',data:modelW,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.4,pointRadius:0,fill:true,borderWidth:1.5},
-      {label:'Obiettivo 360W FTP',data:projW,borderColor:'rgba(232,255,71,.5)',borderDash:[5,4],pointRadius:0,fill:false,borderWidth:1.5},
-      {label:'FTP corrente '+FTP+'W',data:tPts.map(function(){return FTP;}),borderColor:'rgba(249,115,22,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1}
-    ]
+  /* Stessa correzione del grafico CP: coordinate {x,y} reali su asse
+     logaritmico, invece di due array di lunghezza diversa allineati per
+     indice (che spostava ogni best effort sulla durata sbagliata). */
+  mkChart('ch-pdm','line',{datasets:[
+      {label:'Best Effort reali',data:bestEfforts.filter(function(e){return e.secs<=7200;}).map(function(e){return {x:e.secs,y:e.watts};}),type:'scatter',backgroundColor:'#e8ff47',pointRadius:6,showLine:false},
+      {label:'Modello attuale (FTP est. '+m.ftpEst+'W)',data:tPts.map(function(t){return {x:t,y:Math.max(pdmCurve(t,m.CP,m.Wp,m.Pmax),0)};}),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.3,pointRadius:0,fill:true,borderWidth:1.5},
+      {label:'Obiettivo 360W FTP',data:tPts.map(function(t){return {x:t,y:Math.max(pdmCurve(t,projCP,projWp,m.Pmax),0)};}),borderColor:'rgba(232,255,71,.5)',borderDash:[5,4],pointRadius:0,fill:false,borderWidth:1.5},
+      {label:'FTP corrente '+FTP+'W',data:[{x:5,y:FTP},{x:7200,y:FTP}],borderColor:'rgba(249,115,22,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1}
+  ]},{
+    plugins:{tooltip:{callbacks:{label:function(c){ return fmtSecs(c.parsed.x)+' · '+Math.round(c.parsed.y)+'W'; }}}},
+    scales:{
+      x:{type:'logarithmic',min:5,max:7200,
+         title:{display:true,text:'Durata (scala logaritmica)',color:'#4a5168',font:{size:9}},
+         ticks:{color:'#4a5168',font:{size:8},callback:function(v){
+           var allowed=[5,15,30,60,300,600,1200,1800,3600,7200];
+           return allowed.indexOf(v)>=0 ? fmtSecs(v) : '';
+         }},
+         grid:{color:'rgba(255,255,255,.03)'}},
+      y:{title:{display:true,text:'Potenza (W)',color:'#4a5168',font:{size:9}},
+         ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.04)'}}
+    }
   });
 }
 

@@ -65,40 +65,151 @@ function makePlan(){
   plan.sort(function(a,b){ return a.date.localeCompare(b.date); });
 }
 
+var PHASE_COLORS = {
+  'Costruzione':'#3b82f6', 'Picco Forma':'#f97316',
+  'Affilatura':'#a78bfa', 'Tapering Finale':'#22d46a'
+};
+var showPastSessions = false;
+
+function phaseOf(weekLabel) {
+  var parts = (weekLabel||'').split('·');
+  return parts.length>1 ? parts[1].trim() : 'Costruzione';
+}
+
+/* Vista macrociclo: barra delle fasi in alto + una colonna per
+   settimana con il TSS pianificato (e, per le settimane passate, il TSS
+   realmente svolto sovrapposto). Ispirata all'Annual Training Plan di
+   TrainingPeaks: prima la visione d'insieme, poi il dettaglio. */
+function renderMacrocycle(weeks, weekKeys) {
+  var td = today();
+  var maxTSS = Math.max.apply(null, weekKeys.map(function(k){
+    return weeks[k].reduce(function(s,p){return s+(p.tss||0);},0);
+  }).concat([1]));
+
+  // Raggruppa settimane consecutive della stessa fase per la banda in alto
+  var bands = [];
+  weekKeys.forEach(function(k){
+    var ph = phaseOf(k);
+    if (bands.length && bands[bands.length-1].phase===ph) bands[bands.length-1].count++;
+    else bands.push({phase:ph, count:1});
+  });
+
+  var html = '<div class="atp-card">';
+  html += '<div class="ct" style="margin-bottom:12px;">Macrociclo — verso il '+GOAL_DATE.split('-').reverse().join('/')+'</div>';
+
+  html += '<div class="atp-phases">';
+  bands.forEach(function(b){
+    var c = PHASE_COLORS[b.phase]||'#4a5168';
+    html += '<div class="atp-phase" style="flex:'+b.count+';background:'+c+'22;color:'+c+';border-bottom:2px solid '+c+';">'+b.phase+'</div>';
+  });
+  html += '</div>';
+
+  html += '<div class="atp-weeks">';
+  weekKeys.forEach(function(k){
+    var items = weeks[k];
+    var planTSS = items.reduce(function(s,p){return s+(p.tss||0);},0);
+    var ph = phaseOf(k);
+    var c = PHASE_COLORS[ph]||'#4a5168';
+    var isPast = items.every(function(p){return p.date < td;});
+    var isCurrent = items.some(function(p){
+      var mon=new Date(); mon.setDate(mon.getDate()-mon.getDay()+1); mon.setHours(0,0,0,0);
+      var sun=new Date(mon); sun.setDate(mon.getDate()+6);
+      var d=new Date(p.date+'T12:00'); return d>=mon && d<=sun;
+    });
+    var actualTSS = items.reduce(function(s,p){
+      return s + activities.filter(function(a){return a.date===p.date;}).reduce(function(x,a){return x+calcTSS(a);},0);
+    },0);
+    var hasRace = items.some(function(p){return p.type==='race';});
+    var planH = Math.round(planTSS/maxTSS*100);
+    var actH = Math.round(actualTSS/maxTSS*100);
+    var wkNum = (k.match(/Sett\.\s*(\d+)/)||[])[1] || '';
+
+    html += '<div class="atp-week'+(isCurrent?' atp-week-current':'')+'" title="'+k+' — pianificato '+planTSS+' TSS'+(actualTSS?', svolto '+actualTSS+' TSS':'')+'">';
+    html += '<div class="atp-tss">'+(hasRace?'🏁':planTSS)+'</div>';
+    if (isPast || isCurrent) {
+      // barra svolto (piena) sovrapposta alla pianificata (trasparente)
+      html += '<div class="atp-bar" style="height:'+Math.max(planH-actH,0)+'%;background:'+c+'33;"></div>';
+      html += '<div class="atp-bar-actual" style="height:'+Math.min(actH,100)+'%;background:'+c+';"></div>';
+    } else {
+      html += '<div class="atp-bar" style="height:'+planH+'%;background:'+c+'99;"></div>';
+    }
+    html += '<div class="atp-wlabel">'+wkNum+'</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  html += '<div class="atp-legend">';
+  Object.keys(PHASE_COLORS).forEach(function(p){
+    html += '<span><i class="atp-dot" style="background:'+PHASE_COLORS[p]+'"></i>'+p+'</span>';
+  });
+  html += '<span><i class="atp-dot" style="background:#3b82f699"></i>pianificato</span>';
+  html += '<span><i class="atp-dot" style="background:#3b82f6"></i>svolto</span>';
+  html += '</div></div>';
+  return html;
+}
+
+function togglePastSessions() {
+  showPastSessions = !showPastSessions;
+  renderPlanPage();
+}
+
 function renderPlanPage() {
   var meta = lastPlanGenMeta;
   var metaEl = document.getElementById('plan-gen-meta');
   if (metaEl && meta) {
     metaEl.innerHTML =
       '<strong style="color:var(--acc);">Generazione piano futuro — metodi usati</strong><br>'+
-      'CP attuale: <strong>'+meta.CP+'W</strong> · W\': <strong>'+Math.round(meta.Wp/1000)+'kJ</strong> (individualizza tutte le zone qui sotto)<br>'+
+      'CP attuale: <strong>'+meta.CP+'W</strong> · W\': <strong>'+Math.round(meta.Wp/1000)+'kJ</strong> (individualizza tutte le zone)<br>'+
       'Ramp rate applicato: <strong>'+meta.rampRate+' CTL/settimana</strong> (dal tuo storico, clampato 3-8 per sicurezza)<br>'+
-      (meta.polarization ? ('Polarizzazione ultimi 42gg: <strong>'+meta.polarization.lowPct+'% bassa / '+meta.polarization.highPct+'% alta intensità</strong> ('+(meta.polarization.polarized?'80/20 rispettato':'sbilanciata verso l\'alta intensità — sessioni qualità ridotte questa settimana')+')<br>') : '') +
-      (meta.raceProfile ? ('Profilo gare analizzate: <strong>'+meta.raceProfile.count+' gare</strong>, '+meta.raceProfile.avgDurMin+"' medi, decoupling medio "+meta.raceProfile.avgDecoupling+'%<br>') : '');
+      (meta.polarization ? ('Polarizzazione ultimi 42gg: <strong>'+meta.polarization.lowPct+'% bassa / '+meta.polarization.highPct+'% alta intensità</strong> ('+(meta.polarization.polarized?'80/20 rispettato':'sbilanciata verso l\'alta intensità — sessioni qualità ridotte')+')<br>') : '') +
+      (meta.raceProfile ? ('Profilo gare analizzate: <strong>'+meta.raceProfile.count+' gare</strong>, '+meta.raceProfile.avgDurMin+"' medi, decoupling medio "+meta.raceProfile.avgDecoupling+'%') : '');
   }
-  var weeks={};
-  plan.forEach(function(p){if(!weeks[p.week])weeks[p.week]=[];weeks[p.week].push(p);});
-  var td=today();
+
+  var td = today();
+  var weeks={}, weekKeys=[];
+  plan.forEach(function(p){
+    if(!weeks[p.week]){weeks[p.week]=[];weekKeys.push(p.week);}
+    weeks[p.week].push(p);
+  });
+
+  var html = renderMacrocycle(weeks, weekKeys);
+
+  // Dettaglio: di default solo le settimane che contengono giorni futuri.
+  var pastWeeks = weekKeys.filter(function(k){ return weeks[k].every(function(p){return p.date<td;}); });
+  var visibleKeys = showPastSessions ? weekKeys : weekKeys.filter(function(k){ return weeks[k].some(function(p){return p.date>=td;}); });
+
+  if (pastWeeks.length) {
+    html += '<button class="plan-past-toggle" onclick="togglePastSessions()">'+
+            (showPastSessions ? '▾ Nascondi le '+pastWeeks.length+' settimane passate' : '▸ Mostra anche le '+pastWeeks.length+' settimane passate')+
+            '</button>';
+  }
+
   var TM={z1:'pc-z2',z2:'pc-z2',z3:'pc-z3',z4:'pc-z4',z5:'pc-z5',z6:'pc-z5',race:'pc-race',off:'pc-off'};
-  var html='';
-  Object.keys(weeks).forEach(function(wk){
-    var items=weeks[wk];
-    var wTSS=items.reduce(function(s,p){return s+(p.tss||0);},0);
-    html+='<div class="plan-week-block"><div class="pwb-header"><div class="pwb-title">'+wk+'</div><div class="pwb-tss">'+wTSS+' TSS settimana</div></div><div class="plan-day-grid">';
-    items.forEach(function(p){
+  visibleKeys.forEach(function(wk){
+    var items = weeks[wk];
+    // dentro una settimana in corso, i giorni già passati restano visibili ma sbiaditi
+    var shown = showPastSessions ? items : items.filter(function(p){ return p.date>=td || !weeks[wk].every(function(x){return x.date<td;}); });
+    var wTSS = items.reduce(function(s,p){return s+(p.tss||0);},0);
+    var ph = phaseOf(wk);
+    var pc = PHASE_COLORS[ph]||'#4a5168';
+    html+='<div class="plan-week-block"><div class="pwb-header">'+
+          '<div class="pwb-title"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+pc+';margin-right:7px;"></span>'+wk+'</div>'+
+          '<div class="pwb-tss">'+wTSS+' TSS settimana</div></div><div class="plan-day-grid">';
+    shown.forEach(function(p){
       var done=activities.find(function(a){return a.date===p.date;});
-      var isT=p.date===td;
-      var cls='plan-card '+(TM[p.type]||'pc-z2')+(done?' pc-done':'')+(isT?' pc-today':'');
+      var isT=p.date===td, isPast=p.date<td;
+      var cls='plan-card '+(TM[p.type]||'pc-z2')+(done?' pc-done':'')+(isT?' pc-today':'')+(isPast&&!done?' pc-past':'');
       var dl=new Date(p.date+'T12:00').toLocaleDateString('it',{weekday:'short',day:'2-digit',month:'2-digit'});
       html+='<div class="'+cls+'"><div class="pc-header"><span class="pc-date">'+dl+'</span><span class="pc-name">'+p.name+'</span><span class="pc-tss-lbl">'+p.tss+' TSS</span></div>';
       if (done) html+='<div style="font-size:.62rem;color:var(--grn);margin-bottom:4px;">✅ '+calcTSS(done)+' TSS reale · '+fmtDist(done.dist)+'km</div>';
-      html+='<div class="pc-desc">'+p.desc.substring(0,120)+(p.desc.length>120?'…':'')+'</div>';
+      html+='<div class="pc-desc">'+p.desc.substring(0,150)+(p.desc.length>150?'…':'')+'</div>';
       if (p.blocks&&p.blocks.length&&p.type!=='off') html+=renderWorkoutBlock(p);
       if (p.adaptNote) html+='<div class="pc-adapt">⚡ '+p.adaptNote+'</div>';
       html+='</div>';
     });
     html+='</div></div>';
   });
+
   document.getElementById('plan-render').innerHTML=html||'<div class="empty">Nessun piano.</div>';
 }
 

@@ -32,6 +32,12 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});
 }
 document.getElementById('topbar-date').textContent=new Date().toLocaleDateString('it',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-applyDataDrivenZones();
-makePlan();
-renderHome();
+
+/* Avvio: carica la cache locale e disegna subito, poi sincronizza in
+   background (vedi js/storage.js). Niente più bottoni da premere a ogni
+   apertura; quelli manuali restano per forzare un aggiornamento. */
+bootstrapData();
+
+/* Salva lo stato quando si lascia la pagina, così anche le modifiche
+   manuali (attività aggiunte a mano) sopravvivono al reload. */
+window.addEventListener('beforeunload', function(){ try { saveState(); } catch(e){} });

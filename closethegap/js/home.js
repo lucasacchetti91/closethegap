@@ -12,11 +12,8 @@ function renderHome() {
   te.textContent=pmc.tsb||'—';
   te.className='kv '+(pmc.tsb>5?'kv-up':pmc.tsb<-10?'kv-dn':'kv-wa');
   document.getElementById('k-ftp').textContent=FTP+'W';
-  var ws=weekStats(0);
-  document.getElementById('w-tss').textContent=Math.round(ws.tss)||'0';
-  document.getElementById('w-km').textContent=Math.round(ws.km/1000)||'0';
-  var wh=Math.floor(ws.dur/3600), wm2=Math.floor((ws.dur%3600)/60);
-  document.getElementById('w-hrs').textContent=ws.dur>0?wh+'h'+String(wm2).padStart(2,'0'):'0h00';
+  var ws=weekStats(0), wp=weekPlanned(0);
+  renderWeekProgress(ws, wp);
   var h=pmc.history.slice(-60);
   mkChart('ch-mini-pmc','line',{labels:h.map(function(d){return d.date.slice(5);}),datasets:[
     {label:'CTL',data:h.map(function(d){return d.ctl;}),borderColor:'#3b82f6',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
@@ -45,6 +42,50 @@ function renderHome() {
   }).join('');
   renderTodayCard(today());
   renderWeekStrip();
+}
+
+/* Barra "svolto / pianificato" per la settimana corrente: si vede a
+   colpo d'occhio a che punto sei e quanto manca al target. */
+function renderWeekProgress(ws, wp) {
+  var el=document.getElementById('week-progress');
+  if (!el) return;
+  var doneTSS=Math.round(ws.tss), planTSS=Math.round(wp.tss);
+  var doneH=ws.dur/3600, planH=wp.dur/3600;
+  var doneSessions=activities.filter(function(a){
+    var now=new Date(), mon=new Date(now); mon.setDate(now.getDate()-now.getDay()+1); mon.setHours(0,0,0,0);
+    var sun=new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59);
+    var d=new Date(a.date); return d>=mon&&d<=sun;
+  }).length;
+
+  function bar(label, done, plan, unit, decimals) {
+    var pct = plan>0 ? Math.min(100, Math.round(done/plan*100)) : 0;
+    var over = plan>0 && done>plan;
+    var col = over ? 'var(--grn)' : pct>=80 ? 'var(--grn)' : pct>=45 ? 'var(--acc)' : 'var(--blu)';
+    var d = decimals ? (Math.round(done*10)/10).toFixed(1) : Math.round(done);
+    var p = decimals ? (Math.round(plan*10)/10).toFixed(1) : Math.round(plan);
+    var remaining = plan-done;
+    var remTxt = plan<=0 ? '' : remaining>0
+      ? ('mancano ' + (decimals ? (Math.round(remaining*10)/10).toFixed(1) : Math.round(remaining)) + unit)
+      : 'target raggiunto ✅';
+    return '<div style="margin-bottom:11px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">'+
+        '<span style="font-size:.66rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;">'+label+'</span>'+
+        '<span style="font-size:.92rem;font-weight:700;">'+d+'<span style="color:var(--tx3);font-weight:500;"> / '+p+unit+'</span></span>'+
+      '</div>'+
+      '<div style="height:6px;background:var(--s3);border-radius:3px;overflow:hidden;">'+
+        '<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:3px;transition:width .3s;"></div>'+
+      '</div>'+
+      '<div style="font-size:.58rem;color:var(--tx3);margin-top:3px;">'+remTxt+'</div>'+
+    '</div>';
+  }
+
+  var html = bar('TSS', doneTSS, planTSS, '', false) +
+             bar('Ore', doneH, planH, 'h', true) +
+             '<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--br);font-size:.66rem;color:var(--tx2);">'+
+               '<span>Uscite: <strong>'+doneSessions+'</strong> / '+wp.sessions+'</span>'+
+               '<span>Km: <strong>'+Math.round(ws.km/1000)+'</strong></span>'+
+             '</div>';
+  el.innerHTML=html;
 }
 
 function renderTodayCard(ds) {

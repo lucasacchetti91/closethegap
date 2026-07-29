@@ -35,7 +35,10 @@ var ICU_ACTIVITY_FIELDS = [
   'icu_efficiency','efficiency',
   'icu_power_hr','power_hr','icu_power_hr_z2','power_hr_z2',
   'icu_trimp','trimp',
-  'icu_max_wbal_depletion','max_wbal_depletion'
+  'icu_max_wbal_depletion','max_wbal_depletion',
+  // tempo per zona calcolato da ICU sullo stream reale: serve per una
+  // distribuzione zone corretta (vedi nota in charts.js:renderZoneDist)
+  'icu_zone_times','icu_hr_zone_times'
 ].join(',');
 
 /* Trova l'attività locale corrispondente a un record ICU (stesso
@@ -49,6 +52,18 @@ function findLocalMatch(icuDate, icuDistM) {
 
 function pick(obj, keys) {
   for (var i=0;i<keys.length;i++) { if (obj[keys[i]]!=null) return obj[keys[i]]; }
+  return null;
+}
+
+/* ICU può restituire i tempi per zona come array di secondi
+   ([1200, 3400, ...]) oppure come array di oggetti ([{id:'Z1',secs:1200},...]).
+   Non essendo certo quale delle due arrivi, gestiamo entrambe. */
+function normalizeZoneTimes(raw) {
+  if (!Array.isArray(raw) || !raw.length) return null;
+  if (typeof raw[0] === 'number') return raw;
+  if (typeof raw[0] === 'object') {
+    return raw.map(function(z){ return z.secs!=null ? z.secs : (z.time!=null ? z.time : 0); });
+  }
   return null;
 }
 
@@ -88,6 +103,10 @@ async function syncICUNativeMetrics(daysBack) {
     if (decouplingZ2!=null) local.icu_decoupling_z2 = decouplingZ2;
     if (trimp!=null) local.icu_trimp = trimp;
     if (wbalDepletion!=null) local.icu_wbal_depletion_kj = Math.abs(wbalDepletion) > 1000 ? wbalDepletion/1000 : wbalDepletion; // normalizza J->kJ se serve
+    /* Tempo per zona: ICU può restituire un array di secondi oppure un
+       array di oggetti {id/zone, secs}. Normalizziamo in array di secondi. */
+    if (ia.icu_zone_times) local.icu_zone_times = normalizeZoneTimes(ia.icu_zone_times);
+    if (ia.icu_hr_zone_times) local.icu_hr_zone_times = normalizeZoneTimes(ia.icu_hr_zone_times);
     local.icu_native_synced = true;
     matched++;
   });
@@ -145,24 +164,28 @@ async function fetchICUPowerVsHR(activityId) {
 /* Bottone "Sincronizza metriche avanzate" nella tab Analisi: tira giù
    in un colpo solo decoupling/W'bal/EF/VI/TRIMP nativi per tutto lo
    storico e il modello CP/W'/Pmax più recente. */
-async function syncICUAdvanced() {
+async function syncICUAdvanced(opts) {
+  opts = opts || {};
+  var silent = !!opts.silent;
   var el = document.getElementById('icu-advanced-status');
-  if (el) { el.textContent = 'Sincronizzazione metriche avanzate...'; el.style.color = 'var(--tx3)'; }
+  if (el && !silent) { el.textContent = 'Sincronizzazione metriche avanzate...'; el.style.color = 'var(--tx3)'; }
   try {
     var res = await syncICUNativeMetrics(400);
     await syncICUNativeCP();
     applyDataDrivenZones();
-    if (el) {
+    if (el && !silent) {
       el.textContent = '✅ ' + res.matched + '/' + res.total + ' attività arricchite con metriche native'
         + (ICU_NATIVE_CP ? ' · CP nativo: ' + Math.round(ICU_NATIVE_CP.eftp) + 'W' : '');
       el.style.color = 'var(--grn)';
     }
     console.log('Esempio attività grezza ICU (per verificare i nomi dei campi):', icuNativeLastRawSample);
     makePlan();
+    saveState();
     renderAnalytics();
     if (document.getElementById('page-plan').classList.contains('active')) renderPlanPage();
   } catch (e) {
-    if (el) { el.textContent = '❌ ' + e.message; el.style.color = 'var(--red)'; }
+    if (el && !silent) { el.textContent = '❌ ' + e.message; el.style.color = 'var(--red)'; }
     console.error('Sync metriche avanzate ICU:', e);
+    if (silent) throw e;
   }
 }

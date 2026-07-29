@@ -60,3 +60,20 @@ function weekStats(wb) {
     dur:acts.reduce(function(s,a){return s+(a.dur||0);},0)
   };
 }
+
+/* Totali PIANIFICATI della settimana corrente, per confrontarli con
+   quanto già svolto ("TSS 82 / 370"). Il piano non ha i km previsti,
+   quindi si confrontano TSS e ore (le due grandezze che il generatore
+   prescrive davvero). */
+function weekPlanned(wb) {
+  wb = wb||0;
+  var now=new Date(), mon=new Date(now);
+  mon.setDate(now.getDate()-now.getDay()+1-wb*7); mon.setHours(0,0,0,0);
+  var sun=new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59);
+  var items=(plan||[]).filter(function(p){var d=new Date(p.date+'T12:00');return d>=mon&&d<=sun;});
+  return {
+    tss:items.reduce(function(s,p){return s+(p.tss||0);},0),
+    dur:items.reduce(function(s,p){return s+(p.durMin||0)*60;},0),
+    sessions:items.filter(function(p){return p.type!=='off';}).length
+  };
+}

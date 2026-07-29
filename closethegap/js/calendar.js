@@ -22,7 +22,7 @@ function renderCal() {
     var bdr=isT?'border-color:var(--acc);':'';
     var op=c.cur?'':'opacity:.22;';
     var html='<div class="cal-day-cell" style="'+bdr+op+'">';
-    html+='<div style="font-size:.66rem;color:var(--tx3);margin-bottom:2px;font-weight:600;">'+c.date.getDate()+'</div>';
+    html+='<div class="cal-day-num">'+c.date.getDate()+'</div>';
     da.forEach(function(a){
       html+='<span class="cal-pill" style="background:'+(a.isRace?'rgba(167,139,250,.2)':'rgba(34,212,106,.15)')+';color:'+(a.isRace?'#a78bfa':'#22d46a')+'">'+(a.isRace?'🏁 ':'')+a.name.substring(0,12)+'</span>';
       html+='<span class="cal-sub">'+fmtDur(a.dur)+' · '+fmtDist(a.dist)+'km · '+calcTSS(a)+'TSS'+(calcNP(a)?' · '+calcNP(a)+'W':'')+'</span>';

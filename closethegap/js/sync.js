@@ -13,19 +13,23 @@ function saveAct(){
     np:parseInt(document.getElementById('a-np').value)||null,_tss_override:parseInt(document.getElementById('a-tss').value)||null,
     elev:parseInt(document.getElementById('a-elev').value)||0,hr:parseInt(document.getElementById('a-hr').value)||null};
   if(!a.date){alert('Inserisci la data!');return;}
-  activities.push(a); closeM('modal-add'); renderHome();
+  activities.push(a); closeM('modal-add'); renderHome(); saveState();
 }
 function closeM(id){document.getElementById(id).classList.remove('open');}
 document.addEventListener('DOMContentLoaded', function(){
   document.querySelectorAll('.mo').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
 });
 
-async function syncIntervals() {
+async function syncIntervals(opts) {
+  opts = opts || {};
+  var silent = !!opts.silent;
   var btn=document.getElementById('btn-sync-icu');
   var el=document.getElementById('import-status');
-  btn.disabled=true;
-  btn.querySelector('span:last-child').textContent='Sync...';
-  el.textContent='Connessione...'; el.style.color='var(--tx3)';
+  if (!silent) {
+    btn.disabled=true;
+    btn.querySelector('span:last-child').textContent='Sync...';
+    el.textContent='Connessione...'; el.style.color='var(--tx3)';
+  }
   try {
     var td=today();
     var from=dateKey(new Date(new Date().setDate(new Date().getDate()-120)));
@@ -72,13 +76,18 @@ async function syncIntervals() {
       }
     });
     renderHome();
-    el.textContent='✅ +'+imported+' nuove, '+updated+' aggiornate'; el.style.color='var(--grn)';
+    saveState();
+    if (!silent) { el.textContent='✅ +'+imported+' nuove, '+updated+' aggiornate'; el.style.color='var(--grn)'; }
   } catch(e) {
-    el.textContent='❌ '+e.message; el.style.color='var(--red)';
+    if (!silent) { el.textContent='❌ '+e.message; el.style.color='var(--red)'; }
     console.error('Intervals sync error:',e);
+    if (silent) throw e; // il bootstrap decide come reagire (resta sui dati in cache)
+  } finally {
+    if (!silent) {
+      btn.disabled=false;
+      btn.querySelector('span:last-child').textContent='Sync Intervals.icu';
+    }
   }
-  btn.disabled=false;
-  btn.querySelector('span:last-child').textContent='Sync Intervals.icu';
 }
 
 function importGarminFile(evt){
@@ -124,5 +133,5 @@ function parseGarminCSV(raw){
   }
   var el=document.getElementById('import-status');
   el.textContent='✅ CSV: +'+imported+' nuove, '+updated+' aggiornate'; el.style.color='var(--grn)';
-  renderHome();
+  renderHome(); saveState();
 }
