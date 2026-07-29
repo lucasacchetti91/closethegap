@@ -90,105 +90,11 @@ function mkBlock(z, l, loW, hiW, CP, durMin) {
   return {z:z, l:l, lo:pctOfCP(loW,CP), hi:pctOfCP(hiW,CP), d:durMin};
 }
 
-function buildThresholdSession(date, week, CP, pz, phase) {
-  var z4 = pz[3];
-  var mid = Math.round((z4.lo+z4.hi)/2);
-  var reps = phase==='Tapering Finale'?2:phase==='Affilatura'?2:phase==='Picco Forma'?3:3;
-  var repMin = phase==='Tapering Finale'?8:phase==='Affilatura'?10:phase==='Picco Forma'?15:12;
-  var blocks=[mkBlock(1,'WU',0,Math.round(CP*0.5),CP,15)];
-  for (var i=0;i<reps;i++){
-    blocks.push(mkBlock(4,'Soglia',z4.lo,z4.hi,CP,repMin));
-    if (i<reps-1) blocks.push(mkBlock(1,'Rec',0,Math.round(CP*0.5),CP,5));
-  }
-  blocks.push(mkBlock(1,'CD',0,Math.round(CP*0.5),CP,10));
-  var durMin = blocks.reduce(function(s,b){return s+b.d;},0);
-  var tss = Math.round(durMin*Math.pow(mid/CP,2)*100/60 * (reps*repMin/durMin) + durMin*0.35*100/60*(1-reps*repMin/durMin));
-  return {date:date, week:week, name:'Soglia '+reps+'x'+repMin+"'", type:'z4', tss:tss, durMin:durMin,
-    desc:'WU 15\', poi '+reps+'x'+repMin+'\' a '+z4.lo+'-'+z4.hi+'W ('+pctOfCP(z4.lo,CP)+'-'+pctOfCP(z4.hi,CP)+'% CP), rec 5\' Z1, CD 10\'.',
-    blocks:blocks};
-}
+/* NOTA: i vecchi builder monolitici (buildThresholdSession, buildVO2Session,
+   buildZ2Session, buildWeekendLongSession) sono stati rimossi: sono
+   sostituiti dalla libreria di formati in workouts.js, che offre più
+   varietà e dimensiona tutto sui tuoi CP/W' reali. */
 
-function buildVO2Session(date, week, CP, Wp, pz, phase) {
-  var z5 = pz[4];
-  var targetP = Math.round((z5.lo+z5.hi)/2);
-  var tte = timeToExhaustion(targetP, CP, Wp);
-  var repSec = Math.max(120, Math.min(300, Math.round(tte*0.65/30)*30));
-  var repMin = Math.round(repSec/60*10)/10;
-  var reps = phase==='Tapering Finale'?3:phase==='Affilatura'?4:phase==='Picco Forma'?5:5;
-  var recMin = Math.max(3, Math.round(repMin));
-  var blocks=[mkBlock(1,'WU',0,Math.round(CP*0.5),CP,15)];
-  for (var i=0;i<reps;i++){
-    blocks.push(mkBlock(5,'VO2',z5.lo,z5.hi,CP,repMin));
-    blocks.push(mkBlock(1,'Rec',0,Math.round(CP*0.5),CP,recMin));
-  }
-  blocks.push(mkBlock(1,'CD',0,Math.round(CP*0.5),CP,10));
-  var durMin = blocks.reduce(function(s,b){return s+b.d;},0);
-  var tss = Math.round(reps*repMin*Math.pow(targetP/CP,2)*100/60 + (durMin-reps*repMin)*0.35*100/60);
-  return {date:date, week:week, name:'VO2max '+reps+'x'+repMin+"'", type:'z5', tss:tss, durMin:durMin,
-    desc:'WU 15\', poi '+reps+'x'+repMin+'\' a '+z5.lo+'-'+z5.hi+'W ('+pctOfCP(z5.lo,CP)+'-'+pctOfCP(z5.hi,CP)+'% CP, tempo di esaurimento stimato '+Math.round(tte/60*10)/10+"' a questa potenza), rec "+recMin+"' Z1, CD 10'.",
-    blocks:blocks};
-}
-
-function buildZ2Session(date, week, CP, pz, durMin, label) {
-  var z2 = pz[1];
-  var mid = Math.round((z2.lo+z2.hi)/2);
-  var wu=10, cd=10, core=Math.max(20, durMin-wu-cd);
-  var blocks=[mkBlock(1,'WU',0,Math.round(CP*0.5),CP,wu), mkBlock(2,'Z2',z2.lo,z2.hi,CP,core), mkBlock(1,'CD',0,Math.round(CP*0.5),CP,cd)];
-  var tss = Math.round(durMin*Math.pow(mid/CP,2)*100/60);
-  return {date:date, week:week, name:label||'Z2 Aerobico', type:'z2', tss:tss, durMin:durMin,
-    desc:core+"' Z2 "+z2.lo+'-'+z2.hi+'W.', blocks:blocks};
-}
-
-function buildOffDay(date, week) {
-  return {date:date, week:week, name:'Riposo', type:'off', tss:0, durMin:0, desc:'Riposo attivo o completo.', blocks:[]};
-}
-
-function buildRaceSpecificSession(date, week, CP, pz, raceProfile) {
-  var z3 = pz[2], z4top = pz[3].hi;
-  var coreMin = raceProfile ? Math.min(150, Math.max(60, Math.round(raceProfile.avgDurMin*0.4))) : 90;
-  var blocks=[mkBlock(1,'WU',0,Math.round(CP*0.5),CP,15), mkBlock(3,'Tempo',z3.lo,z4top,CP,coreMin), mkBlock(1,'CD',0,Math.round(CP*0.5),CP,15)];
-  var durMin = blocks.reduce(function(s,b){return s+b.d;},0);
-  var mid = Math.round((z3.lo+z4top)/2);
-  var tss = Math.round(durMin*Math.pow(mid/CP,2)*100/60);
-  var note = raceProfile ? ' Durata core calibrata sulla media delle tue '+raceProfile.count+' gare chiave analizzate ('+raceProfile.avgDurMin+"' medi, decoupling medio "+raceProfile.avgDecoupling+'%).' : '';
-  return {date:date, week:week, name:'Simulazione Gara '+coreMin+"'", type:'z3', tss:tss, durMin:durMin,
-    desc:'WU 15\', poi '+coreMin+"' continuativi "+z3.lo+'-'+z4top+'W (Tempo/soglia), CD 15\'.'+note, blocks:blocks};
-}
-
-/* Uscita lunga del weekend: qui vanno i lavori più lunghi (es. soglia
-   2x15-20') per esplicita preferenza - nelle uscite infrasettimanali
-   (max 2h) restano solo formati corti che ci stanno comodamente. */
-function buildWeekendLongSession(date, week, CP, pz, phase) {
-  var z2 = pz[1], z4 = pz[3];
-  var totalMin = phase==='Tapering Finale'?90:phase==='Affilatura'?150:phase==='Picco Forma'?195:170;
-  var includeThreshold = phase!=='Tapering Finale';
-  var reps = phase==='Affilatura'?1:2;
-  var repMin = phase==='Picco Forma'?18:phase==='Affilatura'?12:15;
-
-  var blocks=[mkBlock(1,'WU',0,Math.round(CP*0.5),CP,15)];
-  var thresholdBlockMin = includeThreshold ? reps*repMin + (reps-1)*5 : 0;
-  var z2Min = Math.max(30, totalMin - 15 - 15 - thresholdBlockMin);
-  var z2First = includeThreshold ? Math.round(z2Min*0.6) : z2Min;
-  var z2Second = z2Min - z2First;
-  blocks.push(mkBlock(2,'Z2',z2.lo,z2.hi,CP,z2First));
-  if (includeThreshold) {
-    for (var i=0;i<reps;i++){
-      blocks.push(mkBlock(4,'Soglia',z4.lo,z4.hi,CP,repMin));
-      if (i<reps-1) blocks.push(mkBlock(1,'Rec',0,Math.round(CP*0.5),CP,5));
-    }
-    if (z2Second>0) blocks.push(mkBlock(2,'Z2',z2.lo,z2.hi,CP,z2Second));
-  }
-  blocks.push(mkBlock(1,'CD',0,Math.round(CP*0.5),CP,15));
-  var durMin = blocks.reduce(function(s,b){return s+b.d;},0);
-  var midZ2 = Math.round((z2.lo+z2.hi)/2), midZ4 = Math.round((z4.lo+z4.hi)/2);
-  var tss = Math.round((durMin-thresholdBlockMin)*Math.pow(midZ2/CP,2)*100/60 + reps*repMin*Math.pow(midZ4/CP,2)*100/60);
-  var hrs = Math.round(durMin/60*10)/10;
-  var name = includeThreshold ? ('Lungo + Soglia '+reps+'x'+repMin+"'") : 'Z2 Lungo';
-  var desc = includeThreshold
-    ? (hrs+"h totali: Z2 con "+reps+'x'+repMin+"' a "+z4.lo+'-'+z4.hi+"W (90-105% CP) incorporati - il lavoro lungo va qui nel weekend, come richiesto.")
-    : (hrs+'h Z2 continuativo '+z2.lo+'-'+z2.hi+'W.');
-  return {date:date, week:week, name:name, type: includeThreshold?'z4':'z2', tss:tss, durMin:durMin, desc:desc, blocks:blocks};
-}
 
 function phaseForWeeksToGoal(w) {
   if (w<=1) return 'Tapering Finale';
@@ -224,8 +130,11 @@ function generateFuturePlan(fromDate, toDateExclusive) {
     // Vincoli richiesti: 3-4 uscite/settimana, una uscita lunga (o gara)
     // nel weekend dove vanno i lavori più lunghi, le infrasettimanali
     // sempre <=2h e senza ripetute lunghe di soglia.
+    // I formati vengono pescati dalla libreria in workouts.js ruotando
+    // con l'indice di settimana, così non si ripetono identici.
     var ridesPerWeek = (phase==='Tapering Finale' || phase==='Affilatura') ? 3 : 4;
-    var midweekQuality = !(!polarization.polarized && polarization.sampleDays>10); // se sbilanciato verso alta intensità, martedì diventa Z2 invece di VO2max
+    var midweekQuality = !(!polarization.polarized && polarization.sampleDays>10);
+    var weekIdx = weekNum-1;
 
     var daysLeftInWindow = Math.min(7, Math.round((new Date(toDateExclusive+'T12:00')-new Date(cur+'T12:00'))/86400000));
     for (var d=0; d<daysLeftInWindow; d++) {
@@ -235,25 +144,32 @@ function generateFuturePlan(fromDate, toDateExclusive) {
       var session = null;
 
       if (dow===6) {
-        // Sabato: uscita lunga del weekend - qui i lavori più lunghi,
-        // oppure la simulazione gara nella fase di Picco Forma.
-        if (phase==='Picco Forma' && raceProfile && !raceSpecificUsed) {
-          session = buildRaceSpecificSession(date, weekLabel, CP, pz, raceProfile);
-          raceSpecificUsed = true;
-        } else {
-          session = buildWeekendLongSession(date, weekLabel, CP, pz, phase);
+        // Sabato: uscita lunga - qui i lavori più lunghi. In Picco Forma
+        // la simulazione gara viene usata una volta sola, il resto
+        // ruota tra durabilità e lungo+soglia.
+        var wkKey = pickFromPool(WEEKEND_POOL, phase, weekIdx);
+        if (wkKey==='racesim') {
+          if (raceProfile && !raceSpecificUsed) { raceSpecificUsed = true; }
+          else { wkKey = 'durability'; }
         }
+        session = buildByKey(wkKey, date, weekLabel, CP, Wp, pz, phase, raceProfile);
       } else if (dow===2) {
-        // Martedì: qualità corta infrasettimanale (VO2max, sempre <2h);
-        // se la polarizzazione reale è già sbilanciata verso l'alta
-        // intensità, diventa un Z2 corto per riequilibrare (Seiler 80/20).
-        session = midweekQuality ? buildVO2Session(date, weekLabel, CP, Wp, pz, phase) : buildZ2Session(date, weekLabel, CP, pz, 75, 'Z2 Aerobico');
+        // Martedì: qualità corta infrasettimanale (sempre <2h); se la
+        // polarizzazione reale è sbilanciata verso l'alta intensità,
+        // diventa Z2 per riequilibrare (Seiler 80/20).
+        session = midweekQuality
+          ? buildByKey(pickFromPool(MIDWEEK_QUALITY_POOL, phase, weekIdx), date, weekLabel, CP, Wp, pz, phase, raceProfile)
+          : buildZ2Simple(date, weekLabel, CP, pz, 75, 'Z2 Aerobico');
       } else if (dow===4 && ridesPerWeek>=3) {
-        // Giovedì: Z2 corto, mai oltre 2h
-        session = buildZ2Session(date, weekLabel, CP, pz, 75, 'Z2 Aerobico');
+        // Giovedì: seconda seduta infrasettimanale. In Costruzione ogni
+        // tanto una qualità leggera diversa da quella del martedì,
+        // altrimenti Z2 corto.
+        session = (phase==='Costruzione' && weekIdx%2===1)
+          ? buildSweetSpot(date, weekLabel, CP, pz, phase, 100)
+          : buildZ2Simple(date, weekLabel, CP, pz, 75, 'Z2 Aerobico');
       } else if (dow===0 && ridesPerWeek>=4) {
-        // Domenica (solo se 4 uscite/settimana): Z2 breve di scarico, <2h
-        session = buildZ2Session(date, weekLabel, CP, pz, 60, 'Z2 Recupero');
+        // Domenica (solo se 4 uscite/settimana): Z2 breve di scarico
+        session = buildZ2Simple(date, weekLabel, CP, pz, 60, 'Z2 Recupero');
       } else {
         session = buildOffDay(date, weekLabel);
       }
@@ -262,9 +178,16 @@ function generateFuturePlan(fromDate, toDateExclusive) {
       sessions.push(session);
     }
 
+    /* Riscalamento verso il TSS settimanale target. Volutamente
+       CLAMPATO: il fattore può solo ritoccare le sessioni (±15%), non
+       stravolgerle - senza limite un'ultima settimana con poche uscite
+       produceva assurdità tipo uno Z2 di 75' a 131 TSS. Se il target
+       settimanale non è raggiungibile con questa struttura, è giusto
+       che resti non raggiunto: la struttura viene prima del numero. */
     var weekSessions = sessions.slice(-daysLeftInWindow);
     var actualTSS = weekSessions.reduce(function(s,x){return s+x.tss;},0) || 1;
     var scale = weeklyTSS / actualTSS;
+    scale = Math.max(0.85, Math.min(1.15, scale));
     if (scale>0 && isFinite(scale)) weekSessions.forEach(function(s){ s.tss = Math.round(s.tss*scale); });
 
     cur = addDays(cur, daysLeftInWindow);
