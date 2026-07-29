@@ -254,6 +254,49 @@ Testato: su tutte le settimane generate, nessuna infrasettimanale sopra
 i 120 minuti, sempre 3 o 4 uscite/settimana, il lavoro lungo sempre e
 solo nell'uscita del sabato.
 
+## 5bis. v4 — Libreria di allenamenti basata sulla letteratura
+
+Nuovo file `js/workouts.js`. Prima il generatore conosceva due soli
+schemi e li ripeteva; ora pesca da una libreria di **12 formati**,
+ruotando con l'indice di settimana e filtrando per fase.
+
+| Formato | Cosa fa | Livello di evidenza |
+|---|---|---|
+| **Rønnestad 30/15** (3x13x30s/15s) | Massimizza il tempo sopra il 90% VO2max | Buono, ma con critiche metodologiche reali (vedi sotto) |
+| **Alternati "Bossi"** (5' con oscillazione ±) | Più tempo sopra 90% VO2max vs ripetuta piatta | Buono |
+| **Fast-start VO2max** (90s duri poi hold) | Il VO2 sale prima e ci resta di più | Buono |
+| **Over-Under** (3' sotto / 2' sopra soglia) | Tolleranza al lattato e ai cambi di ritmo | Consolidato in pratica |
+| **Sweet Spot** (88-94% CP) | Alto stimolo aerobico, recupero rapido | Consolidato |
+| **W' repeats** | Ripetute dimensionate per consumare il 60% della *tua* W' | Solido come principio (modello CP/W') |
+| **Durabilità** (sforzi DOPO ~1410 kJ) | Tenere potenza da stanco | Filone recente, molto rilevante per gran fondo |
+| **Forza-resistenza** (50-60 rpm) | Tensione muscolare | **Debole/contrastata** — usato con parsimonia |
+| Lungo+soglia, Simulazione gara, Z2, Riposo | Base del volume | — |
+
+### Onestà sull'evidenza
+- **Rønnestad 30/15**: gli studi (2015 e repliche) mostrano più tempo
+  sopra il 90% VO2max e miglioramenti superiori vs 4-5x5'. Ma le
+  critiche sono legittime e documentate: nel confronto originale il
+  gruppo 30/15 svolgeva **più lavoro totale** (≈29,5' vs 20'), quindi
+  parte del vantaggio può venire dal volume e non dal formato; inoltre i
+  soggetti arrivavano da un periodo ad alto volume, per cui parte
+  dell'effetto potrebbe essere un effetto-taper. È un buon formato, non
+  una bacchetta magica — per questo è **in rotazione con altri**, non
+  l'unico.
+- **Durabilità**: una revisione sistematica recente avverte che i kJ da
+  soli sono una metrica di fatica incompleta, perché l'intensità del
+  lavoro precedente conta molto (sforzi sopra CP affaticano con molti
+  meno kJ). Qui i kJ sono usati come target pratico, consapevoli del
+  limite.
+- **Bassa cadenza**: l'ho incluso per varietà ma con una nota esplicita
+  nella descrizione della sessione — l'evidenza è più debole degli altri.
+
+### Correzione di un bug trovato in test
+Il riscalamento del TSS settimanale non era limitato e poteva produrre
+valori impossibili (uno Z2 di 75' a 131 TSS nell'ultima settimana, che
+ha meno sessioni). Ora il fattore è **clampato a ±15%**: se il target
+settimanale non è raggiungibile con la struttura data, resta non
+raggiunto — la struttura viene prima del numero.
+
 ## 6. Prossimi passi possibili
 - Costruire il Cloudflare Worker OAuth per Strava e rendere W'bal/Decoupling
   reali automatici su ogni sync, non solo sulle 4 uscite pre-calcolate.
