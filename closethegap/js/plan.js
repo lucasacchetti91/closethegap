@@ -230,12 +230,33 @@ function adaptPlan() {
     if (nextQuality) { nextQuality.tss=Math.max(Math.round(nextQuality.tss*.8),20); nextQuality.adaptNote='Ultimi 3gg: '+last3+' TSS. Intensità ridotta del 20% per sicurezza.'; adapted++; }
   }
 
+  /* Controllo di recupero dai dati Garmin (sonno/HRV/FC riposo via
+     Intervals.icu). Reagisce solo a trend su 7 giorni contro baseline
+     42, mai a un singolo giorno storto. Se ci sono due o più segnali
+     concordi, alleggerisce la prossima sessione dura. */
+  var rec = (typeof recoveryStatus==='function') ? recoveryStatus() : null;
+  var recMsg = '';
+  if (rec && rec.score==='alert') {
+    var nq = plan.find(function(p){ return p.date>td && (p.type==='z4'||p.type==='z5'||p.type==='z6'); });
+    if (nq && !nq.adaptNote) {
+      nq.tss=Math.max(Math.round(nq.tss*.75),20);
+      nq.adaptNote='Segnali di recupero incompleto ('+rec.flags.map(function(f){return f.label;}).join(', ')+'): carico ridotto del 25%.';
+      adapted++;
+    }
+    recMsg = '<br><span style="color:var(--red);">⚠ Recupero: '+rec.flags.map(function(f){return f.label+' '+(f.deltaPct>0?'+':'')+Math.round(f.deltaPct)+'%';}).join(' · ')+' vs baseline.</span>';
+  } else if (rec && rec.score==='warn') {
+    recMsg = '<br><span style="color:var(--yel);">Recupero: '+rec.flags.map(function(f){return f.label;}).join(', ')+' fuori baseline — tienilo d\'occhio.</span>';
+  } else if (rec) {
+    recMsg = '<br><span style="color:var(--grn);">Recupero nella norma (sonno/HRV/FC riposo in linea con la tua baseline).</span>';
+  }
+
   var meta = lastPlanGenMeta || {};
   var col=tsb<-10?'#ff4d4d':tsb>5?'#22d46a':'#fbbf24';
   var msg='<strong style="color:'+col+';">TSB '+tsb+'</strong> · CTL '+Math.round(ctl)+' · ATL '+Math.round(atl)+'.<br>';
   msg+='Piano futuro rigenerato: ramp rate '+(meta.rampRate||'—')+' CTL/sett (dal tuo storico) · ';
   msg+=meta.polarization ? ('polarizzazione '+meta.polarization.lowPct+'% bassa/'+meta.polarization.highPct+'% alta intensità ('+(meta.polarization.polarized?'ok, 80/20 rispettato':'sbilanciata, ridotte le sessioni qualità questa settimana')+')') : '';
-  if (adapted>0) msg+='<br><strong>⚡ '+adapted+' sessione ravvicinata alleggerita per fatica accumulata.</strong>';
+  if (adapted>0) msg+='<br><strong>⚡ '+adapted+' sessione alleggerita.</strong>';
+  msg+=recMsg;
   var el=document.getElementById('adapt-msg'); el.innerHTML=msg; el.style.display='block';
   renderTodayCard(today()); renderWeekStrip();
   if(document.getElementById('page-plan').classList.contains('active')) renderPlanPage();

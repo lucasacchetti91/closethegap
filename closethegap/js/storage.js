@@ -27,7 +27,9 @@ function saveState() {
       activities: activities,
       ftp: FTP, lthr: LTHR, hrMax: HR_MAX, hrRest: HR_REST,
       icuNativeCP: typeof ICU_NATIVE_CP !== 'undefined' ? ICU_NATIVE_CP : null,
-      bestEfforts: bestEfforts
+      bestEfforts: bestEfforts,
+      wellness: typeof wellness !== 'undefined' ? wellness : [],
+      weightKg: WEIGHT_KG
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     return true;
@@ -52,6 +54,8 @@ function loadState() {
     if (s.hrRest) HR_REST = s.hrRest;
     if (s.icuNativeCP) ICU_NATIVE_CP = s.icuNativeCP;
     if (Array.isArray(s.bestEfforts) && s.bestEfforts.length) bestEfforts = s.bestEfforts;
+    if (Array.isArray(s.wellness)) wellness = s.wellness;
+    if (s.weightKg) WEIGHT_KG = s.weightKg;
     return s.savedAt;
   } catch (e) {
     console.warn('Caricamento stato fallito:', e.message);
@@ -87,6 +91,7 @@ function renderSyncStatus(savedAt, syncing) {
 /* Avvio: carica la cache, disegna subito, poi sincronizza in background. */
 async function bootstrapData() {
   var savedAt = loadState();
+  loadDetailCache();
   renderSyncStatus(savedAt, false);
 
   // Primo disegno immediato con quello che abbiamo (cache o seed RAW).

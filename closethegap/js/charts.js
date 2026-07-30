@@ -78,6 +78,9 @@ function renderAnalytics() {
   try { renderWbal(); } catch(e) { console.warn('wbal:',e.message); }
   try { renderBanister(); } catch(e) { console.warn('banister:',e.message); }
   try { renderDecouple(); } catch(e) { console.warn('decouple:',e.message); }
+  try { renderFTPProjection(); } catch(e) { console.warn('ftpproj:',e.message); }
+  try { renderPMCProjection(); } catch(e) { console.warn('pmcproj:',e.message); }
+  try { renderWellness(); } catch(e) { console.warn('wellness:',e.message); }
 }
 
 function renderHeatmap() {
@@ -379,6 +382,147 @@ function renderBanister() {
       {label:'Proiezione piano',data:new Array(h.length).fill(null).concat(proj.perf),borderColor:'#e8ff47',borderDash:[4,3],tension:.4,pointRadius:0,fill:false,borderWidth:1.5}
     ]
   });
+}
+
+/* ============================================================
+   PROIEZIONE VERSO L'OBIETTIVO
+   Due grafici che rispondono a "a che punto sono e dove arrivo se
+   seguo il piano":
+   1. Progressione FTP/eFTP storica + proiezione lineare al 19 set,
+      confrontata con la retta necessaria per arrivare a 360W.
+   2. Proiezione CTL/ATL/TSB fino al giorno gara usando il TSS
+      PIANIFICATO, per verificare di arrivare con la forma giusta.
+   ============================================================ */
+
+/* Serie storica di eFTP: usa le stime di CP nel tempo ricavate dai
+   migliori 20' rolling in finestre di 6 settimane. È una stima, non un
+   test FTP: serve a vedere la TENDENZA, non il valore assoluto. */
+/* Progressione della soglia nel tempo.
+   FONTE CORRETTA: l'eFTP giornaliera calcolata da Intervals.icu, che
+   deriva dai tuoi migliori sforzi reali. Una versione precedente di
+   questa funzione stimava la FTP dal miglior NP di un'uscita ×0.95, ma
+   è sbagliato: l'NP di un lungo aerobico di 4h sta molto sotto la
+   soglia, e infatti restituiva ~265W contro i 340W reali. Se l'eFTP
+   nativa non è disponibile è più onesto non disegnare nulla che
+   disegnare una curva falsa. */
+function ftpHistory() {
+  if (typeof wellness === 'undefined' || !wellness.length) return [];
+  var pts = wellness.filter(function(w){ return w.eftp && w.eftp>100; })
+    .map(function(w){ return {date:String(w.date), ftp:Math.round(w.eftp)}; });
+  // un punto a settimana, per non affollare il grafico
+  var out=[], lastKept=null;
+  pts.forEach(function(p){
+    if (!lastKept || (new Date(p.date)-new Date(lastKept))/86400000 >= 7) { out.push(p); lastKept=p.date; }
+  });
+  if (out.length && pts.length && out[out.length-1].date !== pts[pts.length-1].date) out.push(pts[pts.length-1]);
+  return out;
+}
+
+function renderFTPProjection() {
+  var hist=ftpHistory();
+  var el=document.getElementById('ftp-proj-note');
+  if (hist.length<2) {
+    if(el) el.innerHTML='Non ci sono ancora abbastanza punti di eFTP da Intervals.icu per tracciare una tendenza affidabile.<br>'+
+      '<span style="color:var(--tx3);font-size:.9em;">Premi "Sync metriche avanzate ICU": la progressione usa l\'eFTP che Intervals.icu calcola dai tuoi sforzi reali. '+
+      'Ho volutamente evitato di stimarla dall\'NP delle uscite, perché su un lungo aerobico l\'NP sta molto sotto soglia e produrrebbe una curva falsa.</span>';
+    return;
+  }
+
+  // Regressione lineare sugli ultimi 12 punti (≈3 mesi)
+  var recent=hist.slice(-12);
+  var n=recent.length;
+  var t0=new Date(recent[0].date).getTime();
+  var xs=recent.map(function(p){return (new Date(p.date).getTime()-t0)/86400000;});
+  var ys=recent.map(function(p){return p.ftp;});
+  var sx=xs.reduce(function(a,b){return a+b;},0), sy=ys.reduce(function(a,b){return a+b;},0);
+  var sxx=xs.reduce(function(a,b){return a+b*b;},0);
+  var sxy=xs.reduce(function(a,v,i){return a+v*ys[i];},0);
+  var slope=(n*sxy-sx*sy)/(n*sxx-sx*sx||1); // W/giorno
+  var intercept=(sy-slope*sx)/n;
+
+  var todayX=(new Date().getTime()-t0)/86400000;
+  var goalX=(new Date(GOAL_DATE+'T12:00').getTime()-t0)/86400000;
+  var daysToGoal=Math.round(goalX-todayX);
+  var currentFTP=hist[hist.length-1].ftp;
+  var projectedAtGoal=Math.round(intercept+slope*goalX);
+  var neededSlope=daysToGoal>0 ? (GOAL_FTP-currentFTP)/daysToGoal : 0;
+
+  // Serie per il grafico: storico + proiezione settimanale fino alla gara
+  var labels=hist.map(function(p){return p.date.slice(5);});
+  var histData=hist.map(function(p){return p.ftp;});
+  var projLabels=[], projData=[], needData=[];
+  for (var dd=7; dd<=daysToGoal; dd+=7) {
+    var dt=new Date(); dt.setDate(dt.getDate()+dd);
+    projLabels.push(dateKey(dt).slice(5));
+    projData.push(Math.round(intercept+slope*((dt.getTime()-t0)/86400000)));
+    needData.push(Math.round(currentFTP+neededSlope*dd));
+  }
+  mkChart('ch-ftp-proj','line',{
+    labels:labels.concat(projLabels),
+    datasets:[
+      {label:'eFTP (storico Intervals.icu)',data:histData.concat(new Array(projLabels.length).fill(null)),borderColor:'#e8ff47',backgroundColor:'rgba(232,255,71,.08)',tension:.3,pointRadius:2,fill:true,borderWidth:1.5},
+      {label:'Proiezione al ritmo attuale',data:new Array(histData.length).fill(null).concat(projData),borderColor:'#3b82f6',borderDash:[5,4],tension:.3,pointRadius:0,borderWidth:1.5},
+      {label:'Ritmo necessario per 360W',data:new Array(histData.length).fill(null).concat(needData),borderColor:'#a78bfa',borderDash:[2,3],tension:.3,pointRadius:0,borderWidth:1.5},
+      {label:'Obiettivo 360W',data:labels.concat(projLabels).map(function(){return GOAL_FTP;}),borderColor:'rgba(34,212,106,.35)',pointRadius:0,borderWidth:1}
+    ]
+  });
+
+  if (el) {
+    var gap=GOAL_FTP-currentFTP;
+    var wPerWeek=Math.round(slope*7*10)/10;
+    var verdict = projectedAtGoal>=GOAL_FTP
+      ? '<span style="color:var(--grn);">Al ritmo attuale arrivi a ~'+projectedAtGoal+'W: obiettivo raggiungibile.</span>'
+      : '<span style="color:var(--yel);">Al ritmo attuale arrivi a ~'+projectedAtGoal+'W, cioè '+(GOAL_FTP-projectedAtGoal)+'W sotto. Servirebbero '+(Math.round(neededSlope*7*10)/10)+'W/settimana invece degli attuali '+wPerWeek+'W/settimana.</span>';
+    el.innerHTML='FTP stimata oggi: <strong>'+currentFTP+'W</strong> · gap: <strong>'+gap+'W</strong> · '+daysToGoal+' giorni alla gara.<br>'+verdict+
+      '<br><span style="color:var(--tx3);font-size:.9em;">Serie basata sull\'eFTP calcolata da Intervals.icu dai tuoi sforzi reali. La proiezione è una regressione lineare: non tiene conto del fatto che i guadagni rallentano avvicinandosi al proprio tetto fisiologico, quindi tende a essere ottimista sul lungo periodo.</span>';
+  }
+}
+
+/* Proiezione PMC fino al giorno gara con il TSS del piano: serve a
+   verificare di arrivare con un TSB nella finestra di forma (+5/+25). */
+function renderPMCProjection() {
+  var pmc=computePMC();
+  var hist=pmc.history.slice(-60);
+  if (!hist.length) return;
+  var ctl=pmc.ctl, atl=pmc.atl, pc=ctl, pa=atl;
+  var labels=hist.map(function(d){return d.date.slice(5);});
+  var ctlS=hist.map(function(d){return d.ctl;});
+  var atlS=hist.map(function(d){return d.atl;});
+  var tsbS=hist.map(function(d){return d.tsb;});
+  var pLab=[], pCtl=[], pAtl=[], pTsb=[];
+  var d=new Date(), goal=new Date(GOAL_DATE+'T12:00');
+  while (d<goal) {
+    d.setDate(d.getDate()+1);
+    var ds=dateKey(d);
+    var s=plan.find(function(p){return p.date===ds;});
+    var tss=s?s.tss:0;
+    var tsb=parseFloat((pc-pa).toFixed(1));
+    ctl=parseFloat((ctl+(tss-ctl)/42).toFixed(2));
+    atl=parseFloat((atl+(tss-atl)/7).toFixed(2));
+    pLab.push(ds.slice(5)); pCtl.push(Math.round(ctl)); pAtl.push(Math.round(atl)); pTsb.push(Math.round(tsb));
+    pc=ctl; pa=atl;
+  }
+  var pad=new Array(hist.length).fill(null);
+  mkChart('ch-pmc-proj','line',{
+    labels:labels.concat(pLab),
+    datasets:[
+      {label:'CTL',data:ctlS.concat(pad.length?[]:[]).concat(new Array(pLab.length).fill(null)),borderColor:'#3b82f6',tension:.4,pointRadius:0,borderWidth:1.5},
+      {label:'CTL proiettata',data:pad.concat(pCtl),borderColor:'rgba(59,130,246,.5)',borderDash:[4,3],tension:.4,pointRadius:0,borderWidth:1.5},
+      {label:'TSB',data:tsbS.concat(new Array(pLab.length).fill(null)),borderColor:'#e8ff47',tension:.4,pointRadius:0,borderWidth:1.5},
+      {label:'TSB proiettato',data:pad.concat(pTsb),borderColor:'rgba(232,255,71,.5)',borderDash:[4,3],tension:.4,pointRadius:0,borderWidth:1.5}
+    ]
+  });
+  var el=document.getElementById('pmc-proj-note');
+  if (el) {
+    var tsbAtGoal=pTsb.length?pTsb[pTsb.length-1]:null;
+    var ctlAtGoal=pCtl.length?pCtl[pCtl.length-1]:null;
+    var ok = tsbAtGoal!=null && tsbAtGoal>=5 && tsbAtGoal<=25;
+    el.innerHTML='Il giorno gara arriveresti con <strong>CTL '+ctlAtGoal+'</strong> e <strong>TSB '+(tsbAtGoal>0?'+':'')+tsbAtGoal+'</strong>. '+
+      (ok ? '<span style="color:var(--grn);">Nella finestra di forma tipica (+5/+25).</span>'
+          : tsbAtGoal<5 ? '<span style="color:var(--yel);">Sotto la finestra di forma: rischi di arrivare stanco, valuta uno scarico più marcato.</span>'
+                        : '<span style="color:var(--yel);">Sopra la finestra: rischi di arrivare troppo scarico, il taper potrebbe essere eccessivo.</span>')+
+      '<br><span style="color:var(--tx3);font-size:.9em;">Assume che tu segua il piano esattamente: è uno scenario, non una previsione.</span>';
+  }
 }
 
 function renderDecouple() {

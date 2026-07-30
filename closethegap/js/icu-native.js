@@ -172,6 +172,7 @@ async function syncICUAdvanced(opts) {
   try {
     var res = await syncICUNativeMetrics(400);
     await syncICUNativeCP();
+    try { await syncWellness(180); } catch(we) { console.warn('Wellness non disponibile:', we.message); }
     applyDataDrivenZones();
     if (el && !silent) {
       el.textContent = '✅ ' + res.matched + '/' + res.total + ' attività arricchite con metriche native'
