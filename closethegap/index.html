@@ -150,13 +150,8 @@
         <input type="text" id="f-search" placeholder="Cerca..." oninput="renderActs()" class="act-input" style="width:160px;">
         <span id="act-count" style="color:var(--tx3);font-size:.7rem;margin-left:auto;"></span>
       </div>
-      <div class="card" style="overflow-x:auto;">
-        <table class="act-table">
-          <thead><tr><th>Data</th><th>Nome</th><th>Tipo</th><th>Durata</th><th>Km</th><th>D+</th><th>W avg</th><th>NP</th><th>IF</th><th>TSS</th><th>HR</th></tr></thead>
-          <tbody id="act-body"></tbody>
-        </table>
-        <div id="act-empty" class="empty" style="display:none;">Nessuna attività trovata.</div>
-      </div>
+      <div id="act-feed"></div>
+      <div id="act-empty" class="empty" style="display:none;">Nessuna attività trovata.</div>
     </div>
 
     <!-- ANALYTICS -->
@@ -263,6 +258,31 @@
         <p style="font-size:.68rem;color:var(--tx2);margin-bottom:10px;">&lt;5% = buon aerobico &middot; &gt;5% = drift cardiaco &middot; &#9679; = calcolato da stream reali Strava (1&#170; vs 2&#170; met&agrave; ride)</p>
         <div class="cw" style="height:180px;"><canvas id="ch-decouple"></canvas></div>
       </div>
+
+      <div class="card">
+        <div class="ct">Proiezione FTP verso l'obiettivo</div>
+        <div class="cw" style="height:200px;"><canvas id="ch-ftp-proj"></canvas></div>
+        <div id="ftp-proj-note" style="font-size:.68rem;color:var(--tx2);margin-top:10px;line-height:1.6;"></div>
+      </div>
+
+      <div class="card">
+        <div class="ct">Proiezione forma al giorno gara</div>
+        <div class="cw" style="height:200px;"><canvas id="ch-pmc-proj"></canvas></div>
+        <div id="pmc-proj-note" style="font-size:.68rem;color:var(--tx2);margin-top:10px;line-height:1.6;"></div>
+      </div>
+
+      <div class="ct" style="margin:22px 0 10px;font-size:.82rem;">Recupero &amp; Wellness <span style="color:var(--tx3);font-weight:400;font-size:.85em;">— dati Garmin via Intervals.icu</span></div>
+      <div id="wellness-render"></div>
+      <div class="g2">
+        <div class="card">
+          <div class="ct">FC a riposo &amp; HRV</div>
+          <div class="cw" style="height:170px;"><canvas id="ch-wellness-hr"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ct">Sonno</div>
+          <div class="cw" style="height:170px;"><canvas id="ch-wellness-sleep"></canvas></div>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -303,6 +323,8 @@
 <script src="js/workouts.js"></script>
 <script src="js/plan-generator.js"></script>
 <script src="js/charts.js"></script>
+<script src="js/wellness.js"></script>
+<script src="js/activity-detail.js"></script>
 <script src="js/home.js"></script>
 <script src="js/plan.js"></script>
 <script src="js/calendar.js"></script>

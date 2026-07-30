@@ -370,6 +370,68 @@ clipping degli assi, che tagliava fuori le uscite agli estremi, e il
 tooltip, che indicizzava l'array delle attività anche per le linee di
 riferimento.
 
+## 5quater. v6 — Feed attività, wellness Garmin, proiezioni
+
+### Home
+Colonne centrale e destra ora **50/50** come richiesto.
+
+### Attività — feed stile Strava (`js/activity-detail.js` + `activities.js`)
+La tabella a 11 colonne (illeggibile su mobile, senza spazio per grafica)
+è diventata un **feed scorribile di schede**. Ogni scheda mostra i dati
+di riepilogo più i tag delle metriche native (Pw:Hr, VI, W' consumato);
+espandendola compaiono:
+- **Planimetria del percorso** in SVG, disegnata dalle coordinate GPS.
+  È il tracciato vettoriale, non una mappa con sfondo cartografico:
+  nessun provider esterno, nessuna chiave API, nessun costo, nessun
+  tracciamento. Per una vista "minimal" basta; per lo sfondo vero
+  servirebbe Mapbox/OSM.
+- **Profilo altimetrico** con quote min/max.
+- **Best effort** (5s → 20min) calcolati dallo stream di potenza con
+  somme prefisse.
+
+**Perché i dettagli si scaricano a richiesta**: gli stream pesano
+centinaia di kB per uscita; scaricarli tutti a ogni apertura sarebbe
+lento e sprecherebbe chiamate API. Vengono presi solo quando espandi una
+scheda, e di quello che arriva si salva **solo il riassunto derivato**
+(percorso ridotto a 180 punti, altimetria a 140, best effort) — ~9 kB
+per attività, che stanno comodi in localStorage. Gli stream grezzi non
+vengono mai persistiti.
+
+### Wellness Garmin via Intervals.icu (`js/wellness.js`) — sì, ha molto senso
+FC a riposo, HRV, sonno, readiness, stress e peso. **Il motivo per cui
+vale la pena, e non è solo un cruscotto in più**: il PMC ragiona solo sul
+carico che *metti dentro* (TSS), non su come stai *rispondendo*. Due
+settimane con lo stesso TSB sono molto diverse se in una dormi 5h e
+l'HRV è crollata.
+
+Per questo i dati non restano decorativi: **entrano in `adaptPlan()`**.
+Se emergono segnali concordi di recupero incompleto, la prossima
+sessione dura viene alleggerita del 25% con nota esplicita.
+
+Cautele deliberate:
+- Non si reagisce **mai** al valore di un singolo giorno: si confronta
+  sempre la media a 7 giorni con la baseline a 42 giorni. I dati HRV
+  sono rumorosi e una giornata storta non significa nulla.
+- Il "readiness" Garmin è un indice proprietario non validato
+  indipendentemente — trattato come indizio, non come verdetto.
+- Il peso, se disponibile, aggiorna automaticamente il W/kg.
+
+### Proiezioni — "dove arrivo se seguo il piano"
+Due grafici nuovi in Analisi:
+1. **Proiezione FTP**: storico eFTP + regressione lineare fino al 19
+   settembre, confrontata con la retta necessaria per i 360W. Dice a
+   quanti W/settimana stai crescendo e quanti ne servirebbero.
+2. **Proiezione forma al giorno gara**: CTL/TSB proiettati usando il TSS
+   *pianificato*, con verdetto sulla finestra di forma (+5/+25).
+
+**Un errore trovato e corretto mentre costruivo questo grafico**: la
+prima versione stimava la FTP storica dal miglior NP di un'uscita ×0.95.
+È sbagliato — l'NP di un lungo aerobico di 4h sta molto sotto la soglia,
+e infatti il grafico dava "FTP oggi: 265W" contro i ~340W reali. Ora usa
+l'**eFTP che Intervals.icu calcola dai tuoi sforzi reali**; se non è
+disponibile non disegna nulla e lo dice, invece di mostrare una curva
+falsa.
+
 ## 6. Prossimi passi possibili
 - Costruire il Cloudflare Worker OAuth per Strava e rendere W'bal/Decoupling
   reali automatici su ogni sync, non solo sulle 4 uscite pre-calcolate.
