@@ -34,7 +34,7 @@ async function syncIntervals(opts) {
     var td=today();
     var from=dateKey(new Date(new Date().setDate(new Date().getDate()-120)));
     var p='oldest='+from+'&newest='+td;
-    var wResp=await fetch(ICU_WORKER+'/wellness?'+p);
+    var wResp=await icuFetch('/wellness?'+p);
     if(!wResp.ok) throw new Error('Wellness HTTP '+wResp.status);
     var wellness=await wResp.json();
     if(wellness&&wellness.length){
@@ -48,7 +48,7 @@ async function syncIntervals(opts) {
         te.className='kv '+(tsb>5?'kv-up':tsb<-10?'kv-dn':'kv-wa');
       }
     }
-    var aResp=await fetch(ICU_WORKER+'/activities?'+p);
+    var aResp=await icuFetch('/activities?'+p);
     if(!aResp.ok) throw new Error('Activities HTTP '+aResp.status);
     var icuActs=await aResp.json();
     var imported=0, updated=0;

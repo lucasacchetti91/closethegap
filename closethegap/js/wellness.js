@@ -36,7 +36,7 @@ function pickW(o, keys) {
 async function syncWellness(daysBack) {
   var td = today();
   var from = dateKey(new Date(new Date().setDate(new Date().getDate() - (daysBack||180))));
-  var resp = await fetch(ICU_WORKER + '/wellness?oldest=' + from + '&newest=' + td);
+  var resp = await icuFetch('/wellness?oldest=' + from + '&newest=' + td);
   if (!resp.ok) throw new Error('Wellness HTTP ' + resp.status);
   var rows = await resp.json();
   if (!Array.isArray(rows)) throw new Error('Risposta /wellness inattesa');

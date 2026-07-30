@@ -21,6 +21,45 @@
    se vuoi, incollamelo così pulisco il codice dai nomi che non servono.
    ============================================================ */
 
+/* --------------------------------------------------------------
+   icuFetch — chiamata al proxy con fallback automatico.
+
+   PERCHÉ SERVE: esistono DUE proxy verso Intervals.icu.
+   1) il Worker standalone (ICU_WORKER in config.js), che è quello
+      storicamente usato dall'app;
+   2) la Pages Function `functions/api/[[path]].js`, deployata insieme
+      al sito e raggiungibile su same-origin `/api/...`.
+   Se uno dei due non conosce ancora un endpoint risponde 403/404
+   (è successo con /activity/{id}/streams: il Worker aveva la vecchia
+   lista di endpoint permessi). Qui proviamo il Worker e, in caso di
+   403/404, ritentiamo automaticamente sulla Pages Function.
+   Essendo same-origin, la seconda chiamata non ha nemmeno problemi
+   di CORS.
+   -------------------------------------------------------------- */
+var ICU_FALLBACK_BASE = '/api';
+var icuFallbackActive = false;
+
+async function icuFetch(path) {
+  var primary = (icuFallbackActive ? ICU_FALLBACK_BASE : ICU_WORKER) + path;
+  var resp = await fetch(primary);
+  if (resp.ok) return resp;
+  if (resp.status === 403 || resp.status === 404) {
+    var alt = (icuFallbackActive ? ICU_WORKER : ICU_FALLBACK_BASE) + path;
+    var resp2 = await fetch(alt);
+    if (resp2.ok) {
+      if (!icuFallbackActive) {
+        icuFallbackActive = true;
+        console.info('Proxy: il Worker standalone non conosce questo endpoint, passo alla Pages Function /api. '+
+                     'Per tornare al Worker aggiorna il suo codice (vedi worker/closethegap-proxy.js).');
+      }
+      return resp2;
+    }
+    throw new Error('HTTP '+resp.status+' su entrambi i proxy ('+path.split('?')[0]+
+                    '). Aggiorna il codice del Worker: vedi worker/closethegap-proxy.js nel repo.');
+  }
+  throw new Error('HTTP '+resp.status);
+}
+
 var ICU_NATIVE_CP = null; // {eftp, wPrime, pMax, date} - dal sportInfo più recente
 var icuNativeLastRawSample = null; // ultima attività grezza ricevuta, per debug
 
@@ -75,8 +114,7 @@ function normalizeZoneTimes(raw) {
 async function syncICUNativeMetrics(daysBack) {
   var td = today();
   var from = dateKey(new Date(new Date().setDate(new Date().getDate() - (daysBack||365))));
-  var url = ICU_WORKER + '/activities?oldest=' + from + '&newest=' + td + '&fields=' + encodeURIComponent(ICU_ACTIVITY_FIELDS);
-  var resp = await fetch(url);
+  var resp = await icuFetch('/activities?oldest=' + from + '&newest=' + td + '&fields=' + encodeURIComponent(ICU_ACTIVITY_FIELDS));
   if (!resp.ok) throw new Error('ICU activities HTTP ' + resp.status);
   var icuActs = await resp.json();
   if (!Array.isArray(icuActs)) throw new Error('Risposta inattesa da /activities (non è un array)');
@@ -120,7 +158,7 @@ async function syncICUNativeMetrics(daysBack) {
 async function syncICUNativeCP() {
   var td = today();
   var from = dateKey(new Date(new Date().setDate(new Date().getDate() - 60)));
-  var resp = await fetch(ICU_WORKER + '/wellness?oldest=' + from + '&newest=' + td);
+  var resp = await icuFetch('/wellness?oldest=' + from + '&newest=' + td);
   if (!resp.ok) throw new Error('ICU wellness HTTP ' + resp.status);
   var records = await resp.json();
   if (!Array.isArray(records) || !records.length) return null;
@@ -142,7 +180,7 @@ async function syncICUNativeCP() {
    quell'uscita). types tipici: time, watts, heart_rate, cadence. */
 async function fetchICUActivityStreams(activityId, types) {
   var typesParam = (types || ['time','watts','heart_rate']).join(',');
-  var resp = await fetch(ICU_WORKER + '/activity/' + activityId + '/streams.json?types=' + encodeURIComponent(typesParam));
+  var resp = await icuFetch('/activity/' + activityId + '/streams.json?types=' + encodeURIComponent(typesParam));
   if (!resp.ok) throw new Error('ICU streams HTTP ' + resp.status);
   var raw = await resp.json();
   // Formato atteso: array di {type, data:[...]} - normalizziamo in un oggetto {time:[], watts:[], heart_rate:[]}
@@ -156,7 +194,7 @@ async function fetchICUActivityStreams(activityId, types) {
 /* Dati nativi di decoupling Pw:Hr per una singola attività (il grafico
    che alimenta la "Decoupling Chart" di Intervals.icu). */
 async function fetchICUPowerVsHR(activityId) {
-  var resp = await fetch(ICU_WORKER + '/activity/' + activityId + '/power-vs-hr.json');
+  var resp = await icuFetch('/activity/' + activityId + '/power-vs-hr.json');
   if (!resp.ok) throw new Error('ICU power-vs-hr HTTP ' + resp.status);
   return await resp.json();
 }
