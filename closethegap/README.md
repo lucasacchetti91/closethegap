@@ -432,6 +432,39 @@ l'**eFTP che Intervals.icu calcola dai tuoi sforzi reali**; se non è
 disponibile non disegna nulla e lo dice, invece di mostrare una curva
 falsa.
 
+## 5quinquies. Fix — "Dettagli non disponibili: ICU streams HTTP 403"
+
+**Causa: avevo esteso il proxy sbagliato.** Ci sono due proxy verso
+Intervals.icu in questo progetto:
+
+1. `functions/api/[[path]].js` — **Pages Function**, deployata con il
+   sito su Cloudflare Pages, raggiungibile su same-origin `/api/...`
+2. `closethegap-proxy.luca-sacchetti91.workers.dev` — **Worker
+   standalone**, ed è quello che l'app chiama davvero (`ICU_WORKER` in
+   `js/config.js`)
+
+Avevo aggiunto il supporto agli endpoint `/activity/{id}/...` solo al
+primo. Il Worker standalone aveva ancora la vecchia lista di endpoint
+permessi e rispondeva 403 su `/activity/...`, che è esattamente la
+chiamata che serve per mappa, altimetria e best effort.
+
+### Doppia soluzione
+**a) Codice aggiornato del Worker** in `worker/closethegap-proxy.js`.
+Va incollato nel dashboard Cloudflare (Workers & Pages →
+closethegap-proxy → Edit code → Deploy). Non è un file del repo GitHub:
+il Worker vive fuori dal repo.
+
+**b) Fallback automatico nel frontend** (`icuFetch` in
+`js/icu-native.js`): tutte le chiamate passano ora da un helper che
+prova il Worker e, se riceve 403/404, ritenta automaticamente sulla
+Pages Function same-origin `/api/...` — che è già aggiornata e viene
+deployata insieme al sito. Quindi **il feed funziona anche senza
+toccare il Worker**; aggiornarlo resta consigliato per evitare la
+chiamata doppia a ogni richiesta.
+
+Testato simulando il Worker che risponde 403: il fallback scatta, e
+mappa/altimetria/best effort vengono disegnati correttamente.
+
 ## 6. Prossimi passi possibili
 - Costruire il Cloudflare Worker OAuth per Strava e rendere W'bal/Decoupling
   reali automatici su ogni sync, non solo sulle 4 uscite pre-calcolate.
