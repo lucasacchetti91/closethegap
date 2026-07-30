@@ -56,28 +56,26 @@ function buildRoutePath(latlng, w, h, pad) {
   var xs=pts.map(function(p){return p[0];}), ys=pts.map(function(p){return p[1];});
   var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs);
   var minY=Math.min.apply(null,ys), maxY=Math.max.apply(null,ys);
+  if (!isFinite(minX)||!isFinite(minY)) return null;
   var spanX=maxX-minX||1e-6, spanY=maxY-minY||1e-6;
   var scale=Math.min((w-2*pad)/spanX, (h-2*pad)/spanY);
   var offX=(w-spanX*scale)/2, offY=(h-spanY*scale)/2;
-  return pts.map(function(p,i){
-    var x=(p[0]-minX)*scale+offX;
-    var y=h-((p[1]-minY)*scale+offY); // y invertita: nord in alto
-    return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);
-  }).join(' ');
+  var screen = pts.map(function(p){
+    return [ (p[0]-minX)*scale+offX, h-((p[1]-minY)*scale+offY) ]; // y invertita: nord in alto
+  });
+  var d = screen.map(function(p,i){ return (i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1); }).join(' ');
+  return { d:d, start:screen[0], end:screen[screen.length-1] };
 }
 
 function renderRouteSVG(route) {
   if (!route || route.length<2) return '<div class="ad-nodata">Nessun dato GPS</div>';
   var W=260,H=150;
-  var d=buildRoutePath(route,W,H,10);
-  if (!d) return '<div class="ad-nodata">Nessun dato GPS</div>';
-  var start=d.split(' ').slice(0,2).join(' ').replace('M','');
-  var sp=start.split(' ');
-  var lastM=d.lastIndexOf('L'); var end=d.slice(lastM+1).trim().split(' ');
+  var p=buildRoutePath(route,W,H,10);
+  if (!p) return '<div class="ad-nodata">Coordinate GPS non valide</div>';
   return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'+
-    '<path d="'+d+'" fill="none" stroke="#e8ff47" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>'+
-    '<circle cx="'+sp[0]+'" cy="'+sp[1]+'" r="3.5" fill="#22d46a"/>'+
-    '<circle cx="'+end[0]+'" cy="'+end[1]+'" r="3.5" fill="#ff4d4d"/>'+
+    '<path d="'+p.d+'" fill="none" stroke="#e8ff47" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>'+
+    '<circle cx="'+p.start[0].toFixed(1)+'" cy="'+p.start[1].toFixed(1)+'" r="3.5" fill="#22d46a"/>'+
+    '<circle cx="'+p.end[0].toFixed(1)+'" cy="'+p.end[1].toFixed(1)+'" r="3.5" fill="#ff4d4d"/>'+
   '</svg>';
 }
 
@@ -109,6 +107,57 @@ function renderBestEffortsHTML(bests) {
   }).join('')+'</div>';
 }
 
+/* Normalizza le coordinate in un array pulito di [lat, lng].
+
+   PERCHÉ È NECESSARIO: la versione precedente dava per scontato che
+   `latlng` fosse sempre un array di coppie [lat,lng] in stile Strava.
+   Intervals.icu può però restituire le coordinate in forme diverse
+   (oggetti {lat,lng}, due stream separati lat/lng, o un array piatto),
+   e in più i tracciati contengono buchi GPS con valori null: bastava
+   un null per far diventare NaN l'intero calcolo dei limiti della
+   mappa e quindi non disegnare nulla.
+   Qui si accettano tutte le forme e si scartano i punti non validi. */
+function normalizeLatLng(streams) {
+  var pts = [];
+  var ll = streams.latlng || streams.latLng || streams.position;
+
+  if (Array.isArray(ll) && ll.length) {
+    if (Array.isArray(ll[0])) {
+      pts = ll;                                   // [[lat,lng], ...]
+    } else if (typeof ll[0] === 'object' && ll[0] !== null) {
+      pts = ll.map(function(p){                   // [{lat,lng}, ...]
+        var la = p.lat!=null?p.lat:(p.latitude!=null?p.latitude:null);
+        var lo = p.lng!=null?p.lng:(p.lon!=null?p.lon:(p.longitude!=null?p.longitude:null));
+        return [la, lo];
+      });
+    } else if (typeof ll[0] === 'number') {
+      for (var i=0;i+1<ll.length;i+=2) pts.push([ll[i], ll[i+1]]); // [lat,lng,lat,lng,...]
+    }
+  } else if (Array.isArray(streams.lat) && Array.isArray(streams.lng)) {
+    for (var j=0;j<streams.lat.length;j++) pts.push([streams.lat[j], streams.lng[j]]);
+  } else if (Array.isArray(streams.latitude) && Array.isArray(streams.longitude)) {
+    for (var k=0;k<streams.latitude.length;k++) pts.push([streams.latitude[k], streams.longitude[k]]);
+  }
+
+  // Scarta buchi GPS e coordinate palesemente non valide
+  return pts.filter(function(p){
+    return p && p.length===2 && typeof p[0]==='number' && typeof p[1]==='number' &&
+           isFinite(p[0]) && isFinite(p[1]) &&
+           Math.abs(p[0])<=90 && Math.abs(p[1])<=180 &&
+           !(p[0]===0 && p[1]===0);
+  });
+}
+
+/* Trova lo stream di quota indipendentemente dal nome usato. */
+function pickAltitude(streams) {
+  var cands = ['altitude','elevation','fixed_altitude','alt','ele'];
+  for (var i=0;i<cands.length;i++) {
+    var a = streams[cands[i]];
+    if (Array.isArray(a) && a.length) return a.filter(function(v){return typeof v==='number' && isFinite(v);});
+  }
+  return null;
+}
+
 async function loadActivityDetail(icuId, domId) {
   if (activityDetailLoading[icuId]) return;
   var target=document.getElementById(domId);
@@ -118,14 +167,16 @@ async function loadActivityDetail(icuId, domId) {
   target.innerHTML='<div class="ad-loading">Caricamento dettagli…</div>';
   try {
     var s = await fetchICUActivityStreams(icuId, ['time','watts','altitude','distance','latlng']);
-    var latlng = s.latlng || null;
-    var alt = s.altitude || null;
-    var watts = s.watts || null;
+    var route = normalizeLatLng(s);
+    var alt = pickAltitude(s);
+    var watts = Array.isArray(s.watts) ? s.watts : null;
     var detail = {
-      route: latlng ? downsample(latlng, 180) : null,
+      route: route.length>1 ? downsample(route, 180) : null,
       elev: alt ? downsample(alt, 140) : null,
       bests: watts ? bestMeanPowers(watts, [5,15,30,60,300,600,1200]) : null,
-      kj: watts ? Math.round(watts.reduce(function(a,b){return a+(b||0);},0)/1000) : null
+      kj: watts ? Math.round(watts.reduce(function(a,b){return a+(b||0);},0)/1000) : null,
+      // se non c'è percorso, conserva cosa è arrivato per poterlo mostrare
+      streamTypes: icuLastStreamShape ? icuLastStreamShape.typesReceived : null
     };
     activityDetailCache[icuId]=detail;
     saveDetailCache();
@@ -138,8 +189,13 @@ async function loadActivityDetail(icuId, domId) {
 }
 
 function renderDetailPanel(d) {
+  var routeHtml = (d.route && d.route.length>1)
+    ? renderRouteSVG(d.route)
+    : '<div class="ad-nodata">Nessun dato GPS in questa uscita.'+
+      (d.streamTypes ? '<br><span style="opacity:.7;font-size:.9em;">Stream ricevuti: '+d.streamTypes.join(', ')+'</span>' : '')+
+      '</div>';
   return '<div class="ad-grid">'+
-    '<div class="ad-box"><div class="ad-lbl">Percorso</div>'+renderRouteSVG(d.route)+'</div>'+
+    '<div class="ad-box"><div class="ad-lbl">Percorso</div>'+routeHtml+'</div>'+
     '<div class="ad-box"><div class="ad-lbl">Altimetria</div>'+renderElevSVG(d.elev)+'</div>'+
     '<div class="ad-box"><div class="ad-lbl">Best effort'+(d.kj?' · '+d.kj+' kJ totali':'')+'</div>'+renderBestEffortsHTML(d.bests)+'</div>'+
   '</div>';

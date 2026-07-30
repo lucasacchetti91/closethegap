@@ -25,39 +25,75 @@
    icuFetch — chiamata al proxy con fallback automatico.
 
    PERCHÉ SERVE: esistono DUE proxy verso Intervals.icu.
-   1) il Worker standalone (ICU_WORKER in config.js), che è quello
+   1) il Worker standalone (ICU_WORKER in config.js), quello
       storicamente usato dall'app;
    2) la Pages Function `functions/api/[[path]].js`, deployata insieme
       al sito e raggiungibile su same-origin `/api/...`.
-   Se uno dei due non conosce ancora un endpoint risponde 403/404
-   (è successo con /activity/{id}/streams: il Worker aveva la vecchia
-   lista di endpoint permessi). Qui proviamo il Worker e, in caso di
-   403/404, ritentiamo automaticamente sulla Pages Function.
-   Essendo same-origin, la seconda chiamata non ha nemmeno problemi
-   di CORS.
+   Se uno dei due non conosce un endpoint risponde 403/404 (è successo
+   con /activity/{id}/streams: il Worker aveva la vecchia lista di
+   endpoint permessi). Qui proviamo il primario e, se serve, l'altro.
+
+   DUE BUG CORRETTI IN QUESTA VERSIONE:
+
+   1. Il fallback era GLOBALE E PERMANENTE: bastava un 403 su
+      /activity/... perché TUTTE le chiamate successive (comprese
+      /wellness e /activities, che il Worker gestisce benissimo)
+      venissero dirottate sulla Pages Function. Questo rompeva la
+      sincronizzazione dopo aver aperto un dettaglio attività.
+      Ora il fallback è memorizzato PER FAMIGLIA DI ENDPOINT: se
+      /activity funziona solo via /api, gli altri continuano a usare
+      il Worker.
+
+   2. Cloudflare Pages, per una rotta non gestita, restituisce
+      index.html con status 200. `resp.ok` era quindi true e tornavamo
+      una pagina HTML: il successivo .json() esplodeva con un errore
+      di parsing incomprensibile. Ora si verifica che la risposta sia
+      davvero JSON prima di accettarla; una pagina HTML viene trattata
+      come fallimento, con un messaggio chiaro.
    -------------------------------------------------------------- */
 var ICU_FALLBACK_BASE = '/api';
-var icuFallbackActive = false;
+var icuFallbackFor = {};   // {'activity': true} - fallback per famiglia di endpoint
+
+function endpointFamily(path) {
+  var p = path.replace(/^\//,'');
+  return (p.split(/[/?]/)[0] || '').split('.')[0];
+}
+
+async function isJsonResponse(resp) {
+  var ct = resp.headers && resp.headers.get ? (resp.headers.get('content-type')||'') : '';
+  if (ct.indexOf('json') >= 0) return true;
+  if (ct.indexOf('html') >= 0) return false;
+  return true; // content-type assente o generico: proviamo comunque a parsare
+}
 
 async function icuFetch(path) {
-  var primary = (icuFallbackActive ? ICU_FALLBACK_BASE : ICU_WORKER) + path;
-  var resp = await fetch(primary);
-  if (resp.ok) return resp;
-  if (resp.status === 403 || resp.status === 404) {
-    var alt = (icuFallbackActive ? ICU_WORKER : ICU_FALLBACK_BASE) + path;
-    var resp2 = await fetch(alt);
-    if (resp2.ok) {
-      if (!icuFallbackActive) {
-        icuFallbackActive = true;
-        console.info('Proxy: il Worker standalone non conosce questo endpoint, passo alla Pages Function /api. '+
-                     'Per tornare al Worker aggiorna il suo codice (vedi worker/closethegap-proxy.js).');
+  var fam = endpointFamily(path);
+  var useFallbackFirst = !!icuFallbackFor[fam];
+  var bases = useFallbackFirst ? [ICU_FALLBACK_BASE, ICU_WORKER] : [ICU_WORKER, ICU_FALLBACK_BASE];
+  var lastStatus = null, htmlSeen = false;
+
+  for (var i=0;i<bases.length;i++) {
+    var resp;
+    try { resp = await fetch(bases[i] + path); }
+    catch (e) { lastStatus = 'network'; continue; }
+    if (resp.ok) {
+      if (!(await isJsonResponse(resp))) { htmlSeen = true; continue; } // pagina HTML travestita da successo
+      if (i===1 && !useFallbackFirst) {
+        icuFallbackFor[fam] = true;
+        console.info('Proxy: "'+fam+'" non è supportato dal Worker standalone, uso la Pages Function /api solo per questa famiglia di endpoint. '+
+                     'Per risolvere alla radice aggiorna il codice del Worker (vedi worker/closethegap-proxy.js).');
       }
-      return resp2;
+      return resp;
     }
-    throw new Error('HTTP '+resp.status+' su entrambi i proxy ('+path.split('?')[0]+
-                    '). Aggiorna il codice del Worker: vedi worker/closethegap-proxy.js nel repo.');
+    lastStatus = resp.status;
+    if (resp.status !== 403 && resp.status !== 404) break; // errore vero: inutile ritentare
   }
-  throw new Error('HTTP '+resp.status);
+
+  if (htmlSeen) {
+    throw new Error('Il proxy ha restituito una pagina HTML invece di JSON per "'+fam+'". '+
+                    'Probabile che la Pages Function /api non sia attiva: aggiorna il Worker standalone (worker/closethegap-proxy.js).');
+  }
+  throw new Error('HTTP '+lastStatus+' su entrambi i proxy ('+path.split('?')[0]+'). Aggiorna il codice del Worker: vedi worker/closethegap-proxy.js.');
 }
 
 var ICU_NATIVE_CP = null; // {eftp, wPrime, pMax, date} - dal sportInfo più recente
@@ -178,16 +214,38 @@ async function syncICUNativeCP() {
 /* Stream secondo-per-secondo per il dettaglio di UNA attività (es. per
    disegnare la curva W'bal minuto per minuto quando l'utente seleziona
    quell'uscita). types tipici: time, watts, heart_rate, cadence. */
+var icuLastStreamShape = null; // diagnostica: cosa e' realmente arrivato dall'API
+
 async function fetchICUActivityStreams(activityId, types) {
   var typesParam = (types || ['time','watts','heart_rate']).join(',');
   var resp = await icuFetch('/activity/' + activityId + '/streams.json?types=' + encodeURIComponent(typesParam));
-  if (!resp.ok) throw new Error('ICU streams HTTP ' + resp.status);
   var raw = await resp.json();
-  // Formato atteso: array di {type, data:[...]} - normalizziamo in un oggetto {time:[], watts:[], heart_rate:[]}
   var out = {};
+  /* Il formato della risposta non e' garantito: puo' essere un array di
+     {type, data} (caso normale) oppure un oggetto con chiavi per tipo.
+     Gestiamo entrambi invece di restituire silenziosamente un oggetto
+     vuoto, che e' cio' che faceva sparire mappa e altimetria senza
+     alcun messaggio d'errore. */
   if (Array.isArray(raw)) {
-    raw.forEach(function(s) { if (s && s.type) out[s.type] = s.data; });
+    raw.forEach(function(s) {
+      if (!s || !s.type) return;
+      if (Array.isArray(s.data)) out[s.type] = s.data;
+      else if (Array.isArray(s.values)) out[s.type] = s.values;
+    });
+  } else if (raw && typeof raw === 'object') {
+    Object.keys(raw).forEach(function(k) {
+      var v = raw[k];
+      if (Array.isArray(v)) out[k] = v;
+      else if (v && Array.isArray(v.data)) out[k] = v.data;
+    });
   }
+  icuLastStreamShape = {
+    responseType: Array.isArray(raw) ? 'array' : typeof raw,
+    typesReceived: Object.keys(out),
+    sampleLatlng: out.latlng ? JSON.stringify(out.latlng.slice(0,2)) : null,
+    hasLatLngSeparate: !!(out.lat && out.lng)
+  };
+  console.debug('Stream ricevuti per attivita ' + activityId + ':', icuLastStreamShape);
   return out;
 }
 
