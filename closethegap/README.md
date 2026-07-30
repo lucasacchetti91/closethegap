@@ -465,6 +465,54 @@ chiamata doppia a ogni richiesta.
 Testato simulando il Worker che risponde 403: il fallback scatta, e
 mappa/altimetria/best effort vengono disegnati correttamente.
 
+## 5sexies. Fix — sync rotto + mappa percorso assente
+
+### Sync rotto: regressione mia, causata dal fallback
+Il fallback `icuFetch` che avevo aggiunto per aggirare il 403 aveva un
+difetto di progettazione: impostava un flag **globale e permanente**.
+La sequenza era:
+
+1. apri "Dettagli" → `/activity/...` → il Worker risponde 403
+2. scatta il fallback e imposta `icuFallbackActive = true` per **tutto**
+3. da quel momento anche `/wellness` e `/activities`, che il Worker
+   gestisce benissimo, vengono dirottate su `/api/...`
+4. Cloudflare Pages, per una rotta non gestita, restituisce `index.html`
+   con **status 200** → `resp.ok` è vero → si riceve una pagina HTML →
+   il successivo `.json()` esplode → sincronizzazione morta
+
+Due correzioni:
+- **Fallback per famiglia di endpoint**, non globale: se solo
+  `/activity` va servito da `/api`, tutto il resto continua a usare il
+  Worker.
+- **Verifica che la risposta sia davvero JSON**: un 200 che restituisce
+  HTML viene trattato come fallimento, con messaggio esplicito. Un 200
+  falso è più insidioso di un 404 pulito, perché avvelena
+  silenziosamente tutto il resto.
+
+### Mappa del percorso assente
+Davo per scontato che `latlng` fosse sempre un array di coppie
+`[lat,lng]` in stile Strava. In realtà:
+- Intervals.icu può restituire le coordinate in forme diverse (coppie,
+  oggetti `{lat,lng}`, due stream separati `lat`/`lng`, array piatto);
+- la risposta `streams` stessa può essere un array di `{type,data}`
+  oppure un oggetto con chiavi per tipo — nel secondo caso il parser
+  restituiva un oggetto vuoto **senza alcun errore**, e mappa e
+  altimetria sparivano in silenzio;
+- i tracciati contengono buchi GPS con valori `null`: **bastava un solo
+  null** per rendere `NaN` il calcolo dei limiti della mappa e non
+  disegnare nulla.
+
+Ora `normalizeLatLng()` accetta tutte le forme e scarta i punti non
+validi (null, coordinate fuori range, 0/0), `pickAltitude()` riconosce i
+vari nomi dello stream di quota, e il parser degli stream gestisce
+entrambi i formati di risposta. Se il percorso manca davvero, il
+pannello mostra **quali stream sono arrivati**, così la causa è visibile
+invece di essere un riquadro vuoto.
+
+Testato su sei formati di coordinate diversi (coppie, oggetti, piatto,
+stream separati, con buchi GPS, risposta a oggetto): la mappa viene
+disegnata correttamente in tutti e sei.
+
 ## 6. Prossimi passi possibili
 - Costruire il Cloudflare Worker OAuth per Strava e rendere W'bal/Decoupling
   reali automatici su ogni sync, non solo sulle 4 uscite pre-calcolate.
