@@ -48,21 +48,37 @@ async function runDiagnostics() {
 
   // ---------- 1. Proxy ----------
   diagLine('[1] PROXY');
+  /* Sonda su un endpoint sicuramente valido. La versione precedente
+     usava /athlete, che però il proxy trasformava in
+     .../athlete/{id}/athlete -> 404: la sonda falliva anche con il
+     proxy perfettamente funzionante, e peggio ancora interrompeva
+     tutto il resto del report. */
   var proxyOk = false;
   try {
-    var r = await icuFetch('/athlete');
-    var ath = await r.json();
-    diagLine('  ✓ Proxy raggiungibile. Atleta: ' + (ath && (ath.name ? 'ok' : 'risposta ricevuta')));
+    var probeFrom = dateKey(new Date(new Date().setDate(new Date().getDate() - 14)));
+    var r = await icuFetch('/activities?oldest=' + probeFrom + '&newest=' + today() + '&fields=id');
+    var probe = await r.json();
+    diagLine('  ✓ Proxy raggiungibile (' + (Array.isArray(probe) ? probe.length + ' attività negli ultimi 14gg' : 'risposta ricevuta') + ')');
     proxyOk = true;
   } catch (e) {
     diagLine('  ✗ Proxy NON raggiungibile: ' + e.message);
+  }
+  // Verifica separata dell'endpoint /athlete (storicamente rotto: vedi fix nel proxy)
+  try {
+    var ra2 = await icuFetch('/athlete');
+    var ath = await ra2.json();
+    diagLine('  ✓ /athlete risponde' + (ath && ath.id ? ' (id ' + ath.id + ')' : ''));
+  } catch (e2) {
+    diagLine('  ⚠ /athlete non disponibile: ' + e2.message);
+    diagLine('    (non è bloccante: l\'app non usa questo endpoint. Se dà 404, il proxy non ha ancora il fix del doppio /athlete.)');
   }
   diagLine('  Fallback attivi per famiglia: ' + (Object.keys(icuFallbackFor).length ? JSON.stringify(icuFallbackFor) : 'nessuno (tutto via Worker)'));
   diagLine('');
 
   if (!proxyOk) {
-    diagLine('Interrompo: senza proxy non posso verificare il resto.');
-    finishDiagnostics(btn, out); return;
+    diagLine('⚠ Il proxy non risponde sull\'endpoint principale. Proseguo comunque con le');
+    diagLine('  altre verifiche: potrebbero fallire tutte, ma vedere QUALI falliscono aiuta.');
+    diagLine('');
   }
 
   // ---------- 2. Campi attività ----------
