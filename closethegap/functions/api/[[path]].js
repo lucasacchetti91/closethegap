@@ -78,6 +78,12 @@ export async function onRequest(context) {
     const topName = (pathParts[0] || '').split('.')[0];
     if (!ATHLETE_ALLOWED.includes(topName)) {
       denyReason = 'Endpoint non permesso: ' + path;
+    } else if (topName === 'athlete' && pathParts.length === 1) {
+      /* BUG CORRETTO: ICU_ATHLETE_BASE contiene gia' /athlete/{id},
+         quindi '/athlete' produceva .../athlete/i52141/athlete -> 404.
+         'athlete' era nella lista dei permessi ma non ha mai potuto
+         funzionare. Ora punta alla risorsa atleta vera e propria. */
+      icuUrl = ICU_ATHLETE_BASE + queryString;
     } else {
       icuUrl = ICU_ATHLETE_BASE + '/' + path + queryString;
     }
