@@ -122,15 +122,25 @@ function normalizeLatLng(streams) {
   var ll = streams.latlng || streams.latLng || streams.position;
 
   if (Array.isArray(ll) && ll.length) {
-    if (Array.isArray(ll[0])) {
-      pts = ll;                                   // [[lat,lng], ...]
-    } else if (typeof ll[0] === 'object' && ll[0] !== null) {
-      pts = ll.map(function(p){                   // [{lat,lng}, ...]
+    /* Il formato va dedotto dal primo elemento NON NULLO, non da ll[0].
+       BUG CORRETTO: a inizio uscita il GPS impiega qualche secondo ad
+       agganciare, quindi i primi campioni sono spesso null. Guardando
+       solo ll[0] nessun ramo corrispondeva e si otteneva un array
+       vuoto: la mappa spariva senza alcun errore. */
+    var probe = null;
+    for (var pi=0; pi<ll.length; pi++) { if (ll[pi]!=null) { probe = ll[pi]; break; } }
+
+    if (probe == null) {
+      pts = [];                                   // stream tutto nullo
+    } else if (Array.isArray(probe)) {
+      pts = ll.filter(function(p){ return p!=null; });        // [[lat,lng], ...]
+    } else if (typeof probe === 'object') {
+      pts = ll.filter(function(p){ return p!=null; }).map(function(p){   // [{lat,lng}, ...]
         var la = p.lat!=null?p.lat:(p.latitude!=null?p.latitude:null);
         var lo = p.lng!=null?p.lng:(p.lon!=null?p.lon:(p.longitude!=null?p.longitude:null));
         return [la, lo];
       });
-    } else if (typeof ll[0] === 'number') {
+    } else if (typeof probe === 'number') {
       for (var i=0;i+1<ll.length;i+=2) pts.push([ll[i], ll[i+1]]); // [lat,lng,lat,lng,...]
     }
   } else if (Array.isArray(streams.lat) && Array.isArray(streams.lng)) {
