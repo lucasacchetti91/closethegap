@@ -13,7 +13,14 @@
 // fallback, ma è consigliato migrare appena possibile.
 
 const ICU_ATHLETE_ID = 'i52141';
-const ICU_API_KEY_FALLBACK = '5yh0f9alz0tjxr18wq4qbrb5p';
+/* ATTENZIONE — questa chiave è in chiaro nel codice.
+   Se il repository è pubblico (o lo diventa), chiunque può leggerla e
+   accedere ai tuoi dati Intervals.icu; resta inoltre nella cronologia
+   git anche dopo averla cambiata qui.
+   Modo corretto: Cloudflare → Settings → Variables → aggiungi
+   ICU_API_KEY come secret, poi svuota la costante qui sotto ('').
+   Il codice preferisce già la variabile d'ambiente quando esiste. */
+const ICU_API_KEY_FALLBACK = '668wn2dx4nyok95qc35g1hda7';
 const ICU_ATHLETE_BASE = 'https://intervals.icu/api/v1/athlete/' + ICU_ATHLETE_ID;
 const ICU_ACTIVITY_BASE = 'https://intervals.icu/api/v1/activity';
 
