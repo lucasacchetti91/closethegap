@@ -513,6 +513,51 @@ Testato su sei formati di coordinate diversi (coppie, oggetti, piatto,
 stream separati, con buchi GPS, risposta a oggetto): la mappa viene
 disegnata correttamente in tutti e sei.
 
+## 5septies. Validazione — diagnostica in-app e suite di test
+
+### Bottone "🔍 Diagnostica" (`js/diagnostics.js`)
+Nella tab Analisi. Interroga tutti gli endpoint e produce un report che
+dice **quali campi esistono davvero** sul tuo account, invece di
+lasciare che l'app usi silenziosamente i fallback approssimati quando i
+nomi ipotizzati non corrispondono. Verifica: proxy, campi attività,
+campi wellness, forma degli stream, eventi/gare a calendario, e lo stato
+dei modelli. C'è un bottone "Copia report".
+
+Il report contiene nomi di campi, tipi e qualche valore numerico
+(servono per capire le unità). Non contiene la chiave API, né i nomi
+delle attività, né coordinate GPS.
+
+### Un bug vero trovato subito dalla diagnostica
+Il report ha mostrato `punti GPS validi dopo normalizzazione: 0` su uno
+stream che conteneva coordinate valide. Causa: `normalizeLatLng()`
+deduceva il formato dell'array guardando `ll[0]`, ma **a inizio uscita
+il GPS impiega qualche secondo ad agganciare**, quindi i primi campioni
+sono `null`. Nessun ramo corrispondeva e si otteneva un array vuoto —
+mappa assente, senza alcun messaggio d'errore. È molto probabilmente la
+causa reale della mappa mancante. Ora il formato viene dedotto dal primo
+elemento **non nullo**.
+
+Nota metodologica: il test precedente dava questo caso per superato
+perché asseriva sull'HTML renderizzato (`contiene <path d="M"?`) invece
+che sulla funzione. Un'asserzione troppo indiretta può dare un falso
+verde.
+
+### Suite di test (`test/test.js`)
+54 test: sintassi di ogni modulo, avvio senza errori, navigazione fra le
+cinque tab, normalizzazione GPS (tutti i formati + i casi con null),
+plausibilità dei modelli fisiologici, vincoli del piano (uscite/settimana,
+tetto delle 2h infrasettimanali, densità TSS, varietà dei formati), best
+mean power e metriche.
+
+```bash
+npm install     # solo la prima volta
+npm test
+```
+
+Ogni test copre una regressione realmente avvenuta durante lo sviluppo.
+Verificato che la suite fallisca reintroducendo il bug del GPS: un test
+che non fallisce mai quando dovrebbe non serve a niente.
+
 ## 6. Prossimi passi possibili
 - Costruire il Cloudflare Worker OAuth per Strava e rendere W'bal/Decoupling
   reali automatici su ogni sync, non solo sulle 4 uscite pre-calcolate.
