@@ -168,7 +168,17 @@
         <span style="font-size:.7rem;color:var(--tx3);">bpm</span>
         <button onclick="recalcAll()" class="tb tb-acc" style="padding:5px 12px;">&#10003; Aggiorna</button>
         <button onclick="syncICUAdvanced()" class="tb tb-pur" style="padding:5px 12px;">🔬 Sync metriche avanzate ICU</button>
+        <button onclick="runDiagnostics()" id="btn-diag" class="tb" style="padding:5px 12px;">🔍 Diagnostica</button>
         <span id="icu-advanced-status" style="font-size:.63rem;color:var(--tx3);white-space:nowrap;"></span>
+      </div>
+      <div id="diag-output" style="display:none;margin-bottom:16px;">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div class="ct" style="margin:0;">Report diagnostica</div>
+            <button onclick="copyDiagnostics()" id="btn-diag-copy" class="tb tb-acc" style="padding:5px 12px;">Copia report</button>
+          </div>
+          <pre style="font-size:.62rem;line-height:1.55;color:var(--tx2);background:var(--s1);border:1px solid var(--br);border-radius:6px;padding:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;max-height:460px;overflow-y:auto;"></pre>
+        </div>
       </div>
       <div class="card"><div class="ct">PMC &mdash; CTL / ATL / TSB (120gg)</div><div class="cw" style="height:230px;"><canvas id="ch-pmc"></canvas></div></div>
       <div class="g2">
@@ -331,6 +341,7 @@
 <script src="js/activities.js"></script>
 <script src="js/sync.js"></script>
 <script src="js/storage.js"></script>
+<script src="js/diagnostics.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

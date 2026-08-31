@@ -1,0 +1,12 @@
+{
+  "name": "close-the-gap",
+  "version": "1.0.0",
+  "description": "App di allenamento personalizzato per ciclismo",
+  "private": true,
+  "scripts": {
+    "test": "node test/test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}
