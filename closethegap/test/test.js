@@ -183,6 +183,45 @@ setTimeout(() => {
   const pmc = win.computePMC();
   check('PMC restituisce valori finiti', [pmc.ctl, pmc.atl, pmc.tsb].every(Number.isFinite));
 
+  /* ---------- 7bis. Modello Morton 3 parametri (dati reali ICU) ---------- */
+  section('Morton 3 parametri');
+  // Valori reali letti dal report di diagnostica dell'utente
+  const CP = 347, WP = 27093, PMAX = 1103;
+  const m15 = win.mortonPower(15, CP, WP, PMAX);
+  const m3600 = win.mortonPower(3600, CP, WP, PMAX);
+  check('Morton a 15s sotto Pmax', m15 < PMAX && m15 > CP, m15.toFixed(0) + 'W');
+  // REGRESSIONE: applicare l'iperbole a 2 parametri al W' di Morton dava 2153W a 15s
+  check('Morton a 15s plausibile (<1000W)', m15 < 1000, m15.toFixed(0) + 'W');
+  check('Morton a 1h tende a CP', Math.abs(m3600 - CP) < 15, m3600.toFixed(0) + 'W');
+  check('Morton monotono decrescente',
+    [5, 30, 60, 300, 1200, 3600].every((t, i, a) => i === 0 || win.mortonPower(t, CP, WP, PMAX) < win.mortonPower(a[i - 1], CP, WP, PMAX)));
+  win.ICU_NATIVE_CP = { eftp: CP, wPrime: WP, pMax: PMAX };
+  const cpN = win.cpModel();
+  check("W' nativo NON scartato quando c'è Pmax", cpN.Wp === WP && cpN.model === 'morton3p',
+    "model=" + cpN.model + " W'=" + cpN.Wp);
+  win.ICU_NATIVE_CP = null;
+
+  /* ---------- 7ter. Zone: conteggi diversi fra ICU e modello locale ---------- */
+  section('Zone con conteggi diversi');
+  // REGRESSIONE: ICU manda 8 zone di potenza e 7 di FC, il modello locale 7 e 5.
+  // Mappandole per indice i tempi finivano nelle zone sbagliate.
+  const lbl8 = win.zoneLabelsFor(8, 'power');
+  const lbl7 = win.zoneLabelsFor(7, 'hr');
+  check('8 etichette per 8 zone di potenza ICU', lbl8.length === 8);
+  check('7 etichette per 7 zone cardiache ICU', lbl7.length === 7);
+  check('etichette senza intervalli inventati se le definizioni ICU mancano',
+    lbl8.every(l => l.name && (l.range === null || typeof l.range === 'string')));
+
+  /* ---------- 7quater. LTHR non sovrascritta automaticamente ---------- */
+  section('LTHR');
+  // REGRESSIONE: la stima automatica metteva 154 bpm al posto di ~180,
+  // sballando tutte le zone cardiache.
+  win.LTHR = 180;
+  win.applyDataDrivenZones();
+  check('applyDataDrivenZones NON modifica la LTHR', win.LTHR === 180, 'LTHR=' + win.LTHR);
+  const hrZ = win.computeHRZones(180);
+  check('zone FC coerenti con LTHR impostata', hrZ[3].hi === 180, 'Z4 hi=' + hrZ[3].hi);
+
   console.log('\n' + '═'.repeat(60));
   console.log(failed === 0
     ? `✅ TUTTI I TEST SUPERATI (${passed})`
