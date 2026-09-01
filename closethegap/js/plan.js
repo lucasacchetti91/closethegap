@@ -51,17 +51,23 @@ var lastPlanGenMeta = null;
 
 function makePlan(){
   var td = today();
+  resolveGoalDate(); // l'orizzonte del piano segue le gare in calendario
   // Registro storico: solo ciò che è già passato, invariato.
-  var past = HISTORICAL_PLAN.filter(function(p){ return p.date < td && p.date !== GOAL_DATE; });
+  var past = HISTORICAL_PLAN.filter(function(p){ return p.date < td && p.date !== GOAL_DATE_CONFIGURED; });
   // Evento fisso: il giorno della gara obiettivo resta sempre quello
   // scritto a mano (non va rigenerato).
-  var goalEntry = HISTORICAL_PLAN.find(function(p){ return p.date === GOAL_DATE; });
+  var goalEntry = HISTORICAL_PLAN.find(function(p){ return p.date === GOAL_DATE_CONFIGURED; });
   // Tutto il resto (da oggi al giorno prima della gara) è rigenerato
   // sui dati reali.
-  var gen = generateFuturePlan(td < GOAL_DATE ? td : GOAL_DATE, GOAL_DATE);
+  /* Genera fino al giorno DOPO l'ultima gara, così anche l'ultima
+     riceve la propria voce nel piano. */
+  var horizon = addDays(GOAL_DATE, 1);
+  var gen = generateFuturePlan(td < horizon ? td : horizon, horizon);
   lastPlanGenMeta = gen.meta;
   plan = past.concat(gen.sessions);
-  if (goalEntry) plan.push(goalEntry);
+  // La voce fissa dell'obiettivo si aggiunge solo se non l'ha già
+  // generata il modulo gare (evita duplicati sulla stessa data).
+  if (goalEntry && !plan.some(function(p){ return p.date === goalEntry.date; })) plan.push(goalEntry);
   plan.sort(function(a,b){ return a.date.localeCompare(b.date); });
 }
 
@@ -163,6 +169,32 @@ function renderPlanPage() {
       'Ramp rate applicato: <strong>'+meta.rampRate+' CTL/settimana</strong> (dal tuo storico, clampato 3-8 per sicurezza)<br>'+
       (meta.polarization ? ('Polarizzazione ultimi 42gg: <strong>'+meta.polarization.lowPct+'% bassa / '+meta.polarization.highPct+'% alta intensità</strong> ('+(meta.polarization.polarized?'80/20 rispettato':'sbilanciata verso l\'alta intensità — sessioni qualità ridotte')+')<br>') : '') +
       (meta.raceProfile ? ('Profilo gare analizzate: <strong>'+meta.raceProfile.count+' gare</strong>, '+meta.raceProfile.avgDurMin+"' medi, decoupling medio "+meta.raceProfile.avgDecoupling+'%') : '');
+  }
+
+  /* Gare dal calendario Intervals.icu: mostrate in cima, perché sono
+     il vincolo attorno a cui è costruito tutto il resto. */
+  var rs = (typeof racesSummary === 'function') ? racesSummary() : null;
+  var racesEl = document.getElementById('races-render');
+  if (racesEl) {
+    if (rs && rs.length) {
+      var priCol = {A:'#ff4d4d', B:'#f97316', C:'#fbbf24'};
+      racesEl.innerHTML = '<div class="card"><div class="ct">Gare in calendario ('+rs.length+')</div>'+
+        rs.map(function(r){
+          return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--br);">'+
+            '<span style="background:'+priCol[r.priority]+'22;color:'+priCol[r.priority]+';border:1px solid '+priCol[r.priority]+'55;'+
+              'border-radius:4px;padding:2px 7px;font-size:.6rem;font-weight:700;">'+r.priority+'</span>'+
+            '<div style="flex:1;min-width:0;"><div style="font-size:.78rem;font-weight:600;">'+r.name+'</div>'+
+            '<div style="font-size:.6rem;color:var(--tx3);">'+r.label+' · '+r.date+'</div></div>'+
+            '<div style="font-size:.72rem;color:var(--tx2);white-space:nowrap;">tra '+r.days+' gg</div></div>';
+        }).join('')+
+        '<div style="font-size:.62rem;color:var(--tx3);margin-top:9px;line-height:1.5;">'+
+        'Il piano scarica automaticamente prima di ogni gara (5 giorni per le A, 2 per le B) '+
+        'e inserisce recupero dopo. Le gare non vengono mai riscalate dal bilanciamento settimanale del TSS.</div></div>';
+    } else {
+      racesEl.innerHTML = '<div class="card" style="font-size:.7rem;color:var(--tx3);">'+
+        'Nessuna gara futura sul calendario Intervals.icu. Aggiungile lì (categoria RACE_A/B/C) '+
+        'e verranno recepite al prossimo sync.</div>';
+    }
   }
 
   var td = today();

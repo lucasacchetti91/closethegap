@@ -300,7 +300,15 @@ async function loadActivityDetail(icuId, domId) {
   activityDetailLoading[icuId]=true;
   target.innerHTML='<div class="ad-loading">Caricamento dettagli…</div>';
   try {
-    var s = await fetchICUActivityStreams(icuId, ['time','watts','altitude','distance','latlng']);
+    /* Richiesta SENZA filtro types.
+       Con types=...,latlng l'API ha restituito uno stream "latlng"
+       contenente solo latitudini (verificato con la diagnostica: 4432
+       valori tutti fra 45.43 e 45.64, nessuna longitudine, e nessuna
+       voce duplicata). Senza filtro l'API dovrebbe restituire tutti gli
+       stream disponibili, comprese eventuali serie separate per
+       longitudine. Se anche così le longitudini non arrivano, il
+       percorso resta non disegnato: meglio nessuna mappa che una falsa. */
+    var s = await fetchICUActivityStreams(icuId, null);
     var route = normalizeLatLng(s);
     var alt = pickAltitude(s);
     var watts = Array.isArray(s.watts) ? s.watts : null;

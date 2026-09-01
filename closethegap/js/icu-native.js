@@ -210,7 +210,7 @@ function normalizeZoneTimes(raw) {
    che prima non avevamo modo di calcolare con la stessa affidabilità. */
 async function syncICUNativeMetrics(daysBack) {
   var td = today();
-  var from = dateKey(new Date(new Date().setDate(new Date().getDate() - (daysBack||365))));
+  var from = SEASON_START;
   var resp = await icuFetch('/activities?oldest=' + from + '&newest=' + td + '&fields=' + encodeURIComponent(ICU_ACTIVITY_FIELDS));
   if (!resp.ok) throw new Error('ICU activities HTTP ' + resp.status);
   var icuActs = await resp.json();
@@ -264,7 +264,7 @@ async function syncICUNativeMetrics(daysBack) {
    quando disponibile. */
 async function syncICUNativeCP() {
   var td = today();
-  var from = dateKey(new Date(new Date().setDate(new Date().getDate() - 60)));
+  var from = SEASON_START;
   var resp = await icuFetch('/wellness?oldest=' + from + '&newest=' + td);
   if (!resp.ok) throw new Error('ICU wellness HTTP ' + resp.status);
   var records = await resp.json();
@@ -407,12 +407,26 @@ async function fetchICUActivityStreams(activityId, types) {
     while (out[key] !== undefined) { key = type + '_' + n; n++; }
     out[key] = data;
   }
+  var rawEntryShapes = {};
   if (Array.isArray(raw)) {
     raw.forEach(function(s) {
       if (!s || !s.type) return;
       rawEntryTypes.push(s.type);
+      /* Registra TUTTE le chiavi della voce grezza: se la longitudine
+         non arriva come voce separata, deve trovarsi in un altro campo
+         della stessa voce "latlng". Questo serve a scoprirlo senza
+         doverlo indovinare. */
+      rawEntryShapes[s.type] = Object.keys(s).map(function(k){
+        var v = s[k];
+        return k + ':' + (Array.isArray(v) ? 'array['+v.length+'] primo=' + JSON.stringify(v[0])
+                                           : (typeof v === 'object' && v !== null ? 'object' : JSON.stringify(v)));
+      });
       if (Array.isArray(s.data)) put(s.type, s.data);
       else if (Array.isArray(s.values)) put(s.type, s.values);
+      // se la voce contiene ALTRI array oltre a data, conservali
+      Object.keys(s).forEach(function(k){
+        if (k!=='data' && k!=='values' && Array.isArray(s[k]) && s[k].length>10) put(s.type+'__'+k, s[k]);
+      });
     });
   } else if (raw && typeof raw === 'object') {
     Object.keys(raw).forEach(function(k) {
@@ -429,6 +443,7 @@ async function fetchICUActivityStreams(activityId, types) {
     responseType: Array.isArray(raw) ? 'array' : typeof raw,
     rawEntryTypes: rawEntryTypes,
     duplicateTypes: rawEntryTypes.filter(function(t,i){ return rawEntryTypes.indexOf(t) !== i; }),
+    rawEntryShapes: rawEntryShapes,
     typesReceived: Object.keys(out),
     sampleLatlng: out.latlng ? JSON.stringify(out.latlng.slice(0,2)) : null,
     hasLatLngSeparate: !!(out.lat && out.lng)
@@ -456,9 +471,10 @@ async function syncICUAdvanced(opts) {
   try {
     var res = await syncICUNativeMetrics(400);
     await syncICUNativeCP();
-    try { await syncWellness(180); } catch(we) { console.warn('Wellness non disponibile:', we.message); }
+    try { await syncWellness(); } catch(we) { console.warn('Wellness non disponibile:', we.message); }
     try { await syncICUZoneDefs(); } catch(ze) { console.warn('Definizioni zone non disponibili:', ze.message); }
     try { await syncICUPowerCurve(); } catch(pe) { console.warn('Curva di potenza non disponibile:', pe.message); }
+    try { await syncRaces(SEASON_START); } catch(re) { console.warn('Gare non disponibili:', re.message); }
     applyDataDrivenZones();
     if (el && !silent) {
       el.textContent = '✅ ' + res.matched + '/' + res.total + ' attività arricchite con metriche native'

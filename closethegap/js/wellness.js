@@ -33,9 +33,9 @@ function pickW(o, keys) {
   return null;
 }
 
-async function syncWellness(daysBack) {
+async function syncWellness() {
   var td = today();
-  var from = dateKey(new Date(new Date().setDate(new Date().getDate() - (daysBack||180))));
+  var from = SEASON_START; // stagione intera
   var resp = await icuFetch('/wellness?oldest=' + from + '&newest=' + td);
   if (!resp.ok) throw new Error('Wellness HTTP ' + resp.status);
   var rows = await resp.json();

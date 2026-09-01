@@ -30,6 +30,7 @@ function saveState() {
       bestEfforts: bestEfforts,
       bestEffortsSource: typeof BEST_EFFORTS_SOURCE!=='undefined'?BEST_EFFORTS_SOURCE:'hardcoded',
       wellness: typeof wellness !== 'undefined' ? wellness : [],
+      races: typeof races !== 'undefined' ? races : [],
       weightKg: WEIGHT_KG
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -62,6 +63,7 @@ function loadState() {
     if (Array.isArray(s.bestEfforts) && s.bestEfforts.length) bestEfforts = s.bestEfforts;
     if (s.bestEffortsSource) BEST_EFFORTS_SOURCE = s.bestEffortsSource;
     if (Array.isArray(s.wellness)) wellness = s.wellness;
+    if (Array.isArray(s.races)) races = s.races;
     if (s.weightKg) WEIGHT_KG = s.weightKg;
     return s.savedAt;
   } catch (e) {

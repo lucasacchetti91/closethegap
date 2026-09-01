@@ -30,8 +30,26 @@
    forma reale.
    ============================================================ */
 
-var GOAL_DATE = '2026-09-19';
+var GOAL_DATE_CONFIGURED = '2026-09-19'; // obiettivo impostato a mano
+var GOAL_DATE = GOAL_DATE_CONFIGURED;    // effettivo, può essere esteso dalle gare
 var GOAL_FTP = 360;
+
+/* Il piano si generava solo fino alla data obiettivo scritta a mano:
+   qualunque gara successiva veniva semplicemente ignorata, senza
+   avviso. Ora l'orizzonte si estende fino all'ultima gara in
+   calendario, così ogni gara riceve il suo scarico e il suo recupero. */
+function resolveGoalDate() {
+  GOAL_DATE = GOAL_DATE_CONFIGURED;
+  if (typeof races !== 'undefined' && races.length) {
+    var td = today();
+    var future = races.filter(function(r){ return r.date >= td; });
+    if (future.length) {
+      var last = future[future.length-1].date;
+      if (last > GOAL_DATE) GOAL_DATE = last;
+    }
+  }
+  return GOAL_DATE;
+}
 
 function addDays(ds, n) { var d=new Date(ds+'T12:00'); d.setDate(d.getDate()+n); return dateKey(d); }
 function weeksBetweenDates(d1,d2){ return Math.round((new Date(d2+'T12:00')-new Date(d1+'T12:00'))/(7*86400000)); }
@@ -117,6 +135,11 @@ function generateFuturePlan(fromDate, toDateExclusive) {
   var cur = fromDate;
   var weekNum = 1;
   var raceSpecificUsed = false;
+  /* Vincoli imposti dal calendario gare di Intervals.icu: giorni di
+     gara, scarico prima e recupero dopo. Hanno la precedenza su
+     qualunque sessione il generatore avrebbe messo. */
+  var raceConstraints = (typeof buildRaceConstraints === 'function')
+    ? buildRaceConstraints(fromDate, toDateExclusive) : {};
 
   while (cur < toDateExclusive) {
     var weeksToGoal = weeksBetweenDates(cur, toDateExclusive);
@@ -142,6 +165,15 @@ function generateFuturePlan(fromDate, toDateExclusive) {
       if (date >= toDateExclusive) break;
       var dow = new Date(date+'T12:00').getDay(); // 0=Dom..6=Sab
       var session = null;
+
+      /* I vincoli gara vengono prima di tutto il resto. */
+      var rc = raceConstraints[date];
+      if (rc) {
+        if (rc.kind === 'race')          session = buildRaceSession(date, weekLabel, rc.race, CP, pz);
+        else if (rc.kind === 'taper')    session = buildTaperSession(date, weekLabel, CP, pz, rc);
+        else if (rc.kind === 'recovery') session = buildRecoverySession(date, weekLabel, CP, pz, rc);
+        if (session) { sessions.push(session); continue; }
+      }
 
       if (dow===6) {
         // Sabato: uscita lunga - qui i lavori più lunghi. In Picco Forma
@@ -185,14 +217,23 @@ function generateFuturePlan(fromDate, toDateExclusive) {
        settimanale non è raggiungibile con questa struttura, è giusto
        che resti non raggiunto: la struttura viene prima del numero. */
     var weekSessions = sessions.slice(-daysLeftInWindow);
-    var actualTSS = weekSessions.reduce(function(s,x){return s+x.tss;},0) || 1;
-    var scale = weeklyTSS / actualTSS;
+    /* Gara, scarico e recupero NON vengono riscalati: il carico di una
+       gara è quello che è, e uno scarico riscalato all'insù smetterebbe
+       di essere uno scarico. Il riscalamento agisce solo sulle sessioni
+       di allenamento vere e proprie. */
+    var fixedKinds = {race:1, taper:1, recovery:1};
+    var adjustable = weekSessions.filter(function(x){ return !fixedKinds[x.method]; });
+    var fixedTSS = weekSessions.filter(function(x){ return fixedKinds[x.method]; })
+                               .reduce(function(s,x){return s+x.tss;},0);
+    var actualTSS = adjustable.reduce(function(s,x){return s+x.tss;},0) || 1;
+    var scale = (weeklyTSS - fixedTSS) / actualTSS;
     scale = Math.max(0.85, Math.min(1.15, scale));
-    if (scale>0 && isFinite(scale)) weekSessions.forEach(function(s){ s.tss = Math.round(s.tss*scale); });
+    if (scale>0 && isFinite(scale)) adjustable.forEach(function(s){ s.tss = Math.round(s.tss*scale); });
 
     cur = addDays(cur, daysLeftInWindow);
     weekNum++;
   }
 
-  return {sessions: sessions, meta: {rampRate:rampRate, polarization:polarization, raceProfile:raceProfile, CP:CP, Wp:Wp}};
+  return {sessions: sessions, meta: {rampRate:rampRate, polarization:polarization, raceProfile:raceProfile,
+          CP:CP, Wp:Wp, racesPlanned: Object.keys(raceConstraints).filter(function(d){return raceConstraints[d].kind==='race';}).length}};
 }

@@ -11,6 +11,11 @@ var ZC = {1:'#4a5168',2:'#22d46a',3:'#fbbf24',4:'#f97316',5:'#ff4d4d',6:'#a78bfa
 var ZBADGE = {z1:'bz1',z2:'bz2',z3:'bz3',z4:'bz4',z5:'bz5',z6:'bz5',race:'brace',off:'boff'};
 function zc(z) { return ZC[z] || '#4a5168'; }
 
+/* Inizio della stagione 2026: tutti i caricamenti storici partono da qui,
+   così PMC, progressione eFTP e distribuzioni coprono l'intera stagione
+   invece di una finestra mobile di pochi mesi. */
+var SEASON_START = '2025-11-01';
+
 var ICU_WORKER = 'https://closethegap-proxy.luca-sacchetti91.workers.dev';
 
 /* Proxy Strava non ancora esistente: se in futuro viene creato un worker

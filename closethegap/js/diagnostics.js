@@ -169,7 +169,11 @@ async function runDiagnostics() {
       if (icuLastStreamShape && icuLastStreamShape.rawEntryTypes) {
         diagLine('  Voci GREZZE nella risposta (in ordine): ' + icuLastStreamShape.rawEntryTypes.join(', '));
         var dup = icuLastStreamShape.duplicateTypes;
-        diagLine('  Tipi DUPLICATI: ' + (dup && dup.length ? dup.join(', ') + '  ← lat e lng arrivano come due voci con lo stesso nome' : 'nessuno'));
+        diagLine('  Tipi DUPLICATI: ' + (dup && dup.length ? dup.join(', ') + '  ← lat e lng come due voci omonime' : 'nessuno'));
+        if (icuLastStreamShape.rawEntryShapes && icuLastStreamShape.rawEntryShapes.latlng) {
+          diagLine('  CHIAVI della voce grezza "latlng" (qui deve nascondersi la longitudine):');
+          icuLastStreamShape.rawEntryShapes.latlng.forEach(function(k){ diagLine('    ' + k); });
+        }
       }
       diagLine('  Tipi di stream ricevuti: ' + Object.keys(s).join(', '));
       Object.keys(s).forEach(function(k){

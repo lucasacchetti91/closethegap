@@ -32,7 +32,7 @@ async function syncIntervals(opts) {
   }
   try {
     var td=today();
-    var from=dateKey(new Date(new Date().setDate(new Date().getDate()-120)));
+    var from=SEASON_START; // tutta la stagione, non una finestra di 120 giorni
     var p='oldest='+from+'&newest='+td;
     var wResp=await icuFetch('/wellness?'+p);
     if(!wResp.ok) throw new Error('Wellness HTTP '+wResp.status);
