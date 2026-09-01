@@ -50,6 +50,11 @@ function loadState() {
     activities = s.activities;
     if (s.ftp) FTP = s.ftp;
     if (s.lthr) LTHR = s.lthr;
+    /* Se in cache c'e' una LTHR palesemente troppo bassa, e' il residuo
+       della vecchia stima automatica difettosa (produceva ~154 bpm):
+       la ignoriamo e torniamo al default, cosi' le zone cardiache non
+       restano sballate dopo l'aggiornamento. */
+    if (LTHR && HR_MAX && LTHR < HR_MAX*0.80) LTHR = 180;
     if (s.hrMax) HR_MAX = s.hrMax;
     if (s.hrRest) HR_REST = s.hrRest;
     if (s.icuNativeCP) ICU_NATIVE_CP = s.icuNativeCP;

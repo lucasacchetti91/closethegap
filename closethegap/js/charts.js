@@ -129,67 +129,72 @@ function renderHeatmap() {
    quello che è ("per potenza media"), senza spacciarlo per tempo in zona.
    ============================================================ */
 function renderZoneDist() {
-  var pzZones = computePowerZones();
-  var pzL=['Z1','Z2','Z3','Z4','Z5','Z6','Z7'];
-  var pzC=['#4a5168','#22d46a','#fbbf24','#f97316','#ff4d4d','#a78bfa','#ec4899'];
+  var pzC=['#4a5168','#22d46a','#fbbf24','#f97316','#ff4d4d','#a78bfa','#ec4899','#f472b6'];
 
-  var withNative = activities.filter(function(a){return a.icu_zone_times && a.icu_zone_times.length;});
-  var pzS=new Array(7).fill(0), powerMode;
-  if (withNative.length) {
-    powerMode = 'native';
-    withNative.forEach(function(a){
-      a.icu_zone_times.forEach(function(secs,i){ if(i<7) pzS[i]+=(secs||0); });
-    });
-  } else {
-    powerMode = 'approx';
-    var pzB = pzZones.map(function(z){return z.lo;}).concat([Infinity]);
-    activities.filter(function(a){return a.avg_watts;}).forEach(function(a){
-      for(var i=0;i<7;i++){ if(a.avg_watts>=pzB[i]&&a.avg_watts<pzB[i+1]){ pzS[i]+=a.dur; break; } }
-    });
+  /* BUG CORRETTO: Intervals.icu restituisce 8 valori per le zone di
+     potenza e 7 per quelle cardiache, mentre il modello interno ne ha 7
+     e 5. Prima i due array venivano mappati per indice, quindi i tempi
+     finivano nelle zone sbagliate. Ora si disegnano tante barre quante
+     ne fornisce ICU, con le etichette prese dalle TUE impostazioni ICU
+     quando disponibili (vedi syncICUZoneDefs). */
+  function renderSide(kind, elId, noteId, nativeField, localZones, refLabel) {
+    var withNative = activities.filter(function(a){ return a[nativeField] && a[nativeField].length; });
+    var sums, labels, mode;
+    if (withNative.length) {
+      mode='native';
+      var n = Math.max.apply(null, withNative.map(function(a){return a[nativeField].length;}));
+      sums = new Array(n).fill(0);
+      withNative.forEach(function(a){
+        a[nativeField].forEach(function(secs,i){ if(i<n) sums[i]+=(secs||0); });
+      });
+      labels = zoneLabelsFor(n, kind);
+    } else {
+      mode='approx';
+      sums = new Array(localZones.length).fill(0);
+      var bounds = localZones.map(function(z){return z.lo;}).concat([Infinity]);
+      var field = kind==='power' ? 'avg_watts' : 'hr';
+      activities.filter(function(a){return a[field];}).forEach(function(a){
+        for (var i=0;i<localZones.length;i++){
+          if (a[field]>=bounds[i] && a[field]<bounds[i+1]) { sums[i]+=a.dur; break; }
+        }
+      });
+      labels = localZones.map(function(z,i){
+        return {name:'Z'+(i+1), range:z.lo+'–'+(i===localZones.length-1?'Max':z.hi)+(kind==='power'?'W':'bpm')};
+      });
+    }
+    var tot = Math.max(sums.reduce(function(s,v){return s+v;},0), 1);
+    document.getElementById(elId).innerHTML = labels.map(function(l,i){
+      var pct = Math.round((sums[i]||0)/tot*100);
+      var c = pzC[i % pzC.length];
+      return '<div class="zbar"><span class="zbar-lbl" style="color:'+c+';">'+l.name+(l.range?' '+l.range:'')+
+             '</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+c+'"></div></div>'+
+             '<span class="zbar-pct">'+pct+'%</span></div>';
+    }).join('');
+    var note = document.getElementById(noteId);
+    if (note) {
+      var txt = mode==='native'
+        ? 'Tempo reale in zona da Intervals.icu ('+withNative.length+' uscite, '+sums.length+' zone).'
+          + (ICU_ZONE_DEFS && ICU_ZONE_DEFS[kind] ? '' : ' Intervalli non mostrati: le definizioni delle tue zone ICU non sono state lette — premi "Sync metriche avanzate ICU".')
+        : 'Stima per '+refLabel+' dell\'uscita — non è il tempo reale in zona. Premi "Sync metriche avanzate ICU".';
+      note.innerHTML = txt;
+    }
+    return mode;
   }
-  var pzT=Math.max(pzS.reduce(function(s,v){return s+v;},0),1);
-  document.getElementById('zone-dist-power').innerHTML=pzL.map(function(l,i){
-    var z=pzZones[i];
-    var hi = i===6 ? 'Max' : z.hi;
-    var pct=Math.round(pzS[i]/pzT*100);
-    return '<div class="zbar"><span class="zbar-lbl" style="color:'+pzC[i]+';">'+l+' '+z.lo+'–'+hi+'W</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+pzC[i]+'"></div></div><span class="zbar-pct">'+pct+'%</span></div>';
-  }).join('');
-  var pNote=document.getElementById('zone-dist-power-note');
-  if (pNote) pNote.textContent = powerMode==='native'
-    ? 'Tempo reale in zona da Intervals.icu ('+withNative.length+' uscite con dati nativi).'
-    : 'Stima per potenza media dell\'uscita — non è il tempo reale in zona. Premi "Sync metriche avanzate ICU" per avere la distribuzione vera.';
 
-  var hrZones = computeHRZones(LTHR);
-  var hrL=['Z1 Rec','Z2 Aerob','Z3 Tempo','Z4 Soglia','Z5 VO2'];
-  var hrC=['#4a5168','#22d46a','#fbbf24','#f97316','#ff4d4d'];
-  var hrWithNative = activities.filter(function(a){return a.icu_hr_zone_times && a.icu_hr_zone_times.length;});
-  var hrS=new Array(5).fill(0), hrMode;
-  if (hrWithNative.length) {
-    hrMode='native';
-    hrWithNative.forEach(function(a){ a.icu_hr_zone_times.forEach(function(secs,i){ if(i<5) hrS[i]+=(secs||0); }); });
-  } else {
-    hrMode='approx';
-    var hrB = hrZones.map(function(z){return z.lo;}).concat([Infinity]);
-    activities.filter(function(a){return a.hr;}).forEach(function(a){
-      for(var i=0;i<5;i++){ if(a.hr>=hrB[i]&&a.hr<hrB[i+1]){ hrS[i]+=a.dur; break; } }
-    });
-  }
-  var hrT=Math.max(hrS.reduce(function(s,v){return s+v;},0),1);
-  document.getElementById('lthr-label').textContent=LTHR;
+  renderSide('power','zone-dist-power','zone-dist-power-note','icu_zone_times', computePowerZones(), 'potenza media');
+  document.getElementById('lthr-label').textContent = LTHR;
+  renderSide('hr','zone-dist-hr','lthr-estimate-note-inner','icu_hr_zone_times', computeHRZones(LTHR), 'FC media');
+
+  /* Suggerimento LTHR: mostrato, mai applicato in automatico. */
   var lthrEst = estimateLTHRFromHistory();
-  var lthrNoteEl = document.getElementById('lthr-estimate-note');
-  if (lthrNoteEl) {
-    var modeTxt = hrMode==='native'
-      ? 'Tempo reale in zona da Intervals.icu ('+hrWithNative.length+' uscite).'
-      : 'Stima per FC media dell\'uscita — non è il tempo reale in zona.';
-    lthrNoteEl.innerHTML = modeTxt + (lthrEst ? '<br>LTHR stimata dai dati reali: <strong>'+lthrEst.lthr+'bpm</strong> (da "'+lthrEst.source+'", '+lthrEst.date+') — in uso ora: '+LTHR+'bpm.' : '');
+  var el = document.getElementById('lthr-estimate-note');
+  if (el) {
+    var inner = document.getElementById('lthr-estimate-note-inner');
+    var base = inner ? inner.innerHTML : '';
+    el.innerHTML = '<div id="lthr-estimate-note-inner">'+base+'</div>' +
+      (lthrEst ? '<div style="margin-top:6px;">Indicazione dai dati: la FC media più alta in uno sforzo duro è <strong>'+lthrEst.lthr+'bpm</strong> ('+lthrEst.date+'). '+
+        'È un limite INFERIORE, non la tua LTHR: la media di un\'uscita include riscaldamento e recuperi. In uso ora: '+LTHR+'bpm — impostala a mano dopo un test dedicato.</div>' : '');
   }
-  document.getElementById('zone-dist-hr').innerHTML=hrL.map(function(l,i){
-    var z=hrZones[i];
-    var hi = i===4 ? HR_MAX : z.hi;
-    var pct=Math.round(hrS[i]/hrT*100);
-    return '<div class="zbar"><span class="zbar-lbl" style="color:'+hrC[i]+';">'+l+' '+z.lo+'–'+hi+'bpm</span><div class="zbar-track"><div class="zbar-fill" style="width:'+pct+'%;background:'+hrC[i]+'"></div></div><span class="zbar-pct">'+pct+'%</span></div>';
-  }).join('');
 }
 
 function renderScatter() {
@@ -234,12 +239,12 @@ function renderCPModel() {
   var CP=cp.CP, Wp=cp.Wp;
   document.getElementById('cp-val').textContent=CP+'W'+(cp.native?' ●':'');
   document.getElementById('wp-val').textContent=Math.round(Wp/1000)+'kJ';
-  document.getElementById('pmax-val').textContent=(cp.native&&cp.pMax?Math.round(cp.pMax):bestEfforts[0].watts)+'W';
-  var srcLabel = cp.native
-    ? (cp.wpFallback
-        ? "Modello CP (● CP nativo ICU, W' da fit locale — quello nativo era implausibile)"
-        : "Modello CP (● nativo Morton 3P di Intervals.icu)")
-    : "Modello CP (fit locale su "+cp.fitPoints+" punti 3-20min)";
+  document.getElementById('pmax-val').textContent=(cp.Pmax?Math.round(cp.Pmax):bestEfforts[0].watts)+'W';
+  var srcLabel = cp.model==='morton3p'
+    ? "Modello Morton 3P (● nativo Intervals.icu: CP "+cp.CP+"W, W' "+(cp.Wp/1000).toFixed(1)+"kJ, Pmax "+cp.Pmax+"W)"
+    : cp.native
+      ? "Modello CP (CP nativo ICU, W' da fit locale — Pmax non disponibile)"
+      : "Modello CP (fit locale su "+cp.fitPoints+" punti 3-20min)";
 
   /* FIX 1 — il modello iperbolico CP + W'/t è valido solo nella finestra
      ~2-30 minuti. Estrapolarlo a 5 secondi è matematicamente lecito ma
@@ -251,10 +256,16 @@ function renderCPModel() {
      contro 15 etichette di durata: ogni punto finiva sulla durata
      sbagliata (il tuo 1min a 460W appariva a "30s"). Ora entrambi i
      dataset usano coordinate {x,y} reali su asse logaritmico. */
-  var MODEL_LO = 120, MODEL_HI = 3600;
-  var tModel=[120,150,180,240,300,420,600,900,1200,1800,2400,3000,3600];
+  /* Con Morton a 3 parametri il modello resta valido anche sulle durate
+     brevi (tende a Pmax, non a infinito), quindi la curva può coprire
+     tutto l'intervallo. Con la sola iperbole a 2 parametri restiamo
+     invece nella finestra 2-60min, dove il modello ha senso: fuori di lì
+     produceva valori assurdi (fino a ~8000W a 5 secondi). */
+  var isMorton = cp.model==='morton3p';
+  var MODEL_LO = isMorton ? 5 : 120, MODEL_HI = 3600;
+  var tModel=[5,10,15,20,30,45,60,90,120,150,180,240,300,420,600,900,1200,1800,2400,3000,3600];
   var modelPts = tModel.filter(function(t){return t>=MODEL_LO && t<=MODEL_HI;})
-                       .map(function(t){ return {x:t, y:Math.round(CP+Wp/t)}; });
+                       .map(function(t){ return {x:t, y:predictedPower(t, cp)}; });
   var effortPts = bestEfforts.map(function(e){ return {x:e.secs, y:e.watts}; });
 
   mkChart('ch-cp','line',{datasets:[

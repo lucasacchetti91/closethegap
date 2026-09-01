@@ -100,10 +100,12 @@ async function runDiagnostics() {
       checkFieldVariants(sample, 'Decoupling',       ['icu_power_hr','power_hr','decoupling','icu_decoupling']);
       checkFieldVariants(sample, "W' depletion",     ['icu_max_wbal_depletion','max_wbal_depletion','icu_wbal','wbal_depletion']);
       checkFieldVariants(sample, 'Variability Index',['icu_variability_index','variability_index','icu_vi']);
-      checkFieldVariants(sample, 'Efficiency Factor',['icu_efficiency','efficiency','icu_ef']);
+      diagLine('  ⓘ Efficiency Factor: non esposto da ICU — calcolato in locale come NP/FC media.');
       checkFieldVariants(sample, 'TRIMP',            ['icu_trimp','trimp']);
-      checkFieldVariants(sample, 'Tempo in zona (W)',['icu_zone_times','zone_times','icu_power_zone_times']);
-      checkFieldVariants(sample, 'Tempo in zona (HR)',['icu_hr_zone_times','hr_zone_times']);
+      var pzt = checkFieldVariants(sample, 'Tempo in zona (W)',['icu_zone_times','zone_times','icu_power_zone_times']);
+      var hzt = checkFieldVariants(sample, 'Tempo in zona (HR)',['icu_hr_zone_times','hr_zone_times']);
+      if (pzt) diagLine('    → ICU fornisce ' + sample[pzt].length + ' zone di potenza (il modello locale ne ha ' + computePowerZones().length + ')');
+      if (hzt) diagLine('    → ICU fornisce ' + sample[hzt].length + ' zone cardiache (il modello locale ne ha ' + computeHRZones(LTHR).length + ')');
       checkFieldVariants(sample, 'Training Load',    ['icu_training_load','training_load']);
       checkFieldVariants(sample, 'NP',               ['icu_weighted_avg_watts','icu_normalized_watts','normalized_watts']);
     } else {
@@ -158,7 +160,7 @@ async function runDiagnostics() {
       diagLine('  ✗ Nessuna attività con id Intervals.icu in memoria: fai prima un sync.');
     } else {
       var target = withId[0];
-      var s = await fetchICUActivityStreams(icuIdOf(target), ['time','watts','heartrate','heart_rate','altitude','distance','latlng']);
+      var s = await fetchICUActivityStreams(icuIdOf(target), ['time','watts','heartrate','altitude','distance','latlng']);
       diagLine('  Forma della risposta: ' + (icuLastStreamShape ? icuLastStreamShape.responseType : '?'));
       diagLine('  Tipi di stream ricevuti: ' + Object.keys(s).join(', '));
       Object.keys(s).forEach(function(k){
@@ -210,6 +212,8 @@ async function runDiagnostics() {
     diagLine('  Attività totali in memoria: ' + activities.length + ' (con metriche native: ' + natCount + ')');
     var zt = activities.filter(function(a){return a.icu_zone_times;}).length;
     diagLine('  Attività con tempo-in-zona nativo: ' + zt + (zt ? '' : '  ← se 0, i grafici zone usano la STIMA, non il dato reale'));
+    diagLine('  Definizioni zone da ICU: ' + (ICU_ZONE_DEFS ? ((ICU_ZONE_DEFS.power?'potenza ok':'potenza NO') + ', ' + (ICU_ZONE_DEFS.hr?'FC ok':'FC NO')) : 'non lette'));
+    diagLine('  Modello CP in uso: ' + (cp.model==='morton3p' ? 'Morton 3 parametri (nativo)' : 'iperbole 2 parametri'));
     diagLine('  Record wellness in memoria: ' + (typeof wellness!=='undefined' ? wellness.length : 0));
     var withEftp = (typeof wellness!=='undefined' ? wellness.filter(function(w){return w.eftp;}).length : 0);
     diagLine('  Record con eFTP: ' + withEftp + (withEftp<2 ? '  ← se <2, la proiezione FTP non può essere disegnata' : ''));

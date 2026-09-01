@@ -96,8 +96,70 @@ async function icuFetch(path) {
   throw new Error('HTTP '+lastStatus+' su entrambi i proxy ('+path.split('?')[0]+'). Aggiorna il codice del Worker: vedi worker/closethegap-proxy.js.');
 }
 
-var ICU_NATIVE_CP = null; // {eftp, wPrime, pMax, date} - dal sportInfo più recente
-var icuNativeLastRawSample = null; // ultima attività grezza ricevuta, per debug
+var ICU_NATIVE_CP = null; // {eftp, wPrime, pMax, date} - dal sportInfo piu' recente
+var icuNativeLastRawSample = null; // ultima attivita' grezza ricevuta, per debug
+var ICU_ZONE_DEFS = null; // {power:{count,names,boundaries}, hr:{...}} dalle impostazioni ICU
+
+/* Le impostazioni zone dell'atleta su Intervals.icu.
+   PERCHÉ SERVE: icu_zone_times arriva con 8 valori per la potenza e 7
+   per la FC, mentre il modello interno dell'app ne ha 7 e 5. Mapparli
+   per indice sfalsa completamente i grafici di distribuzione. Qui si
+   leggono le definizioni vere, così le etichette corrispondono ai dati.
+   La struttura esatta non è documentata pubblicamente, quindi il
+   parsing è difensivo e registra cosa ha trovato per la diagnostica. */
+var icuAthleteRawSample = null;
+
+async function syncICUZoneDefs() {
+  var resp = await icuFetch('/athlete');
+  var ath = await resp.json();
+  icuAthleteRawSample = ath;
+  var settings = ath && (ath.sportSettings || ath.sport_settings);
+  if (!Array.isArray(settings)) return null;
+  var ride = settings.find(function(s){
+    var types = s.types || s.sportTypes || [];
+    return (Array.isArray(types) && types.indexOf('Ride')>=0) || s.type==='Ride' || s.id==='Ride';
+  }) || settings[0];
+  if (!ride) return null;
+
+  function grab(obj, keys) {
+    for (var i=0;i<keys.length;i++) if (Array.isArray(obj[keys[i]])) return obj[keys[i]];
+    return null;
+  }
+  var pz = grab(ride, ['power_zones','powerZones']);
+  var pn = grab(ride, ['power_zone_names','powerZoneNames']);
+  var hz = grab(ride, ['hr_zones','hrZones']);
+  var hn = grab(ride, ['hr_zone_names','hrZoneNames']);
+
+  ICU_ZONE_DEFS = {
+    power: pz ? {bounds:pz, names:pn, ftp: ride.ftp||ride.icu_ftp||null} : null,
+    hr:    hz ? {bounds:hz, names:hn, lthr: ride.lthr||ride.threshold_hr||null} : null
+  };
+  return ICU_ZONE_DEFS;
+}
+
+/* Etichette per una serie di tempi-in-zona di lunghezza arbitraria.
+   Se conosciamo le definizioni ICU le usiamo (con i watt/bpm reali),
+   altrimenti etichettiamo Z1..Zn senza inventare intervalli. */
+function zoneLabelsFor(count, kind) {
+  var defs = ICU_ZONE_DEFS && ICU_ZONE_DEFS[kind];
+  var out = [];
+  for (var i=0;i<count;i++) {
+    var name = defs && defs.names && defs.names[i] ? defs.names[i] : 'Z'+(i+1);
+    var range = null;
+    if (defs && defs.bounds) {
+      var ref = kind==='power' ? (defs.ftp||FTP) : (defs.lthr||LTHR);
+      var hi = defs.bounds[i], lo = i===0 ? 0 : defs.bounds[i-1];
+      if (typeof hi === 'number' && ref) {
+        // i bound ICU possono essere percentuali o valori assoluti
+        var asAbs = hi <= 200 ? Math.round(hi*ref/100) : Math.round(hi);
+        var loAbs = lo === 0 ? 0 : (lo <= 200 ? Math.round(lo*ref/100) : Math.round(lo));
+        range = loAbs+'–'+asAbs+(kind==='power'?'W':'bpm');
+      }
+    }
+    out.push({name:name, range:range});
+  }
+  return out;
+}
 
 var ICU_ACTIVITY_FIELDS = [
   'id','start_date_local','name','type','distance','moving_time',
@@ -107,7 +169,6 @@ var ICU_ACTIVITY_FIELDS = [
   'average_heartrate','max_heartrate','calories',
   // varianti candidate per le metriche native - vedi avviso sopra
   'icu_variability_index','variability_index',
-  'icu_efficiency','efficiency',
   'icu_power_hr','power_hr','icu_power_hr_z2','power_hr_z2',
   'icu_trimp','trimp',
   'icu_max_wbal_depletion','max_wbal_depletion',
@@ -165,7 +226,12 @@ async function syncICUNativeMetrics(daysBack) {
     if (!local) { unmatched++; return; }
 
     var vi = pick(ia, ['icu_variability_index','variability_index']);
-    var ef = pick(ia, ['icu_efficiency','efficiency']);
+    /* L'Efficiency Factor NON è esposto da Intervals.icu (verificato con
+       la diagnostica): lo calcoliamo noi come NP / FC media, che è la
+       definizione standard. */
+    var npForEf = pick(ia, ['icu_weighted_avg_watts','icu_normalized_watts']);
+    var hrForEf = ia.average_heartrate;
+    var ef = (npForEf && hrForEf) ? parseFloat((npForEf/hrForEf).toFixed(3)) : null;
     var decoupling = pick(ia, ['icu_power_hr','power_hr']);
     var decouplingZ2 = pick(ia, ['icu_power_hr_z2','power_hr_z2']);
     var trimp = pick(ia, ['icu_trimp','trimp']);
@@ -217,15 +283,24 @@ async function syncICUNativeCP() {
 var icuLastStreamShape = null; // diagnostica: cosa e' realmente arrivato dall'API
 
 async function fetchICUActivityStreams(activityId, types) {
-  var typesParam = (types || ['time','watts','heart_rate']).join(',');
-  var resp = await icuFetch('/activity/' + activityId + '/streams.json?types=' + encodeURIComponent(typesParam));
+  /* BUG CORRETTO (HTTP 422): chiedere un tipo di stream inesistente fa
+     rifiutare a Intervals.icu l'INTERA richiesta. La diagnostica
+     inviava sia "heartrate" sia "heart_rate" per sicurezza, e proprio
+     quel doppione faceva fallire tutto con 422.
+     Strategia ora: si chiede un insieme conservativo di nomi validi;
+     se comunque arriva un 422 si ritenta SENZA il parametro types,
+     lasciando che ICU restituisca tutti gli stream disponibili. */
+  var resp;
+  var requested = types || ['time','watts','heartrate','altitude','distance','latlng'];
+  try {
+    resp = await icuFetch('/activity/' + activityId + '/streams.json?types=' + encodeURIComponent(requested.join(',')));
+  } catch (e) {
+    if (String(e.message).indexOf('422') < 0) throw e;
+    console.info('Stream: 422 con types espliciti, ritento senza filtro.');
+    resp = await icuFetch('/activity/' + activityId + '/streams.json');
+  }
   var raw = await resp.json();
   var out = {};
-  /* Il formato della risposta non e' garantito: puo' essere un array di
-     {type, data} (caso normale) oppure un oggetto con chiavi per tipo.
-     Gestiamo entrambi invece di restituire silenziosamente un oggetto
-     vuoto, che e' cio' che faceva sparire mappa e altimetria senza
-     alcun messaggio d'errore. */
   if (Array.isArray(raw)) {
     raw.forEach(function(s) {
       if (!s || !s.type) return;
@@ -239,6 +314,9 @@ async function fetchICUActivityStreams(activityId, types) {
       else if (v && Array.isArray(v.data)) out[k] = v.data;
     });
   }
+  /* Normalizza i nomi alternativi della frequenza cardiaca. */
+  if (!out.heartrate && out.heart_rate) out.heartrate = out.heart_rate;
+  if (!out.heart_rate && out.heartrate) out.heart_rate = out.heartrate;
   icuLastStreamShape = {
     responseType: Array.isArray(raw) ? 'array' : typeof raw,
     typesReceived: Object.keys(out),
@@ -269,6 +347,7 @@ async function syncICUAdvanced(opts) {
     var res = await syncICUNativeMetrics(400);
     await syncICUNativeCP();
     try { await syncWellness(180); } catch(we) { console.warn('Wellness non disponibile:', we.message); }
+    try { await syncICUZoneDefs(); } catch(ze) { console.warn('Definizioni zone non disponibili:', ze.message); }
     applyDataDrivenZones();
     if (el && !silent) {
       el.textContent = '✅ ' + res.matched + '/' + res.total + ' attività arricchite con metriche native'

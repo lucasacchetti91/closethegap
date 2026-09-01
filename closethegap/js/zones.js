@@ -45,14 +45,27 @@ function computePowerZones() {
   ];
 }
 
+/* Stima della LTHR dallo storico.
+   ATTENZIONE — QUESTA STIMA NON VIENE PIÙ APPLICATA AUTOMATICAMENTE.
+   La versione precedente sovrascriveva la LTHR impostata a mano con il
+   massimo delle FC medie fra le uscite con IF>=0.78: un criterio troppo
+   debole, che su dati reali ha prodotto 154 bpm contro un valore reale
+   di ~180, corrompendo di conseguenza TUTTE le zone cardiache.
+   Il problema è concettuale: la FC MEDIA di un'uscita include
+   riscaldamento, discese e recuperi, quindi sta strutturalmente sotto la
+   FC di soglia; non è un buon stimatore, per quanto si stringano i
+   filtri. Ora il valore viene solo PROPOSTO nell'interfaccia, e resti tu
+   a decidere. Una LTHR affidabile si ottiene da un test dedicato (es.
+   20-30' all-out, FC media dell'ultima parte) oppure dal valore che
+   Intervals.icu ti calcola nelle impostazioni sport. */
 function estimateLTHRFromHistory() {
   var candidates = activities.filter(function(a) {
     var IF = calcIF(a);
-    return a.hr && IF!=null && IF>=0.78 && a.dur>=1200 && a.dur<=4500;
+    return a.hr && IF!=null && IF>=0.85 && a.dur>=1200 && a.dur<=3600;
   });
   if (!candidates.length) return null;
   var best = candidates.reduce(function(b,a){ return (!b || a.hr>b.hr) ? a : b; }, null);
-  return {lthr: best.hr, source: best.name, date: best.date};
+  return {lthr: best.hr, source: best.name, date: best.date, caveat: true};
 }
 
 function computeHRZones(lthr) {
@@ -80,11 +93,10 @@ function applyDataDrivenZones() {
     if (ftpInp) ftpInp.value = FTP;
     var kftp = document.getElementById('k-ftp'); if (kftp) kftp.textContent = FTP+'W';
   }
-  var est = estimateLTHRFromHistory();
-  if (est && Math.abs(est.lthr - LTHR) >= 2) {
-    LTHR = est.lthr;
-    var lthrInp = document.getElementById('lthr-inp');
-    if (lthrInp) lthrInp.value = LTHR;
-  }
-  return {ftp: FTP, lthr: LTHR, lthrEstimate: est};
+  /* La LTHR NON viene più sovrascritta automaticamente: la stima dalla
+     FC media delle uscite è inaffidabile (vedi nota su
+     estimateLTHRFromHistory) e su dati reali ha prodotto 154 bpm al
+     posto di ~180, sballando tutte le zone cardiache. Resta un valore
+     che imposti tu, con la stima mostrata solo come suggerimento. */
+  return {ftp: FTP, lthr: LTHR, lthrEstimate: estimateLTHRFromHistory()};
 }

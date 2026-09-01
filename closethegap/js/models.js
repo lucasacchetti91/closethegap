@@ -25,31 +25,46 @@
    come nella build precedente, sottostima CP (contaminato da pacing/
    decoupling aerobico sui sforzi lunghi) - qui viene evitato. */
 function cpModel() {
-  /* Preferisce il modello nativo di Intervals.icu (Morton 3-parametri,
-     calcolato su TUTTO lo storico attività, non solo su 11 best-effort
-     statici) quando disponibile - vedi js/icu-native.js. */
+  /* Modello nativo di Intervals.icu: Morton a 3 PARAMETRI (CP, W', Pmax).
+     ATTENZIONE ALLA SEMANTICA: il W' del modello a 3 parametri NON è
+     intercambiabile con quello dell'iperbole a 2 parametri. Una versione
+     precedente applicava l'equazione a 2 parametri (CP + W'/t) al W'
+     nativo, ottenendo valori assurdi a breve durata (2153W a 15s), e una
+     "guardia di plausibilità" finiva per scartare il dato VERO
+     ripiegando su un fit locale con W' di 8.7 kJ.
+     Che il W' nativo (~27 kJ) sia quello giusto lo conferma ICU stessa:
+     misura deplezioni di W'bal fino a ~32 kJ in singole uscite, cosa
+     impossibile con una riserva di 8.7 kJ.
+     Ora il W' nativo viene tenuto e usato con l'equazione CORRETTA
+     (vedi pdmCurve/mortonPower). */
   if (typeof ICU_NATIVE_CP !== 'undefined' && ICU_NATIVE_CP && ICU_NATIVE_CP.eftp) {
     var CPn = Math.round(ICU_NATIVE_CP.eftp);
     var WpN = Math.round(ICU_NATIVE_CP.wPrime||0);
-    /* CONTROLLO DI PLAUSIBILITÀ sul W' nativo.
-       Il modello Morton a 3 parametri di ICU può restituire un W' molto
-       diverso dal nostro (unità diverse, oppure fit su un dominio più
-       ampio). Se con quel W' il modello predice per 1 minuto una potenza
-       molto superiore al tuo miglior minuto REALE, il valore non è
-       utilizzabile per disegnare la curva: teniamo il CP nativo (che è
-       affidabile) ma ricadiamo sul W' stimato localmente.
-       È esattamente il caso che generava la curva a ~8000W. */
-    var best1min = bestEfforts.find(function(e){return e.secs===60;});
-    var localWp = fitLocalCP().Wp;
-    if (WpN>0 && best1min) {
-      var predicted1min = CPn + WpN/60;
-      if (predicted1min > best1min.watts*1.25) {
-        return {CP:CPn, Wp:localWp, fitPoints:-1, native:true, pMax:ICU_NATIVE_CP.pMax, wpFallback:true};
-      }
+    var PmaxN = ICU_NATIVE_CP.pMax ? Math.round(ICU_NATIVE_CP.pMax) : null;
+    if (WpN > 0 && PmaxN && PmaxN > CPn) {
+      return {CP:CPn, Wp:WpN, Pmax:PmaxN, fitPoints:-1, native:true, model:'morton3p'};
     }
-    return {CP:CPn, Wp:WpN||localWp, fitPoints:-1, native:true, pMax:ICU_NATIVE_CP.pMax};
+    // Senza Pmax non possiamo usare Morton: ripieghiamo sul W' locale.
+    return {CP:CPn, Wp:fitLocalCP().Wp, fitPoints:-1, native:true, model:'hyperbolic', wpFallback:true};
   }
-  return fitLocalCP();
+  var local = fitLocalCP();
+  local.model = 'hyperbolic';
+  return local;
+}
+
+/* Equazione di Morton a 3 parametri:
+     P(t) = W' / (t + W'/(Pmax - CP)) + CP
+   Tende a Pmax per t→0 e a CP per t→∞, quindi resta plausibile anche
+   sulle durate brevi, dove l'iperbole a 2 parametri esplode. */
+function mortonPower(t, CP, Wp, Pmax) {
+  return Wp/(t + Wp/(Pmax - CP)) + CP;
+}
+
+/* Potenza prevista a una data durata, usando il modello disponibile. */
+function predictedPower(t, cp) {
+  cp = cp || cpModel();
+  if (cp.model === 'morton3p') return Math.round(mortonPower(t, cp.CP, cp.Wp, cp.Pmax));
+  return Math.round(cp.CP + cp.Wp/t);
 }
 
 /* Fit lineare locale di Monod-Scherrer sugli sforzi 3-20 minuti. */
@@ -78,7 +93,7 @@ function pdmModel() {
   var cp=cpModel();
   var CP=cp.CP, Wp=cp.Wp;
   var pmaxEff = bestEfforts.reduce(function(best,e){return e.secs<=15&&e.watts>(best?best.watts:0)?e:best;}, null);
-  var Pmax = cp.native && cp.pMax ? Math.round(cp.pMax) : (pmaxEff ? pmaxEff.watts : bestEfforts[0].watts);
+  var Pmax = cp.Pmax ? Math.round(cp.Pmax) : (pmaxEff ? pmaxEff.watts : bestEfforts[0].watts);
   var ftpMorton=Math.round(CP+Wp/3600);
   var p20=bestEfforts.find(function(e){return e.label==='20min';});
   var ftp20=p20?Math.round(p20.watts*0.95):ftpMorton;
@@ -88,8 +103,12 @@ function pdmModel() {
 /* Curva del modello P(t): sotto ~30s è vincolata verso Pmax (capacità
    neuromuscolare), altrove segue l'iperbole CP + W'/t. */
 function pdmCurve(t, CP, Wp, Pmax) {
+  /* Se abbiamo Pmax usiamo Morton a 3 parametri, che resta plausibile
+     anche a durate brevi. Altrimenti iperbole a 2 parametri con un
+     tetto su Pmax, per non far esplodere la curva sotto i 30 secondi. */
+  if (Pmax && Pmax > CP) return Math.round(mortonPower(t, CP, Wp, Pmax));
   var hyperbolic = CP + Wp/t;
-  if (t<=30) return Math.min(Pmax, hyperbolic*1.4);
+  if (t<=30) return Math.round(Math.min(Pmax||hyperbolic, hyperbolic));
   return Math.round(hyperbolic);
 }
 
@@ -203,7 +222,10 @@ function buildDecoupleTimeline() {
    dove HRr = (HRmedia - HRriposo) / (HRmax - HRriposo). */
 var HR_REST = 48;
 function calcTRIMP(a) {
+  /* ICU espone il campo come 'trimp' (senza prefisso icu_), verificato
+     con la diagnostica: accettiamo entrambe le varianti. */
   if (a.icu_trimp!=null) return a.icu_trimp;
+  if (a.trimp!=null) return a.trimp;
   if (!a.hr) return 0;
   var hrr = (a.hr-HR_REST)/(HR_MAX-HR_REST);
   if (hrr<=0) return 0;
