@@ -222,6 +222,17 @@ setTimeout(() => {
   const hrZ = win.computeHRZones(180);
   check('zone FC coerenti con LTHR impostata', hrZ[3].hi === 180, 'Z4 hi=' + hrZ[3].hi);
 
+  /* ---------- 7quinquies. Id Intervals.icu (la causa del 422) ---------- */
+  section('Id Intervals.icu');
+  // REGRESSIONE: gli id STRAVA dei dati seed venivano scambiati per id ICU
+  // e passati a /activity/{id}/..., che rispondeva 422.
+  check('id Strava puramente numerico NON accettato come id ICU',
+    win.icuIdOf({ id: '19360116613' }) === null, 'ottenuto ' + win.icuIdOf({ id: '19360116613' }));
+  check('prefisso icu- riconosciuto', win.icuIdOf({ id: 'icu-i98765' }) === 'i98765');
+  check('campo icu_id ha la precedenza', win.icuIdOf({ id: '19360116613', icu_id: 'i555' }) === 'i555');
+  check('attività senza id → null', win.icuIdOf({}) === null);
+  check('dati seed hardcoded rimossi da config.js', win.RAW.length === 0, 'RAW=' + win.RAW.length);
+
   console.log('\n' + '═'.repeat(60));
   console.log(failed === 0
     ? `✅ TUTTI I TEST SUPERATI (${passed})`
