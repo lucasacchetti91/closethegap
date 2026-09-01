@@ -156,11 +156,15 @@ async function runDiagnostics() {
   diagLine('[4] STREAM DI UNA ATTIVITÀ (/activity/{id}/streams)');
   try {
     var withId = activities.filter(function(a){ return icuIdOf(a); });
+    diagLine('  Attività con un id Intervals.icu valido: ' + withId.length + ' su ' + activities.length);
     if (!withId.length) {
-      diagLine('  ✗ Nessuna attività con id Intervals.icu in memoria: fai prima un sync.');
+      diagLine('  ✗ Nessun id ICU disponibile: fai un "Sync metriche avanzate ICU" e riprova.');
+      diagLine('    (un id puramente numerico NON è un id ICU: era il vecchio bug che dava 422)');
     } else {
       var target = withId[0];
-      var s = await fetchICUActivityStreams(icuIdOf(target), ['time','watts','heartrate','altitude','distance','latlng']);
+      var tid = icuIdOf(target);
+      diagLine('  Uso l\'attività del ' + target.date + ' (id ICU: ' + tid + ')');
+      var s = await fetchICUActivityStreams(tid, ['time','watts','heartrate','altitude','distance','latlng']);
       diagLine('  Forma della risposta: ' + (icuLastStreamShape ? icuLastStreamShape.responseType : '?'));
       diagLine('  Tipi di stream ricevuti: ' + Object.keys(s).join(', '));
       Object.keys(s).forEach(function(k){
@@ -178,7 +182,23 @@ async function runDiagnostics() {
   }
   diagLine('');
 
-  // ---------- 5. Eventi / gare ----------
+  diagLine('[4b] CURVA DI POTENZA (/power-curves)');
+  try {
+    var n = await syncICUPowerCurve();
+    if (n) {
+      diagLine('  ✓ Curva reale letta: ' + n + ' durate → i best effort NON sono più valori statici');
+      diagLine('    ' + bestEfforts.map(function(e){ return e.label+'='+e.watts+'W'; }).join(', '));
+    } else {
+      diagLine('  ✗ Formato della risposta non riconosciuto: i best effort restano i valori statici di config.js.');
+      diagLine('    Struttura ricevuta: ' + (Array.isArray(icuPowerCurveRawSample)
+        ? 'array[' + icuPowerCurveRawSample.length + '] primo elemento = ' + describeValue(icuPowerCurveRawSample[0])
+        : describeValue(icuPowerCurveRawSample)));
+    }
+  } catch (e) {
+    diagLine('  ✗ Errore: ' + e.message);
+  }
+  diagLine('');
+
   diagLine('[5] EVENTI E GARE (/events) — servono per il piano');
   try {
     var re = await icuFetch('/events?oldest=' + today() + '&newest=2026-12-31');
@@ -213,6 +233,7 @@ async function runDiagnostics() {
     var zt = activities.filter(function(a){return a.icu_zone_times;}).length;
     diagLine('  Attività con tempo-in-zona nativo: ' + zt + (zt ? '' : '  ← se 0, i grafici zone usano la STIMA, non il dato reale'));
     diagLine('  Definizioni zone da ICU: ' + (ICU_ZONE_DEFS ? ((ICU_ZONE_DEFS.power?'potenza ok':'potenza NO') + ', ' + (ICU_ZONE_DEFS.hr?'FC ok':'FC NO')) : 'non lette'));
+    diagLine('  Origine dei best effort: ' + BEST_EFFORTS_SOURCE + (BEST_EFFORTS_SOURCE==='hardcoded' ? '  ← valori statici non verificati' : ''));
     diagLine('  Modello CP in uso: ' + (cp.model==='morton3p' ? 'Morton 3 parametri (nativo)' : 'iperbole 2 parametri'));
     diagLine('  Record wellness in memoria: ' + (typeof wellness!=='undefined' ? wellness.length : 0));
     var withEftp = (typeof wellness!=='undefined' ? wellness.filter(function(w){return w.eftp;}).length : 0);

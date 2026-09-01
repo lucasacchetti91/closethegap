@@ -67,9 +67,10 @@ async function syncIntervals(opts) {
         if(np) ex.np=np; if(avgW) ex.avg_watts=avgW;
         if(tss){ex.tss_real=tss;ex._tss_override=tss;}
         if(ifv) ex.if_val=ifv; if(hr) ex.hr=hr; if(maxHr) ex.max_hr=maxHr; if(cal) ex.cal=cal;
+        if (ia.id != null) ex.icu_id = ia.id;
         ex.source='intervals'; updated++;
       } else {
-        activities.push({id:'icu-'+(ia.id||date),name:ia.name||'Uscita',date:date,dur:dur,dist:dist,
+        activities.push({id:'icu-'+(ia.id||date),icu_id:ia.id,name:ia.name||'Uscita',date:date,dur:dur,dist:dist,
           elev:elev,avg_watts:avgW,np:np,_tss_override:tss,tss_real:tss,if_val:ifv,
           hr:hr,max_hr:maxHr,cal:cal,isRace:ia.race||false,source:'intervals'});
         imported++;

@@ -27,10 +27,15 @@ function toggleActivityDetail(idx, icuId) {
 
 /* Estrae l'id numerico Intervals.icu da un id locale tipo "icu-12345". */
 function icuIdOf(a) {
+  /* Restituisce l'id Intervals.icu SOLO se lo conosciamo davvero.
+     BUG CORRETTO: la versione precedente accettava qualsiasi id
+     numerico, quindi passava gli id STRAVA dei dati seed hardcoded
+     agli endpoint /activity/{id}/... di Intervals.icu, che rispondeva
+     422. Un id numerico di origine ignota non è un id ICU. */
+  if (a.icu_id != null) return String(a.icu_id);
   if (!a.id) return null;
-  var s=String(a.id);
-  if (s.indexOf('icu-')===0) return s.slice(4);
-  if (/^i?\d+$/.test(s)) return s;
+  var s = String(a.id);
+  if (s.indexOf('icu-') === 0) return s.slice(4);
   return null;
 }
 

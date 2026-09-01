@@ -269,7 +269,7 @@ function renderCPModel() {
   var effortPts = bestEfforts.map(function(e){ return {x:e.secs, y:e.watts}; });
 
   mkChart('ch-cp','line',{datasets:[
-    {label:'Best Effort reali',data:effortPts,type:'scatter',backgroundColor:'#e8ff47',pointRadius:5,pointHoverRadius:7,showLine:false},
+    {label:'Best Effort '+(typeof BEST_EFFORTS_SOURCE!=='undefined'&&BEST_EFFORTS_SOURCE==='icu'?'(curva reale ICU)':'(valori statici NON verificati)'),data:effortPts,type:'scatter',backgroundColor:'#e8ff47',pointRadius:5,pointHoverRadius:7,showLine:false},
     {label:srcLabel,data:modelPts,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.3,pointRadius:0,fill:true,borderWidth:1.5},
     {label:'CP '+CP+'W',data:[{x:MODEL_LO,y:CP},{x:MODEL_HI,y:CP}],borderColor:'rgba(34,212,106,.45)',borderDash:[5,4],pointRadius:0,borderWidth:1},
     {label:'FTP '+FTP+'W',data:[{x:5,y:FTP},{x:3600,y:FTP}],borderColor:'rgba(232,255,71,.4)',borderDash:[4,4],pointRadius:0,borderWidth:1}
@@ -312,7 +312,7 @@ function renderPDM() {
      logaritmico, invece di due array di lunghezza diversa allineati per
      indice (che spostava ogni best effort sulla durata sbagliata). */
   mkChart('ch-pdm','line',{datasets:[
-      {label:'Best Effort reali',data:bestEfforts.filter(function(e){return e.secs<=7200;}).map(function(e){return {x:e.secs,y:e.watts};}),type:'scatter',backgroundColor:'#e8ff47',pointRadius:6,showLine:false},
+      {label:'Best Effort '+(typeof BEST_EFFORTS_SOURCE!=='undefined'&&BEST_EFFORTS_SOURCE==='icu'?'(curva reale ICU)':'(valori statici NON verificati)'),data:bestEfforts.filter(function(e){return e.secs<=7200;}).map(function(e){return {x:e.secs,y:e.watts};}),type:'scatter',backgroundColor:'#e8ff47',pointRadius:6,showLine:false},
       {label:'Modello attuale (FTP est. '+m.ftpEst+'W)',data:tPts.map(function(t){return {x:t,y:Math.max(pdmCurve(t,m.CP,m.Wp,m.Pmax),0)};}),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.07)',tension:.3,pointRadius:0,fill:true,borderWidth:1.5},
       {label:'Obiettivo 360W FTP',data:tPts.map(function(t){return {x:t,y:Math.max(pdmCurve(t,projCP,projWp,m.Pmax),0)};}),borderColor:'rgba(232,255,71,.5)',borderDash:[5,4],pointRadius:0,fill:false,borderWidth:1.5},
       {label:'FTP corrente '+FTP+'W',data:[{x:5,y:FTP},{x:7200,y:FTP}],borderColor:'rgba(249,115,22,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1}

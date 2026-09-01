@@ -28,6 +28,7 @@ function saveState() {
       ftp: FTP, lthr: LTHR, hrMax: HR_MAX, hrRest: HR_REST,
       icuNativeCP: typeof ICU_NATIVE_CP !== 'undefined' ? ICU_NATIVE_CP : null,
       bestEfforts: bestEfforts,
+      bestEffortsSource: typeof BEST_EFFORTS_SOURCE!=='undefined'?BEST_EFFORTS_SOURCE:'hardcoded',
       wellness: typeof wellness !== 'undefined' ? wellness : [],
       weightKg: WEIGHT_KG
     };
@@ -59,6 +60,7 @@ function loadState() {
     if (s.hrRest) HR_REST = s.hrRest;
     if (s.icuNativeCP) ICU_NATIVE_CP = s.icuNativeCP;
     if (Array.isArray(s.bestEfforts) && s.bestEfforts.length) bestEfforts = s.bestEfforts;
+    if (s.bestEffortsSource) BEST_EFFORTS_SOURCE = s.bestEffortsSource;
     if (Array.isArray(s.wellness)) wellness = s.wellness;
     if (s.weightKg) WEIGHT_KG = s.weightKg;
     return s.savedAt;

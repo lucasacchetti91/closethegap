@@ -247,6 +247,11 @@ async function syncICUNativeMetrics(daysBack) {
        array di oggetti {id/zone, secs}. Normalizziamo in array di secondi. */
     if (ia.icu_zone_times) local.icu_zone_times = normalizeZoneTimes(ia.icu_zone_times);
     if (ia.icu_hr_zone_times) local.icu_hr_zone_times = normalizeZoneTimes(ia.icu_hr_zone_times);
+    /* Salva l'id VERO di Intervals.icu. Senza questo, un'attività
+       abbinata per data+distanza conservava il proprio id d'origine
+       (es. quello Strava dei dati seed), e passarlo agli endpoint
+       /activity/{id}/... faceva rispondere 422. */
+    if (ia.id != null) local.icu_id = ia.id;
     local.icu_native_synced = true;
     matched++;
   });
@@ -277,9 +282,77 @@ async function syncICUNativeCP() {
   return null;
 }
 
-/* Stream secondo-per-secondo per il dettaglio di UNA attività (es. per
-   disegnare la curva W'bal minuto per minuto quando l'utente seleziona
-   quell'uscita). types tipici: time, watts, heart_rate, cadence. */
+/* Curva di potenza reale dell'atleta.
+   Sostituisce i bestEfforts scritti a mano in config.js, che erano
+   valori statici e non verificati pur essendo etichettati come "reali"
+   nei grafici. La forma della risposta non è documentata pubblicamente,
+   quindi il parsing prova più strutture plausibili e registra cosa ha
+   trovato per la diagnostica. */
+var icuPowerCurveRawSample = null;
+var BEST_EFFORTS_SOURCE = 'hardcoded'; // 'icu' quando arrivano dati veri
+
+function normalizePowerCurve(raw) {
+  icuPowerCurveRawSample = raw;
+  var pts = null;
+
+  function fromArrays(o) {
+    var secs = o.secs || o.durations || o.x || o.time;
+    var watts = o.watts || o.values || o.y || o.power;
+    if (Array.isArray(secs) && Array.isArray(watts) && secs.length === watts.length) {
+      return secs.map(function(s,i){ return {secs:s, watts:watts[i]}; });
+    }
+    return null;
+  }
+  function fromObjects(arr) {
+    if (!Array.isArray(arr) || !arr.length) return null;
+    var p = arr.find(function(x){ return x && typeof x === 'object'; });
+    if (!p) return null;
+    var sk = ['secs','duration','seconds','t'].find(function(k){ return p[k]!=null; });
+    var wk = ['watts','value','power','y'].find(function(k){ return p[k]!=null; });
+    if (!sk || !wk) return null;
+    return arr.filter(function(x){return x && x[sk]!=null && x[wk]!=null;})
+              .map(function(x){ return {secs:x[sk], watts:x[wk]}; });
+  }
+
+  if (Array.isArray(raw)) {
+    pts = fromObjects(raw);
+    if (!pts) { // può essere un array di curve: prendiamo la prima utilizzabile
+      for (var i=0;i<raw.length && !pts;i++) {
+        if (raw[i] && typeof raw[i]==='object') pts = fromArrays(raw[i]) || fromObjects(raw[i].list || raw[i].points || []);
+      }
+    }
+  } else if (raw && typeof raw === 'object') {
+    pts = fromArrays(raw) || fromObjects(raw.list || raw.points || raw.curve || []);
+  }
+  if (!pts || !pts.length) return null;
+
+  // Tiene solo le durate che l'app usa nei grafici
+  var wanted = [5,15,30,60,120,300,480,600,1200,1800,3600];
+  var labelFor = function(s){ return s<60 ? s+'s' : s<3600 ? Math.round(s/60)+'min' : '1h'; };
+  var out = [];
+  wanted.forEach(function(target){
+    var closest = pts.reduce(function(b,p){
+      return (!b || Math.abs(p.secs-target) < Math.abs(b.secs-target)) ? p : b;
+    }, null);
+    // accetta solo se davvero vicino alla durata cercata
+    if (closest && Math.abs(closest.secs-target) <= Math.max(2, target*0.06) && closest.watts>0) {
+      out.push({label:labelFor(target), secs:target, watts:Math.round(closest.watts)});
+    }
+  });
+  return out.length >= 4 ? out : null;
+}
+
+async function syncICUPowerCurve() {
+  var resp = await icuFetch('/power-curves.json?type=Ride&curves=all');
+  var raw = await resp.json();
+  var curve = normalizePowerCurve(raw);
+  if (curve) {
+    bestEfforts = curve;
+    BEST_EFFORTS_SOURCE = 'icu';
+    return curve.length;
+  }
+  return 0;
+}
 var icuLastStreamShape = null; // diagnostica: cosa e' realmente arrivato dall'API
 
 async function fetchICUActivityStreams(activityId, types) {
@@ -348,6 +421,7 @@ async function syncICUAdvanced(opts) {
     await syncICUNativeCP();
     try { await syncWellness(180); } catch(we) { console.warn('Wellness non disponibile:', we.message); }
     try { await syncICUZoneDefs(); } catch(ze) { console.warn('Definizioni zone non disponibili:', ze.message); }
+    try { await syncICUPowerCurve(); } catch(pe) { console.warn('Curva di potenza non disponibile:', pe.message); }
     applyDataDrivenZones();
     if (el && !silent) {
       el.textContent = '✅ ' + res.matched + '/' + res.total + ' attività arricchite con metriche native'
