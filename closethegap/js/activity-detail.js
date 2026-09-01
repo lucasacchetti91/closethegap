@@ -117,72 +117,94 @@ function renderBestEffortsHTML(bests) {
    un null per far diventare NaN l'intero calcolo dei limiti della
    mappa e quindi non disegnare nulla.
    Qui si accettano tutte le forme e si scartano i punti non validi. */
-var latlngLayoutDetected = null; // diagnostica: 'interleaved' | 'concatenated' | 'pairs' | ...
+var latlngLayoutDetected = null; // diagnostica: come sono state accoppiate le coordinate
+var latlngRejectReason = null;   // se il risultato è stato scartato, perché
 
 /* Un array PIATTO di coordinate può essere impacchettato in due modi:
      A) interleaved  [lat0,lng0, lat1,lng1, ...]
      B) concatenato  [lat0..latN, lng0..lngN]
    Accoppiare (i, i+1) è corretto solo nel caso A. Nel caso B si
    accoppierebbe latitudine con latitudine, producendo una mappa
-   plausibile a vista ma completamente inventata — impossibile da
-   riconoscere a occhio, quindi va determinato dai dati.
-   Discriminante: nel caso A gli indici pari e dispari hanno intervalli
-   di valori nettamente diversi (latitudini vs longitudini); nel caso B
-   la differenza si trova invece fra prima e seconda metà. */
-function detectFlatLayout(arr) {
-  var nums = arr.filter(function(v){ return typeof v === 'number' && isFinite(v); });
-  if (nums.length < 8) return 'interleaved';
-  function spread(vals) {
-    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
-    return {mn:mn, mx:mx, mid:(mn+mx)/2};
-  }
-  var even = [], odd = [];
-  for (var i=0;i<nums.length;i++) (i%2 ? odd : even).push(nums[i]);
-  var half = Math.floor(nums.length/2);
-  var first = nums.slice(0, half), second = nums.slice(half);
+   plausibile a vista ma completamente inventata.
 
-  var e = spread(even), o = spread(odd), f = spread(first), s = spread(second);
-  var interleavedSep = Math.abs(e.mid - o.mid);
-  var concatenatedSep = Math.abs(f.mid - s.mid);
-  // Il layout vero è quello in cui i due gruppi sono nettamente separati
-  return concatenatedSep > interleavedSep * 2 ? 'concatenated' : 'interleaved';
+   Invece di indovinare con una euristica statistica, qui si COSTRUISCONO
+   entrambe le ipotesi e si tiene quella geograficamente sensata. Una
+   traccia GPS vera ha: latitudini tutte simili fra loro, longitudini
+   tutte simili fra loro, e i due gruppi ben separati (in Italia ~45 vs
+   ~9). Se NESSUNA delle due ipotesi soddisfa questi criteri, non si
+   disegna nulla: meglio "nessun dato GPS" di un percorso falso. */
+function scoreCoordPairing(pts) {
+  if (!pts || pts.length < 10) return -1;
+  var lats = pts.map(function(p){return p[0];}).filter(isFinite);
+  var lngs = pts.map(function(p){return p[1];}).filter(isFinite);
+  if (!lats.length || !lngs.length) return -1;
+  var latMin=Math.min.apply(null,lats), latMax=Math.max.apply(null,lats);
+  var lngMin=Math.min.apply(null,lngs), lngMax=Math.max.apply(null,lngs);
+  if (latMax>90 || latMin<-90 || lngMax>180 || lngMin<-180) return -1;
+  var latSpread=latMax-latMin, lngSpread=lngMax-lngMin;
+  // Un'uscita in bici non copre più di ~3 gradi
+  if (latSpread>3 || lngSpread>3) return -1;
+
+  /* CRITERIO CHIAVE — separazione contro dispersione.
+     Se si spezza a metà UNA SOLA serie di latitudini, i due gruppi
+     risultano adiacenti: la distanza fra loro è dello stesso ordine
+     della loro dispersione interna (es. separazione 0.1° con gruppi
+     larghi 0.06°). Con latitudine e longitudine vere, invece, la
+     separazione è enorme rispetto alla dispersione (in Lombardia ~37°
+     contro ~0.06°). Il semplice test di sovrapposizione non bastava:
+     sui dati reali i due gruppi si sfioravano senza sovrapporsi, e
+     l'accoppiamento sbagliato veniva accettato.
+     LIMITE NOTO: una traccia reale con latitudine e longitudine molto
+     simili (es. lat 45.6 / lng 45.5, in Kazakistan) verrebbe scartata.
+     È un compromesso accettabile: si preferisce non mostrare la mappa
+     piuttosto che mostrarne una falsa. */
+  var separation = Math.abs((latMin+latMax)/2 - (lngMin+lngMax)/2);
+  var maxSpread = Math.max(latSpread, lngSpread, 1e-9);
+  if (separation < 5 * maxSpread) return -1;
+  return separation;
 }
 
 function normalizeLatLng(streams) {
   var pts = [];
   var ll = streams.latlng || streams.latLng || streams.position;
   latlngLayoutDetected = null;
+  latlngRejectReason = null;
 
   if (Array.isArray(ll) && ll.length) {
-    /* Il formato va dedotto dal primo elemento NON NULLO, non da ll[0].
-       BUG CORRETTO: a inizio uscita il GPS impiega qualche secondo ad
-       agganciare, quindi i primi campioni sono spesso null. Guardando
-       solo ll[0] nessun ramo corrispondeva e si otteneva un array
-       vuoto: la mappa spariva senza alcun errore. */
+    /* Il formato va dedotto dal primo elemento NON NULLO, non da ll[0]:
+       a inizio uscita il GPS impiega qualche secondo ad agganciare,
+       quindi i primi campioni sono spesso null. */
     var probe = null;
     for (var pi=0; pi<ll.length; pi++) { if (ll[pi]!=null) { probe = ll[pi]; break; } }
 
     if (probe == null) {
-      pts = [];                                   // stream tutto nullo
       latlngLayoutDetected = 'empty';
     } else if (Array.isArray(probe)) {
       latlngLayoutDetected = 'pairs';
-      pts = ll.filter(function(p){ return p!=null; });        // [[lat,lng], ...]
+      pts = ll.filter(function(p){ return p!=null; });
     } else if (typeof probe === 'object') {
       latlngLayoutDetected = 'objects';
-      pts = ll.filter(function(p){ return p!=null; }).map(function(p){   // [{lat,lng}, ...]
+      pts = ll.filter(function(p){ return p!=null; }).map(function(p){
         var la = p.lat!=null?p.lat:(p.latitude!=null?p.latitude:null);
         var lo = p.lng!=null?p.lng:(p.lon!=null?p.lon:(p.longitude!=null?p.longitude:null));
         return [la, lo];
       });
     } else if (typeof probe === 'number') {
-      var layout = detectFlatLayout(ll);
-      latlngLayoutDetected = 'flat-' + layout;
-      if (layout === 'concatenated') {
-        var h = Math.floor(ll.length/2);
-        for (var c=0;c<h;c++) pts.push([ll[c], ll[h+c]]);
+      // Costruisci entrambe le ipotesi e scegli quella plausibile
+      var inter = [], conc = [];
+      for (var i=0;i+1<ll.length;i+=2) inter.push([ll[i], ll[i+1]]);
+      var h = Math.floor(ll.length/2);
+      for (var c=0;c<h;c++) conc.push([ll[c], ll[h+c]]);
+      var sInter = scoreCoordPairing(inter), sConc = scoreCoordPairing(conc);
+      if (sInter < 0 && sConc < 0) {
+        latlngLayoutDetected = 'flat-nessuna-ipotesi-valida';
+        latlngRejectReason = 'Nessun accoppiamento produce coordinate geograficamente sensate '+
+          '(latitudini e longitudini indistinguibili). Percorso non disegnato per non mostrarne uno falso.';
+        pts = [];
+      } else if (sConc > sInter) {
+        latlngLayoutDetected = 'flat-concatenated'; pts = conc;
       } else {
-        for (var i=0;i+1<ll.length;i+=2) pts.push([ll[i], ll[i+1]]);
+        latlngLayoutDetected = 'flat-interleaved'; pts = inter;
       }
     }
   } else if (Array.isArray(streams.lat) && Array.isArray(streams.lng)) {
@@ -193,13 +215,22 @@ function normalizeLatLng(streams) {
     for (var k=0;k<streams.latitude.length;k++) pts.push([streams.latitude[k], streams.longitude[k]]);
   }
 
-  // Scarta buchi GPS e coordinate palesemente non valide
-  return pts.filter(function(p){
+  var clean = pts.filter(function(p){
     return p && p.length===2 && typeof p[0]==='number' && typeof p[1]==='number' &&
            isFinite(p[0]) && isFinite(p[1]) &&
            Math.abs(p[0])<=90 && Math.abs(p[1])<=180 &&
            !(p[0]===0 && p[1]===0);
   });
+
+  /* Controllo finale valido per TUTTI i formati: se il risultato non è
+     geograficamente sensato lo scartiamo. Vale anche per il formato a
+     coppie o a oggetti, dove un ordine invertito passerebbe inosservato. */
+  if (clean.length >= 10 && scoreCoordPairing(clean) < 0 && !latlngRejectReason) {
+    latlngRejectReason = 'Le coordinate ottenute non sono geograficamente sensate '+
+      '(latitudini e longitudini con intervalli sovrapposti). Percorso non disegnato.';
+    return [];
+  }
+  return clean;
 }
 
 /* Trova lo stream di quota indipendentemente dal nome usato. */
@@ -226,6 +257,8 @@ async function loadActivityDetail(icuId, domId) {
     var watts = Array.isArray(s.watts) ? s.watts : null;
     var detail = {
       route: route.length>1 ? downsample(route, 180) : null,
+      routeReject: latlngRejectReason || null,
+      routeLayout: latlngLayoutDetected || null,
       elev: alt ? downsample(alt, 140) : null,
       bests: watts ? bestMeanPowers(watts, [5,15,30,60,300,600,1200]) : null,
       kj: watts ? Math.round(watts.reduce(function(a,b){return a+(b||0);},0)/1000) : null,
@@ -243,11 +276,17 @@ async function loadActivityDetail(icuId, domId) {
 }
 
 function renderDetailPanel(d) {
-  var routeHtml = (d.route && d.route.length>1)
-    ? renderRouteSVG(d.route)
-    : '<div class="ad-nodata">Nessun dato GPS in questa uscita.'+
+  var routeHtml;
+  if (d.route && d.route.length>1) {
+    routeHtml = renderRouteSVG(d.route);
+  } else if (d.routeReject) {
+    routeHtml = '<div class="ad-nodata">Percorso non disegnato.<br>'+
+      '<span style="opacity:.75;font-size:.9em;">'+d.routeReject+'</span></div>';
+  } else {
+    routeHtml = '<div class="ad-nodata">Nessun dato GPS in questa uscita.'+
       (d.streamTypes ? '<br><span style="opacity:.7;font-size:.9em;">Stream ricevuti: '+d.streamTypes.join(', ')+'</span>' : '')+
       '</div>';
+  }
   return '<div class="ad-grid">'+
     '<div class="ad-box"><div class="ad-lbl">Percorso</div>'+routeHtml+'</div>'+
     '<div class="ad-box"><div class="ad-lbl">Altimetria</div>'+renderElevSVG(d.elev)+'</div>'+

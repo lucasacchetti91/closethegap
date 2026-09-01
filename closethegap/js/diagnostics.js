@@ -172,8 +172,34 @@ async function runDiagnostics() {
         var first = Array.isArray(arr) && arr.length ? arr[0] : null;
         diagLine('    ' + k + ': ' + describeValue(arr) + ' primo valore = ' + describeValue(first));
       });
+      /* DUMP GREZZO: il formato di latlng si è rivelato non ovvio, quindi
+         invece di continuare a ipotizzare guardiamo i valori reali. */
+      if (Array.isArray(s.latlng)) {
+        diagLine('  latlng GREZZO — primi 10 valori:');
+        diagLine('    [' + s.latlng.slice(0,10).map(function(v){
+          return (v===null?'null':(typeof v==='object'?JSON.stringify(v):v));
+        }).join(', ') + ']');
+        var mid = Math.floor(s.latlng.length/2);
+        diagLine('  latlng a metà array (indici ' + mid + '-' + (mid+5) + '):');
+        diagLine('    [' + s.latlng.slice(mid,mid+6).join(', ') + ']');
+        var nums = s.latlng.filter(function(v){return typeof v==='number';});
+        if (nums.length) {
+          diagLine('  intervallo di TUTTI i valori: ' + Math.min.apply(null,nums).toFixed(5) +
+                   ' .. ' + Math.max.apply(null,nums).toFixed(5));
+          var ev=[],od=[];
+          nums.forEach(function(v,i){ (i%2?od:ev).push(v); });
+          diagLine('  indici PARI:    ' + Math.min.apply(null,ev).toFixed(5) + ' .. ' + Math.max.apply(null,ev).toFixed(5));
+          diagLine('  indici DISPARI: ' + Math.min.apply(null,od).toFixed(5) + ' .. ' + Math.max.apply(null,od).toFixed(5));
+          var hh=Math.floor(nums.length/2);
+          var f=nums.slice(0,hh), sec=nums.slice(hh);
+          diagLine('  prima META:     ' + Math.min.apply(null,f).toFixed(5) + ' .. ' + Math.max.apply(null,f).toFixed(5));
+          diagLine('  seconda META:   ' + Math.min.apply(null,sec).toFixed(5) + ' .. ' + Math.max.apply(null,sec).toFixed(5));
+          diagLine('  (le longitudini in Lombardia stanno intorno a 8-9)');
+        }
+      }
       var norm = normalizeLatLng(s);
-      diagLine('  → punti GPS validi dopo normalizzazione: ' + norm.length + ' (layout rilevato: ' + latlngLayoutDetected + ')');
+      diagLine('  → punti GPS validi: ' + norm.length + ' (accoppiamento: ' + latlngLayoutDetected + ')');
+      if (latlngRejectReason) diagLine('  ⚠ SCARTATO: ' + latlngRejectReason);
       if (norm.length > 1) {
         diagLine('    primo punto: ' + norm[0][0].toFixed(5) + ', ' + norm[0][1].toFixed(5));
         var lats = norm.map(function(p){return p[0];}), lngs = norm.map(function(p){return p[1];});
