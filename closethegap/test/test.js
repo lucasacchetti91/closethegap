@@ -233,6 +233,50 @@ setTimeout(() => {
   check('attività senza id → null', win.icuIdOf({}) === null);
   check('dati seed hardcoded rimossi da config.js', win.RAW.length === 0, 'RAW=' + win.RAW.length);
 
+  /* ---------- 7sexies. Coordinate in array piatto ---------- */
+  section('latlng piatto: interleaved vs concatenato');
+  // Un accoppiamento sbagliato produce una mappa PLAUSIBILE MA FALSA,
+  // impossibile da riconoscere a occhio: va determinato dai dati.
+  const M = 500;
+  const rlat = i => 45.63 + 0.02 * Math.sin(i / 80);
+  const rlng = i => 8.70 + 0.03 * Math.cos(i / 80);
+  const inter = [], concat = [];
+  for (let i = 0; i < M; i++) inter.push(rlat(i), rlng(i));
+  for (let i = 0; i < M; i++) concat.push(rlat(i));
+  for (let i = 0; i < M; i++) concat.push(rlng(i));
+
+  const rI = win.normalizeLatLng({ latlng: inter });
+  check('interleaved riconosciuto', win.latlngLayoutDetected === 'flat-interleaved', win.latlngLayoutDetected);
+  check('interleaved: lat/lng nel giusto ordine',
+    Math.abs(rI[0][0] - rlat(0)) < 1e-6 && Math.abs(rI[0][1] - rlng(0)) < 1e-6);
+  const rC = win.normalizeLatLng({ latlng: concat });
+  check('concatenato riconosciuto', win.latlngLayoutDetected === 'flat-concatenated', win.latlngLayoutDetected);
+  check('concatenato: lat/lng nel giusto ordine',
+    Math.abs(rC[0][0] - rlat(0)) < 1e-6 && Math.abs(rC[0][1] - rlng(0)) < 1e-6,
+    JSON.stringify(rC[0]));
+  // controllo di sanità: latitudini e longitudini devono restare separate
+  const latSpread = Math.max(...rC.map(p => p[0])) - Math.min(...rC.map(p => p[0]));
+  const lngSpread = Math.max(...rC.map(p => p[1])) - Math.min(...rC.map(p => p[1]));
+  check('lat e lng non mescolate', Math.abs(rC[0][0] - rC[0][1]) > 30,
+    'lat=' + rC[0][0].toFixed(3) + ' lng=' + rC[0][1].toFixed(3));
+
+  /* ---------- 7septies. Curva di potenza: forme della risposta ---------- */
+  section('Curva di potenza');
+  const secs = [5, 15, 30, 60, 120, 300, 600, 1200, 3600];
+  const wattsArr = [900, 800, 700, 550, 450, 400, 375, 355, 340];
+  const shapes = {
+    'array piatto di punti': secs.map((s, i) => ({ secs: s, watts: wattsArr[i] })),
+    'oggetto con array': { secs, watts: wattsArr },
+    '{list:[curva]} (forma reale ICU)': { list: [{ secs, watts: wattsArr }], activities: [] },
+    '{list:[{points}]}': { list: [{ points: secs.map((s, i) => ({ secs: s, watts: wattsArr[i] })) }] }
+  };
+  for (const [name, shape] of Object.entries(shapes)) {
+    const r = win.normalizePowerCurve(shape);
+    check(name, r !== null && r.length >= 4, r ? r.length + ' durate' : 'non riconosciuto');
+  }
+  check('forma incomprensibile → null (niente dati inventati)',
+    win.normalizePowerCurve({ pippo: 1 }) === null);
+
   console.log('\n' + '═'.repeat(60));
   console.log(failed === 0
     ? `✅ TUTTI I TEST SUPERATI (${passed})`
