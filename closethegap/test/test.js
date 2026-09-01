@@ -273,6 +273,19 @@ setTimeout(() => {
   const badPairs = Array.from({ length: 50 }, (_, i) => [45.6 + i * 0.001, 45.5 + i * 0.001]);
   check('coppie con lat/lng sovrapposte → scartate', win.normalizeLatLng({ latlng: badPairs }).length === 0);
 
+  // Due serie separate con lo stesso nome (forma reale di Intervals.icu)
+  const latsS = [], lngsS = [];
+  for (let i = 0; i < 300; i++) { latsS.push(45.635 - 0.0006 * i); lngsS.push(8.85 + 0.0004 * i); }
+  const rTwo = win.normalizeLatLng({ latlng: latsS, latlng_2: lngsS });
+  check('due serie latlng accoppiate elemento per elemento', rTwo.length === 300, rTwo.length + ' punti');
+  check('due serie: lat e lng nel giusto ordine',
+    Math.abs(rTwo[0][0] - 45.635) < 1e-6 && Math.abs(rTwo[0][1] - 8.85) < 1e-6, JSON.stringify(rTwo[0]));
+  // se una serie supera 90 dev'essere per forza la longitudine
+  const bigLng = lngsS.map(v => v + 100);
+  const rSwap = win.normalizeLatLng({ latlng: bigLng, latlng_2: latsS });
+  check('serie oltre 90° riconosciuta come longitudine',
+    rSwap.length && Math.abs(rSwap[0][0] - 45.635) < 1e-6, JSON.stringify(rSwap[0] || null));
+
   /* ---------- 7septies. Curva di potenza: forme della risposta ---------- */
   section('Curva di potenza');
   const secs = [5, 15, 30, 60, 120, 300, 600, 1200, 3600];
