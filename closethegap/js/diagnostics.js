@@ -173,7 +173,14 @@ async function runDiagnostics() {
         diagLine('    ' + k + ': ' + describeValue(arr) + ' primo valore = ' + describeValue(first));
       });
       var norm = normalizeLatLng(s);
-      diagLine('  → punti GPS validi dopo normalizzazione: ' + norm.length);
+      diagLine('  → punti GPS validi dopo normalizzazione: ' + norm.length + ' (layout rilevato: ' + latlngLayoutDetected + ')');
+      if (norm.length > 1) {
+        diagLine('    primo punto: ' + norm[0][0].toFixed(5) + ', ' + norm[0][1].toFixed(5));
+        var lats = norm.map(function(p){return p[0];}), lngs = norm.map(function(p){return p[1];});
+        diagLine('    lat ' + Math.min.apply(null,lats).toFixed(3) + '..' + Math.max.apply(null,lats).toFixed(3) +
+                 ' | lng ' + Math.min.apply(null,lngs).toFixed(3) + '..' + Math.max.apply(null,lngs).toFixed(3));
+        diagLine('    (se lat e lng hanno intervalli simili l\'accoppiamento è sbagliato)');
+      }
       var altS = pickAltitude(s);
       diagLine('  → punti altimetria validi: ' + (altS ? altS.length : 0));
     }
@@ -189,10 +196,26 @@ async function runDiagnostics() {
       diagLine('  ✓ Curva reale letta: ' + n + ' durate → i best effort NON sono più valori statici');
       diagLine('    ' + bestEfforts.map(function(e){ return e.label+'='+e.watts+'W'; }).join(', '));
     } else {
-      diagLine('  ✗ Formato della risposta non riconosciuto: i best effort restano i valori statici di config.js.');
-      diagLine('    Struttura ricevuta: ' + (Array.isArray(icuPowerCurveRawSample)
-        ? 'array[' + icuPowerCurveRawSample.length + '] primo elemento = ' + describeValue(icuPowerCurveRawSample[0])
-        : describeValue(icuPowerCurveRawSample)));
+      diagLine('  ✗ Formato non riconosciuto: i best effort restano i valori statici di config.js.');
+      diagLine('    Struttura ricevuta: ' + describeValue(icuPowerCurveRawSample));
+      // dump mirato: serve a capire dove stanno davvero durate e watt
+      var r = icuPowerCurveRawSample;
+      if (r && typeof r === 'object' && Array.isArray(r.list)) {
+        diagLine('    list: array[' + r.list.length + ']');
+        var c0 = r.list[0];
+        if (c0 && typeof c0 === 'object') {
+          diagLine('    list[0] chiavi: ' + Object.keys(c0).join(', '));
+          Object.keys(c0).slice(0,14).forEach(function(k){
+            diagLine('      list[0].' + k + ' = ' + describeValue(c0[k]));
+          });
+          // se una chiave contiene un array di numeri, mostriamo i primi valori
+          Object.keys(c0).forEach(function(k){
+            if (Array.isArray(c0[k]) && c0[k].length > 3 && typeof c0[k][0] === 'number') {
+              diagLine('      → list[0].' + k + ' primi 6: [' + c0[k].slice(0,6).join(', ') + ']');
+            }
+          });
+        }
+      }
     }
   } catch (e) {
     diagLine('  ✗ Errore: ' + e.message);

@@ -117,9 +117,41 @@ function renderBestEffortsHTML(bests) {
    un null per far diventare NaN l'intero calcolo dei limiti della
    mappa e quindi non disegnare nulla.
    Qui si accettano tutte le forme e si scartano i punti non validi. */
+var latlngLayoutDetected = null; // diagnostica: 'interleaved' | 'concatenated' | 'pairs' | ...
+
+/* Un array PIATTO di coordinate può essere impacchettato in due modi:
+     A) interleaved  [lat0,lng0, lat1,lng1, ...]
+     B) concatenato  [lat0..latN, lng0..lngN]
+   Accoppiare (i, i+1) è corretto solo nel caso A. Nel caso B si
+   accoppierebbe latitudine con latitudine, producendo una mappa
+   plausibile a vista ma completamente inventata — impossibile da
+   riconoscere a occhio, quindi va determinato dai dati.
+   Discriminante: nel caso A gli indici pari e dispari hanno intervalli
+   di valori nettamente diversi (latitudini vs longitudini); nel caso B
+   la differenza si trova invece fra prima e seconda metà. */
+function detectFlatLayout(arr) {
+  var nums = arr.filter(function(v){ return typeof v === 'number' && isFinite(v); });
+  if (nums.length < 8) return 'interleaved';
+  function spread(vals) {
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    return {mn:mn, mx:mx, mid:(mn+mx)/2};
+  }
+  var even = [], odd = [];
+  for (var i=0;i<nums.length;i++) (i%2 ? odd : even).push(nums[i]);
+  var half = Math.floor(nums.length/2);
+  var first = nums.slice(0, half), second = nums.slice(half);
+
+  var e = spread(even), o = spread(odd), f = spread(first), s = spread(second);
+  var interleavedSep = Math.abs(e.mid - o.mid);
+  var concatenatedSep = Math.abs(f.mid - s.mid);
+  // Il layout vero è quello in cui i due gruppi sono nettamente separati
+  return concatenatedSep > interleavedSep * 2 ? 'concatenated' : 'interleaved';
+}
+
 function normalizeLatLng(streams) {
   var pts = [];
   var ll = streams.latlng || streams.latLng || streams.position;
+  latlngLayoutDetected = null;
 
   if (Array.isArray(ll) && ll.length) {
     /* Il formato va dedotto dal primo elemento NON NULLO, non da ll[0].
@@ -132,20 +164,32 @@ function normalizeLatLng(streams) {
 
     if (probe == null) {
       pts = [];                                   // stream tutto nullo
+      latlngLayoutDetected = 'empty';
     } else if (Array.isArray(probe)) {
+      latlngLayoutDetected = 'pairs';
       pts = ll.filter(function(p){ return p!=null; });        // [[lat,lng], ...]
     } else if (typeof probe === 'object') {
+      latlngLayoutDetected = 'objects';
       pts = ll.filter(function(p){ return p!=null; }).map(function(p){   // [{lat,lng}, ...]
         var la = p.lat!=null?p.lat:(p.latitude!=null?p.latitude:null);
         var lo = p.lng!=null?p.lng:(p.lon!=null?p.lon:(p.longitude!=null?p.longitude:null));
         return [la, lo];
       });
     } else if (typeof probe === 'number') {
-      for (var i=0;i+1<ll.length;i+=2) pts.push([ll[i], ll[i+1]]); // [lat,lng,lat,lng,...]
+      var layout = detectFlatLayout(ll);
+      latlngLayoutDetected = 'flat-' + layout;
+      if (layout === 'concatenated') {
+        var h = Math.floor(ll.length/2);
+        for (var c=0;c<h;c++) pts.push([ll[c], ll[h+c]]);
+      } else {
+        for (var i=0;i+1<ll.length;i+=2) pts.push([ll[i], ll[i+1]]);
+      }
     }
   } else if (Array.isArray(streams.lat) && Array.isArray(streams.lng)) {
+    latlngLayoutDetected = 'separate';
     for (var j=0;j<streams.lat.length;j++) pts.push([streams.lat[j], streams.lng[j]]);
   } else if (Array.isArray(streams.latitude) && Array.isArray(streams.longitude)) {
+    latlngLayoutDetected = 'separate';
     for (var k=0;k<streams.latitude.length;k++) pts.push([streams.latitude[k], streams.longitude[k]]);
   }
 

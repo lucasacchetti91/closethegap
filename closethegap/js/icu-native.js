@@ -307,10 +307,15 @@ function normalizePowerCurve(raw) {
     if (!Array.isArray(arr) || !arr.length) return null;
     var p = arr.find(function(x){ return x && typeof x === 'object'; });
     if (!p) return null;
-    var sk = ['secs','duration','seconds','t'].find(function(k){ return p[k]!=null; });
-    var wk = ['watts','value','power','y'].find(function(k){ return p[k]!=null; });
+    /* I valori devono essere NUMERI. Senza questo controllo un oggetto
+       curva del tipo {secs:[...], watts:[...]} veniva scambiato per un
+       punto: le chiavi ci sono, ma contengono array. Il falso positivo
+       impediva poi al ramo corretto di entrare in funzione. */
+    var isNum = function(k){ return typeof p[k] === 'number'; };
+    var sk = ['secs','duration','seconds','t'].find(isNum);
+    var wk = ['watts','value','power','y'].find(isNum);
     if (!sk || !wk) return null;
-    return arr.filter(function(x){return x && x[sk]!=null && x[wk]!=null;})
+    return arr.filter(function(x){ return x && typeof x[sk]==='number' && typeof x[wk]==='number'; })
               .map(function(x){ return {secs:x[sk], watts:x[wk]}; });
   }
 
@@ -322,7 +327,19 @@ function normalizePowerCurve(raw) {
       }
     }
   } else if (raw && typeof raw === 'object') {
+    /* Struttura osservata su Intervals.icu: {list:[...], activities:[...]}.
+       `list` non è un elenco di punti ma di CURVE, ognuna con i propri
+       array di durate e watt: va quindi ispezionato elemento per
+       elemento, non trattato come lista di punti. */
     pts = fromArrays(raw) || fromObjects(raw.list || raw.points || raw.curve || []);
+    if (!pts && Array.isArray(raw.list)) {
+      for (var j=0;j<raw.list.length && !pts;j++) {
+        var c = raw.list[j];
+        if (c && typeof c === 'object') {
+          pts = fromArrays(c) || fromObjects(c.list || c.points || c.curve || []);
+        }
+      }
+    }
   }
   if (!pts || !pts.length) return null;
 
