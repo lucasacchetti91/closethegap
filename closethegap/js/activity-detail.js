@@ -164,11 +164,65 @@ function scoreCoordPairing(pts) {
   return separation;
 }
 
+/* Coordinata utilizzabile: numeri finiti, entro i limiti geografici,
+   e non il classico 0/0 dei buchi GPS. */
+function validCoord(p) {
+  return p && p.length===2 && typeof p[0]==='number' && typeof p[1]==='number' &&
+         isFinite(p[0]) && isFinite(p[1]) &&
+         Math.abs(p[0])<=90 && Math.abs(p[1])<=180 &&
+         !(p[0]===0 && p[1]===0);
+}
+
 function normalizeLatLng(streams) {
   var pts = [];
   var ll = streams.latlng || streams.latLng || streams.position;
   latlngLayoutDetected = null;
   latlngRejectReason = null;
+
+  /* CASO PRIORITARIO — due serie separate con lo stesso nome.
+     Intervals.icu restituisce latitudini e longitudini come due voci
+     distinte entrambe di tipo "latlng"; il parser degli stream le
+     conserva ora come latlng e latlng_2. Vanno accoppiate elemento per
+     elemento, non concatenate. L'ordine (quale delle due sia la
+     latitudine) viene dedotto dai valori: la latitudine è quella con
+     ampiezza compatibile con ±90 e, in caso di ambiguità, si prova
+     l'accoppiamento nei due sensi tenendo quello sensato. */
+  var second = streams.latlng_2 || streams.latLng_2 || streams.position_2;
+  if (Array.isArray(ll) && Array.isArray(second) && ll.length && second.length) {
+    var n = Math.min(ll.length, second.length);
+    var A = [], B = [];
+    for (var q=0;q<n;q++) {
+      if (typeof ll[q]==='number' && typeof second[q]==='number') {
+        A.push([ll[q], second[q]]);   // prima serie = latitudine
+        B.push([second[q], ll[q]]);   // ordine invertito
+      }
+    }
+    /* Quale delle due serie è la latitudine?
+       L'unico discriminante certo è l'intervallo: la latitudine sta
+       entro ±90, la longitudine può arrivare a ±180. Se una serie
+       supera 90 in valore assoluto, è per forza la longitudine.
+       Se invece entrambe stanno entro ±90 il dato non basta a decidere
+       (lat 45/lng 8 e lat 8/lng 45 sono due luoghi entrambi reali):
+       in quel caso si assume l'ordine suggerito dal nome del campo,
+       cioè lat prima di lng. Se la mappa dovesse risultare specchiata
+       o ruotata, è questa l'assunzione da invertire. */
+    var maxFirst = Math.max.apply(null, ll.filter(function(v){return typeof v==='number';}).map(Math.abs));
+    var maxSecond = Math.max.apply(null, second.filter(function(v){return typeof v==='number';}).map(Math.abs));
+    var chosen, label;
+    if (maxFirst > 90 && maxSecond <= 90) { chosen = B; label = 'due-serie (prima=lng, dedotto dal range)'; }
+    else if (maxSecond > 90 && maxFirst <= 90) { chosen = A; label = 'due-serie (prima=lat, dedotto dal range)'; }
+    else {
+      var sA = scoreCoordPairing(A), sB = scoreCoordPairing(B);
+      if (sA < 0 && sB < 0) {
+        latlngRejectReason = 'Le due serie di coordinate non formano posizioni sensate.';
+        latlngLayoutDetected = 'due-serie-non-valide';
+        return [];
+      }
+      chosen = A; label = 'due-serie (prima assunta come lat: ordine non deducibile dai dati)';
+    }
+    latlngLayoutDetected = label;
+    return chosen.filter(validCoord);
+  }
 
   if (Array.isArray(ll) && ll.length) {
     /* Il formato va dedotto dal primo elemento NON NULLO, non da ll[0]:
@@ -215,12 +269,7 @@ function normalizeLatLng(streams) {
     for (var k=0;k<streams.latitude.length;k++) pts.push([streams.latitude[k], streams.longitude[k]]);
   }
 
-  var clean = pts.filter(function(p){
-    return p && p.length===2 && typeof p[0]==='number' && typeof p[1]==='number' &&
-           isFinite(p[0]) && isFinite(p[1]) &&
-           Math.abs(p[0])<=90 && Math.abs(p[1])<=180 &&
-           !(p[0]===0 && p[1]===0);
-  });
+  var clean = pts.filter(validCoord);
 
   /* Controllo finale valido per TUTTI i formati: se il risultato non è
      geograficamente sensato lo scartiamo. Vale anche per il formato a

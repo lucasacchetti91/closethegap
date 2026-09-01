@@ -391,17 +391,35 @@ async function fetchICUActivityStreams(activityId, types) {
   }
   var raw = await resp.json();
   var out = {};
+  var rawEntryTypes = [];
+  /* Il formato della risposta non è garantito: può essere un array di
+     {type, data} (caso normale) oppure un oggetto con chiavi per tipo.
+
+     BUG CORRETTO — VOCI DUPLICATE: assegnando out[s.type] = s.data una
+     seconda voce con lo STESSO type sovrascriveva silenziosamente la
+     prima. Sui dati reali lo stream "latlng" arriva come due voci
+     distinte (latitudini e longitudini): ne sopravviveva una sola, e la
+     mappa risultava fatta di sole latitudini. Ora i duplicati vengono
+     conservati come latlng, latlng_2, ... */
+  function put(type, data) {
+    var key = type;
+    var n = 2;
+    while (out[key] !== undefined) { key = type + '_' + n; n++; }
+    out[key] = data;
+  }
   if (Array.isArray(raw)) {
     raw.forEach(function(s) {
       if (!s || !s.type) return;
-      if (Array.isArray(s.data)) out[s.type] = s.data;
-      else if (Array.isArray(s.values)) out[s.type] = s.values;
+      rawEntryTypes.push(s.type);
+      if (Array.isArray(s.data)) put(s.type, s.data);
+      else if (Array.isArray(s.values)) put(s.type, s.values);
     });
   } else if (raw && typeof raw === 'object') {
     Object.keys(raw).forEach(function(k) {
       var v = raw[k];
-      if (Array.isArray(v)) out[k] = v;
-      else if (v && Array.isArray(v.data)) out[k] = v.data;
+      rawEntryTypes.push(k);
+      if (Array.isArray(v)) put(k, v);
+      else if (v && Array.isArray(v.data)) put(k, v.data);
     });
   }
   /* Normalizza i nomi alternativi della frequenza cardiaca. */
@@ -409,6 +427,8 @@ async function fetchICUActivityStreams(activityId, types) {
   if (!out.heart_rate && out.heartrate) out.heart_rate = out.heartrate;
   icuLastStreamShape = {
     responseType: Array.isArray(raw) ? 'array' : typeof raw,
+    rawEntryTypes: rawEntryTypes,
+    duplicateTypes: rawEntryTypes.filter(function(t,i){ return rawEntryTypes.indexOf(t) !== i; }),
     typesReceived: Object.keys(out),
     sampleLatlng: out.latlng ? JSON.stringify(out.latlng.slice(0,2)) : null,
     hasLatLngSeparate: !!(out.lat && out.lng)

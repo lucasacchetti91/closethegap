@@ -166,6 +166,11 @@ async function runDiagnostics() {
       diagLine('  Uso l\'attività del ' + target.date + ' (id ICU: ' + tid + ')');
       var s = await fetchICUActivityStreams(tid, ['time','watts','heartrate','altitude','distance','latlng']);
       diagLine('  Forma della risposta: ' + (icuLastStreamShape ? icuLastStreamShape.responseType : '?'));
+      if (icuLastStreamShape && icuLastStreamShape.rawEntryTypes) {
+        diagLine('  Voci GREZZE nella risposta (in ordine): ' + icuLastStreamShape.rawEntryTypes.join(', '));
+        var dup = icuLastStreamShape.duplicateTypes;
+        diagLine('  Tipi DUPLICATI: ' + (dup && dup.length ? dup.join(', ') + '  ← lat e lng arrivano come due voci con lo stesso nome' : 'nessuno'));
+      }
       diagLine('  Tipi di stream ricevuti: ' + Object.keys(s).join(', '));
       Object.keys(s).forEach(function(k){
         var arr = s[k];
