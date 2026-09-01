@@ -252,13 +252,26 @@ setTimeout(() => {
   const rC = win.normalizeLatLng({ latlng: concat });
   check('concatenato riconosciuto', win.latlngLayoutDetected === 'flat-concatenated', win.latlngLayoutDetected);
   check('concatenato: lat/lng nel giusto ordine',
-    Math.abs(rC[0][0] - rlat(0)) < 1e-6 && Math.abs(rC[0][1] - rlng(0)) < 1e-6,
-    JSON.stringify(rC[0]));
-  // controllo di sanità: latitudini e longitudini devono restare separate
-  const latSpread = Math.max(...rC.map(p => p[0])) - Math.min(...rC.map(p => p[0]));
-  const lngSpread = Math.max(...rC.map(p => p[1])) - Math.min(...rC.map(p => p[1]));
-  check('lat e lng non mescolate', Math.abs(rC[0][0] - rC[0][1]) > 30,
-    'lat=' + rC[0][0].toFixed(3) + ' lng=' + rC[0][1].toFixed(3));
+    Math.abs(rC[0][0] - rlat(0)) < 1e-6 && Math.abs(rC[0][1] - rlng(0)) < 1e-6, JSON.stringify(rC[0]));
+
+  // REGRESSIONE CRITICA: se nessun accoppiamento produce coordinate sensate
+  // NON si deve disegnare un percorso inventato. Caso reale osservato:
+  // tutti i valori intorno a 45 (due latitudini), nessuna longitudine.
+  const allLat = [];
+  for (let i = 0; i < 400; i++) allLat.push(45.578 + 0.05 * Math.sin(i / 40));
+  const rBad = win.normalizeLatLng({ latlng: allLat });
+  check('coordinate implausibili → nessun percorso (non inventato)', rBad.length === 0,
+    'ottenuti ' + rBad.length + ' punti');
+  check('viene registrato il motivo dello scarto', !!win.latlngRejectReason);
+
+  // Un'uscita che copre mezzo pianeta non è una traccia GPS valida
+  const wild = [];
+  for (let i = 0; i < 400; i++) wild.push(20 + i * 0.1, 5 + i * 0.1);
+  check('escursione geografica assurda → scartata', win.normalizeLatLng({ latlng: wild }).length === 0);
+
+  // Il controllo vale anche per il formato a coppie, non solo per quello piatto
+  const badPairs = Array.from({ length: 50 }, (_, i) => [45.6 + i * 0.001, 45.5 + i * 0.001]);
+  check('coppie con lat/lng sovrapposte → scartate', win.normalizeLatLng({ latlng: badPairs }).length === 0);
 
   /* ---------- 7septies. Curva di potenza: forme della risposta ---------- */
   section('Curva di potenza');
