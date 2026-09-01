@@ -28,7 +28,7 @@ const { JSDOM } = require('jsdom');
 
 const ROOT = path.join(__dirname, '..');
 const JS_FILES = ['config.js','icu-native.js','metrics.js','models.js','zones.js','workouts.js',
-  'plan-generator.js','charts.js','wellness.js','activity-detail.js','home.js','plan.js',
+  'plan-generator.js','races.js','charts.js','wellness.js','activity-detail.js','home.js','plan.js',
   'calendar.js','activities.js','sync.js','storage.js','diagnostics.js','app.js'];
 
 let passed = 0, failed = 0;
@@ -302,6 +302,45 @@ setTimeout(() => {
   }
   check('forma incomprensibile → null (niente dati inventati)',
     win.normalizePowerCurve({ pippo: 1 }) === null);
+
+  /* ---------- 8. Gare dal calendario ICU ---------- */
+  section('Gare nel piano');
+  const raceDate = win.addDays(win.today(), 21);
+  win.races = [{ date: raceDate, name: 'Gran Fondo Test', priority: 'A', durMin: 240, tss: 260 }];
+  const cons = win.buildRaceConstraints(win.today(), win.addDays(win.today(), 60));
+  check('il giorno gara è un vincolo', cons[raceDate] && cons[raceDate].kind === 'race');
+  check('scarico nei 5 giorni prima (RACE_A)',
+    [1, 2, 3, 4, 5].every(i => cons[win.addDays(raceDate, -i)] && cons[win.addDays(raceDate, -i)].kind === 'taper'));
+  check('nessuno scarico 6 giorni prima', !cons[win.addDays(raceDate, -6)]);
+  check('recupero nei 2 giorni dopo',
+    [1, 2].every(i => cons[win.addDays(raceDate, i)] && cons[win.addDays(raceDate, i)].kind === 'recovery'));
+
+  const rB = win.addDays(win.today(), 40);
+  win.races = [{ date: rB, name: 'Circuito', priority: 'B', durMin: 120, tss: 130 }];
+  const consB = win.buildRaceConstraints(win.today(), win.addDays(win.today(), 60));
+  check('RACE_B scarica solo 2 giorni',
+    consB[win.addDays(rB, -2)] && consB[win.addDays(rB, -2)].kind === 'taper' && !consB[win.addDays(rB, -3)]);
+
+  // Il piano rigenerato deve rispettare i vincoli
+  win.races = [{ date: raceDate, name: 'Gran Fondo Test', priority: 'A', durMin: 240, tss: 260 }];
+  win.makePlan();
+  const raceSession = win.plan.find(p => p.date === raceDate);
+  check('la gara compare nel piano generato', !!raceSession && raceSession.type === 'race',
+    raceSession ? raceSession.type : 'assente');
+  check('TSS della gara preservato dal riscalamento', raceSession && raceSession.tss === 260,
+    raceSession ? 'tss=' + raceSession.tss : '');
+  const preRace = [1, 2, 3, 4, 5].map(i => win.plan.find(p => p.date === win.addDays(raceDate, -i))).filter(Boolean);
+  check('nessun lavoro duro nei 5 giorni pre-gara',
+    preRace.every(p => p.type !== 'z5' && p.type !== 'z6' && p.type !== 'z4'),
+    preRace.map(p => p.type).join(','));
+  check('carico pre-gara ridotto', preRace.every(p => p.tss <= 60), preRace.map(p => p.tss).join(','));
+  win.races = [];
+
+  /* ---------- 9. Storico dall'inizio stagione ---------- */
+  section('Finestra storica');
+  check('SEASON_START definito', typeof win.SEASON_START === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(win.SEASON_START),
+    win.SEASON_START);
+  check('la stagione parte da novembre 2025', win.SEASON_START === '2025-11-01', win.SEASON_START);
 
   console.log('\n' + '═'.repeat(60));
   console.log(failed === 0
