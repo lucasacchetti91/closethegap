@@ -1,0 +1,191 @@
+/* ============================================================
+   CLOSE THE GAP — css/mobile.css
+   Foglio di override: si carica DOPO css/style.css e non lo modifica.
+   Vedi patch/README.md per l'installazione.
+   ============================================================ */
+
+:root{
+  --font:'Archivo',system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+
+  /* Superfici ricalibrate: meno bordi, piu stacco fra i livelli.
+     Cambiando --acc cambi l'accento in tutta l'app. */
+  --bg:#08090c;
+  --s1:#0d0f14;
+  --s2:#13161d;
+  --s3:#1b1f28;
+  --br:#1b1f28;
+  --br2:#272c38;
+
+  --tx:#f2f4f8;
+  --tx2:#9aa2b6;
+  --tx3:#5d657c;
+
+  --r:14px;
+  --r2:18px;
+}
+
+body{font-family:var(--font);letter-spacing:-.005em;-webkit-font-smoothing:antialiased;}
+
+/* I numeri in mono: allineano in colonna e smettono di sembrare testo. */
+.kv,.tm-val,.fs-v,.pkv,.rl-tss,.ws-date,.ad-best-w,.atp-tss,.act-table td,
+.wp-val,.gc-val,.gc-gap{
+  font-family:var(--mono);font-feature-settings:'tnum' 1;letter-spacing:-.02em;
+}
+/* Etichette: una regola per tutte le maiuscolette sparse nell'app. */
+.kl,.ct,.today-label,.ws-title,.rl-title,.wc-lbl,.fs-u,.pkl,.tm-lbl,.ad-lbl,
+.nav-section-label,.gc-lbl,.wp-lbl,.gc-sub{
+  font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;color:var(--tx3);
+}
+
+/* ---------- 1. Gerarchia: il TSB diventa il dato eroe ---------- */
+/* Tre card gemelle non dicono cosa guardare per primo. Su mobile la riga
+   diventa 2 colonne + TSB a piena larghezza. */
+@media(max-width:640px){
+  .kpi-row{grid-template-columns:1fr 1fr;gap:8px;}
+  .kpi{background:var(--s2);border:1px solid var(--br);border-radius:var(--r);padding:12px 14px;}
+  .kv{font-size:1.45rem;}
+
+  .kpi-row .kpi:nth-child(3){
+    grid-column:1 / -1;
+    padding:15px 16px 14px;
+    background:linear-gradient(180deg,var(--s3),var(--s2));
+    border-color:var(--br2);
+  }
+  .kpi-row .kpi:nth-child(3) .kv{font-size:3.2rem;line-height:.9;}
+  .kpi-row .kpi:nth-child(3) .kl{font-size:.64rem;}
+  /* "CTL-ATL ieri" e' gia' detto dall'etichetta: via, guadagna spazio. */
+  .kpi-row .kpi:nth-child(3) .ks{display:none;}
+}
+
+/* ---------- 2. Card obiettivo (sostituisce la 2a kpi-row) ---------- */
+.goal-card{
+  background:var(--s2);border:1px solid var(--br);border-radius:var(--r);
+  padding:13px 14px;margin-bottom:14px;
+  display:flex;align-items:center;gap:14px;
+}
+.gc-val{font-size:1.3rem;font-weight:700;line-height:1;margin-top:6px;}
+.gc-val .gc-now{color:var(--acc);}
+.gc-val .gc-arr{color:var(--tx3);margin:0 2px;}
+.gc-val .gc-goal{color:var(--pur);}
+.gc-right{text-align:right;flex-shrink:0;}
+.gc-gap{font-size:.95rem;font-weight:700;color:var(--pur);}
+.gc-sub{margin-top:4px;}
+.gc-lthr{margin-top:6px;}
+
+/* ---------- 3. Densita: un ritmo verticale unico ---------- */
+.content{padding:14px 14px 96px;}                 /* 96px = spazio per la tab bar */
+.card,.today-card,.week-strip,.recent-list,.feed-card,.atp-card{
+  margin-bottom:14px;border-radius:var(--r2);border:1px solid var(--br);
+  background:var(--s2);box-shadow:none;
+}
+.card{padding:14px 16px;}
+.ct{margin-bottom:12px;}
+.divider{display:none;}                            /* le card gia' separano */
+
+/* ---------- 4. Topbar fissa ---------- */
+/* Su mobile .app diventa block e la topbar scorre via: senza titolo e
+   senza "+" a portata di pollice ci si perde fra le sezioni. */
+@media(max-width:900px){
+  .topbar{
+    position:sticky;top:0;z-index:18;height:auto;min-height:56px;
+    padding:10px 14px;background:rgba(13,15,20,.86);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--br);
+  }
+  .topbar-title{font-size:1rem;font-weight:700;letter-spacing:-.02em;}
+  .topbar-date{font-family:var(--mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;}
+  .tb{min-height:40px;padding:0 14px;border-radius:10px;font-size:.75rem;}
+  .hamburger-btn{width:44px;height:44px;margin-left:-8px;}
+}
+
+/* ---------- 5. Grafici leggibili ---------- */
+/* Altezza minima onesta: sotto i 200px un PMC a 60 giorni e' illeggibile.
+   I blocchi larghi scorrono in orizzontale invece di comprimersi. */
+@media(max-width:640px){
+  .cw{min-height:210px;}
+  .cw canvas{min-height:210px!important;}
+  .hm-wrap{margin:0 -16px;padding:0 16px 6px;}
+  .power-kpis{
+    grid-template-columns:none;display:flex;gap:8px;overflow-x:auto;
+    margin:0 -16px 14px;padding:0 16px 4px;scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+  }
+  .power-kpis::-webkit-scrollbar{display:none;}
+  .pk{
+    flex:0 0 92px;box-sizing:border-box;   /* border-box: senza, il padding sfonda i 92px */
+    background:var(--s3);border:none;border-radius:12px;padding:12px 10px;
+  }
+  .pkv{font-family:var(--mono);font-size:1.05rem;}
+  .zbar{margin-bottom:9px;}
+  .zbar-lbl{flex:0 0 96px;font-size:.66rem;}
+  .zbar-track{height:9px;border-radius:5px;}
+  .zbar-fill{border-radius:5px;}
+  /* i due blocchi affiancati in .g2 restano impilati: nessun grafico sotto i 170px */
+  .g2{gap:0;}
+}
+
+/* ---------- 6. Settimana e allenamento di oggi ---------- */
+.today-card{padding:14px 16px;}
+.today-name{font-size:1.5rem;letter-spacing:-.03em;}
+.today-desc{font-size:.82rem;line-height:1.6;padding:12px 14px;border-radius:12px;border-left-width:2px;}
+.today-meta{gap:22px;margin:12px 0 10px;}
+.tm-val{font-size:1.15rem;}
+
+/* Progresso settimanale compatto (vedi js/mobile-ui.js) */
+.wp-row{display:flex;align-items:baseline;justify-content:space-between;}
+.wp-lbl{font-family:var(--font)!important;font-size:.78rem!important;letter-spacing:0!important;color:var(--tx2)!important;text-transform:none!important;}
+.wp-lbl em{font-style:normal;color:var(--tx3);}
+.wp-val{font-size:.88rem;font-weight:700;}
+.wp-val span{color:var(--tx3);font-weight:500;}
+.wp-track{height:7px;border-radius:4px;background:var(--s3);margin:7px 0 12px;overflow:hidden;}
+.wp-track:last-child{margin-bottom:0;}
+.wp-fill{height:100%;border-radius:4px;transition:width .3s;}
+.wp-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;}
+.wp-head b{color:var(--tx);}
+
+@media(max-width:640px){
+  .ws-days{gap:4px;}
+  .ws-day{padding:9px 2px;border-radius:10px;min-height:62px;}
+  .ws-today{box-shadow:inset 0 0 0 1px var(--acc);}
+}
+
+/* ---------- 7. Liste: righe toccabili ---------- */
+.rl-item{padding:11px 0;gap:12px;min-height:52px;}
+.rl-name{font-size:.86rem;font-weight:500;}
+.rl-meta{font-family:var(--mono);font-size:.66rem;}
+.rl-tss{font-size:.9rem;}
+
+/* ---------- 8. Form e modale a pagina piena ---------- */
+@media(max-width:640px){
+  .mo{align-items:flex-end;}
+  .mbox{
+    width:100%;max-width:none;border-radius:20px 20px 0 0;
+    padding:20px 18px calc(20px + env(safe-area-inset-bottom));max-height:92vh;
+  }
+  .fgrid{grid-template-columns:1fr 1fr;gap:12px;}
+  .fg input,.fg select{padding:12px;font-size:1rem;border-radius:10px;} /* 16px = niente zoom iOS */
+  .fg label{font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;}
+}
+
+/* ---------- 9. Tab bar in basso ---------- */
+.tabbar{display:none;}
+@media(max-width:900px){
+  .tabbar{
+    display:grid;grid-template-columns:repeat(5,1fr);
+    position:fixed;left:0;right:0;bottom:0;z-index:25;
+    background:rgba(13,15,20,.92);
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    border-top:1px solid var(--br);
+    padding:8px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .tabbar button{
+    background:none;border:none;cursor:pointer;color:var(--tx3);
+    display:flex;flex-direction:column;align-items:center;gap:5px;
+    padding:6px 0;min-height:48px;font-family:var(--mono);
+    font-size:.6rem;letter-spacing:.04em;
+  }
+  .tabbar button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;}
+  .tabbar button.active{color:var(--acc);}
+  .tabbar button.active svg{stroke-width:2.2;}
+}
