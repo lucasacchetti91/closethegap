@@ -10,8 +10,8 @@ function mkChart(id,type,data,extra) {
   var opts={responsive:true,maintainAspectRatio:false,
     plugins:{legend:{labels:{color:'#8b92a8',font:{size:9},boxWidth:10}}},
     scales:type==='doughnut'||type==='pie'?{}:{
-      x:{ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}},
-      y:{ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.04)'}}
+      x:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.03)'}},
+      y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}
     }
   };
   if (extra) Object.assign(opts, extra);
@@ -228,8 +228,8 @@ function renderScatter() {
       return p ? p.date+' · '+p.name.substring(0,20)+' · IF '+c.parsed.x.toFixed(2)+' · TSS '+Math.round(c.parsed.y) : '';
     }}}},
     scales:{
-      x:{min:xLo,max:xHi,title:{display:true,text:'Intensity Factor',color:'#4a5168',font:{size:9}},ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}},
-      y:{min:0,max:yHi,title:{display:true,text:'TSS',color:'#4a5168',font:{size:9}},ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.04)'}}
+      x:{min:xLo,max:xHi,title:{display:true,text:'Intensity Factor',color:'#5d657c',font:{size:9}},ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.03)'}},
+      y:{min:0,max:yHi,title:{display:true,text:'TSS',color:'#5d657c',font:{size:9}},ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}
     }
   });
 }
@@ -277,14 +277,14 @@ function renderCPModel() {
     plugins:{tooltip:{callbacks:{label:function(c){ return fmtSecs(c.parsed.x)+' · '+Math.round(c.parsed.y)+'W'; }}}},
     scales:{
       x:{type:'logarithmic',min:5,max:3600,
-         title:{display:true,text:'Durata (scala logaritmica)',color:'#4a5168',font:{size:9}},
-         ticks:{color:'#4a5168',font:{size:8},callback:function(v){
+         title:{display:true,text:'Durata (scala logaritmica)',color:'#5d657c',font:{size:9}},
+         ticks:{color:'#5d657c',font:{size:11},callback:function(v){
            var allowed=[5,15,30,60,300,600,1200,1800,3600];
            return allowed.indexOf(v)>=0 ? fmtSecs(v) : '';
          }},
          grid:{color:'rgba(255,255,255,.03)'}},
-      y:{title:{display:true,text:'Potenza (W)',color:'#4a5168',font:{size:9}},
-         ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.04)'}}
+      y:{title:{display:true,text:'Potenza (W)',color:'#5d657c',font:{size:9}},
+         ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}
     }
   });
 }
@@ -320,14 +320,14 @@ function renderPDM() {
     plugins:{tooltip:{callbacks:{label:function(c){ return fmtSecs(c.parsed.x)+' · '+Math.round(c.parsed.y)+'W'; }}}},
     scales:{
       x:{type:'logarithmic',min:5,max:7200,
-         title:{display:true,text:'Durata (scala logaritmica)',color:'#4a5168',font:{size:9}},
-         ticks:{color:'#4a5168',font:{size:8},callback:function(v){
+         title:{display:true,text:'Durata (scala logaritmica)',color:'#5d657c',font:{size:9}},
+         ticks:{color:'#5d657c',font:{size:11},callback:function(v){
            var allowed=[5,15,30,60,300,600,1200,1800,3600,7200];
            return allowed.indexOf(v)>=0 ? fmtSecs(v) : '';
          }},
          grid:{color:'rgba(255,255,255,.03)'}},
-      y:{title:{display:true,text:'Potenza (W)',color:'#4a5168',font:{size:9}},
-         ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.04)'}}
+      y:{title:{display:true,text:'Potenza (W)',color:'#5d657c',font:{size:9}},
+         ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}
     }
   });
 }

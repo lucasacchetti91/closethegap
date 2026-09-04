@@ -145,15 +145,15 @@ function renderWellnessCharts() {
       {label:'FC riposo (bpm)',data:w.map(function(x){return x.restingHR;}),borderColor:'#ff4d4d',tension:.35,pointRadius:0,borderWidth:1.5,spanGaps:true,yAxisID:'y'},
       {label:'HRV (ms)',data:w.map(function(x){return x.hrv;}),borderColor:'#22d46a',tension:.35,pointRadius:0,borderWidth:1.5,spanGaps:true,yAxisID:'y1'}
     ]},{scales:{
-      y:{position:'left',ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}},
-      y1:{position:'right',ticks:{color:'#4a5168',font:{size:8}},grid:{display:false}},
-      x:{ticks:{color:'#4a5168',font:{size:8},maxTicksLimit:10},grid:{display:false}}
+      y:{position:'left',ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.03)'}},
+      y1:{position:'right',ticks:{color:'#5d657c',font:{size:11}},grid:{display:false}},
+      x:{ticks:{color:'#5d657c',font:{size:11},maxTicksLimit:10},grid:{display:false}}
     }});
   }
   if (w.some(function(x){return x.sleepH!=null;})) {
     mkChart('ch-wellness-sleep','bar',{labels:labels,datasets:[
       {label:'Sonno (h)',data:w.map(function(x){return x.sleepH;}),backgroundColor:'rgba(167,139,250,.55)',borderRadius:2,borderWidth:0},
       {label:'8h',data:w.map(function(){return 8;}),type:'line',borderColor:'rgba(232,255,71,.35)',borderDash:[4,3],pointRadius:0,borderWidth:1}
-    ]},{scales:{x:{ticks:{color:'#4a5168',font:{size:8},maxTicksLimit:10},grid:{display:false}},y:{ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}}}});
+    ]},{scales:{x:{ticks:{color:'#5d657c',font:{size:11},maxTicksLimit:10},grid:{display:false}},y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.03)'}}}});
   }
 }

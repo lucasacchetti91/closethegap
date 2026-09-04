@@ -6,9 +6,32 @@
    ============================================================ */
 
 var USER_NAME = 'Luca';
-/* Obiettivo di stagione. Se lo prendi da races.js (gara A), sostituisci
-   questi valori con la lettura da quella struttura. */
+
+/* Obiettivo di stagione.
+   Invece di tenerlo scritto a mano, viene letto dai moduli che gia' lo
+   conoscono: GOAL_FTP dal generatore del piano e la data dalla prima
+   gara di priorita' A sul calendario Intervals.icu (races.js). Cosi'
+   se sposti la gara su Intervals.icu, la card eroe si aggiorna da sola
+   invece di mostrare una data ferma. I valori scritti restano come
+   ripiego se i moduli non sono ancora caricati. */
 var GOAL = { watts: 360, date: '2026-09-19' };
+
+function resolveGoal() {
+  /* Difesa sull'ordine di caricamento: renderWeekProgress (definita qui)
+     sovrascrive per hoisting quella di home.js, quindi puo' essere
+     invocata durante il bootstrap PRIMA che questo file abbia eseguito
+     l'assegnazione di GOAL. In quel caso GOAL sarebbe undefined e la
+     pagina Oggi andrebbe in errore. */
+  if (typeof GOAL === 'undefined' || !GOAL) GOAL = { watts: 360, date: '2026-09-19' };
+  if (typeof GOAL_FTP === 'number') GOAL.watts = GOAL_FTP;
+  if (typeof races !== 'undefined' && races && races.length) {
+    var td = (typeof today === 'function') ? today() : new Date().toISOString().slice(0,10);
+    var nextA = races.filter(function(r){ return r.priority === 'A' && r.date >= td; })[0];
+    if (nextA) { GOAL.date = nextA.date; GOAL.name = nextA.name; return GOAL; }
+  }
+  if (typeof GOAL_DATE === 'string' && GOAL_DATE) GOAL.date = GOAL_DATE;
+  return GOAL;
+}
 
 /* ---------- 1. Card TSB eroe ---------- */
 /* home.js scrive gia' in #k-tsb, #k-ctl, #k-atl, #k-ftp e mette su
@@ -17,6 +40,7 @@ var GOAL = { watts: 360, date: '2026-09-19' };
 function renderHero() {
   var flag = document.getElementById('tsb-flag');
   if (!flag) return;
+  resolveGoal();
   var tsb = parseFloat((document.getElementById('k-tsb').textContent || '0').replace('−', '-')) || 0;
 
   var state = tsb > 5   ? ['FRESCO',    'buona finestra per intensita',        'var(--grn)']
@@ -30,9 +54,12 @@ function renderHero() {
 
   var race = document.getElementById('hero-race');
   if (race) {
-    var d = new Date(GOAL.date);
-    race.innerHTML = d.getDate() + '<span>' +
-      d.toLocaleDateString('it', { month: 'short' }).replace('.', '') + '</span>';
+    var d = new Date(GOAL.date + 'T12:00');
+    if (!isNaN(d)) {
+      race.innerHTML = d.getDate() + '<span>' +
+        d.toLocaleDateString('it', { month: 'short' }).replace('.', '') + '</span>';
+      race.title = (GOAL.name ? GOAL.name + ' — ' : '') + GOAL.date;
+    }
   }
   var gap = document.getElementById('hero-gap');
   if (gap) {
@@ -138,15 +165,35 @@ function syncTabbar(id) {
 }
 /* Il saluto al posto del titolo di pagina, solo su "Oggi". */
 (function () {
+  /* renderHero() era definita ma non veniva mai invocata: stato TSB,
+     frase, gap al target e data gara sarebbero rimasti a "—". La
+     agganciamo sia a renderHome (che gira a ogni aggiornamento dei
+     dati) sia a showPage. */
+  var origHome = window.renderHome;
+  if (typeof origHome === 'function') {
+    window.renderHome = function () {
+      origHome.apply(this, arguments);
+      try { renderHero(); } catch (e) { console.warn('renderHero:', e.message); }
+    };
+  }
+
   var orig = window.showPage;
   window.showPage = function (id, el) {
     orig(id, el);
     syncTabbar(id);
     if (id === 'home') {
       document.getElementById('topbar-title').textContent = 'Bentornato, ' + USER_NAME;
+      try { renderHero(); } catch (e) { console.warn('renderHero:', e.message); }
     }
   };
-  document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('topbar-title').textContent = 'Bentornato, ' + USER_NAME;
-  });
+
+  function boot() {
+    var t = document.getElementById('topbar-title');
+    if (t) t.textContent = 'Bentornato, ' + USER_NAME;
+    try { renderHero(); } catch (e) { console.warn('renderHero:', e.message); }
+  }
+  /* Lo script sta in fondo al body: se il DOM e' gia' pronto
+     DOMContentLoaded non scattera' piu', quindi si esegue subito. */
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();

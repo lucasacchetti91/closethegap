@@ -31,7 +31,7 @@ function renderHome() {
   mkChart('ch-home-tss','bar',{labels:wks.map(function(w){return w.label;}),datasets:[
     {label:'TSS',data:wks.map(function(w){return w.tss;}),backgroundColor:'rgba(232,255,71,.5)',borderColor:'#e8ff47',borderWidth:1,borderRadius:3,yAxisID:'y'},
     {label:'Km',data:wks.map(function(w){return w.km;}),type:'line',borderColor:'#3b82f6',pointRadius:2,tension:.3,yAxisID:'y1'}
-  ]},{scales:{y:{ticks:{color:'#4a5168',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}},y1:{position:'right',ticks:{color:'#4a5168',font:{size:8}},grid:{display:false}}}});
+  ]},{scales:{y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.03)'}},y1:{position:'right',ticks:{color:'#5d657c',font:{size:11}},grid:{display:false}}}});
   var rec=[].concat(activities).sort(function(a,b){return b.date.localeCompare(a.date);}).slice(0,5);
   document.getElementById('home-recent').innerHTML=rec.map(function(a){
     return '<div class="rl-item">'+
