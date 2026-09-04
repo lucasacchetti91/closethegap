@@ -12,6 +12,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Close the Gap">
 <link rel="stylesheet" href="css/style.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/redesign.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
@@ -77,15 +80,22 @@
     <div class="page active" id="page-home">
       <div class="home-split">
         <div class="left-panel">
-          <div class="kpi-row">
-            <div class="kpi"><div class="kl">CTL · Fitness</div><div class="kv kv-up" id="k-ctl">—</div><div class="ks">42gg EMA</div></div>
-            <div class="kpi"><div class="kl">ATL · Fatica</div><div class="kv kv-dn" id="k-atl">—</div><div class="ks">7gg EMA</div></div>
-            <div class="kpi"><div class="kl">TSB · Forma</div><div class="kv" id="k-tsb">—</div><div class="ks">CTL−ATL ieri</div></div>
-          </div>
-          <div class="kpi-row">
-            <div class="kpi"><div class="kl">FTP</div><div class="kv kv-acc" id="k-ftp">340W</div><div class="ks">4.8 W/kg</div></div>
-            <div class="kpi"><div class="kl">LTHR</div><div class="kv kv-acc">180</div><div class="ks">bpm soglia</div></div>
-            <div class="kpi"><div class="kl">Obiettivo</div><div class="kv" style="color:var(--pur);">360W</div><div class="ks">19 set 2026</div></div>
+          <div class="hero-tsb">
+            <div class="hero-head">
+              <span class="gc-lbl">TSB · Forma</span>
+              <span class="hero-flag" id="tsb-flag">—</span>
+            </div>
+            <div class="hero-main">
+              <div class="kv" id="k-tsb">—</div>
+              <p class="hero-note" id="tsb-note"></p>
+            </div>
+            <div class="hero-row">
+              <div><span class="gc-lbl">CTL</span><span class="kv-s kv-up" id="k-ctl">—</span></div>
+              <div><span class="gc-lbl">ATL</span><span class="kv-s kv-dn" id="k-atl">—</span></div>
+              <div><span class="gc-lbl">FTP</span><span class="kv-s kv-acc" id="k-ftp">—</span></div>
+              <div><span class="gc-lbl">A target</span><span class="kv-s kv-pur" id="hero-gap">—</span></div>
+              <div><span class="gc-lbl">Gara</span><span class="kv-s" id="hero-race">—</span></div>
+            </div>
           </div>
           <div class="card">
             <div class="ct">Questa Settimana</div>
@@ -157,6 +167,14 @@
 
     <!-- ANALYTICS -->
     <div class="page" id="page-analytics">
+      <div class="chips">
+        <button class="chip active">Potenza</button>
+        <button class="chip">Forma</button>
+        <button class="chip">Volume</button>
+        <button class="chip">Modelli</button>
+        <button class="chip">Recupero</button>
+        <span class="chip chip-range">90 gg ▾</span>
+      </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;background:var(--s2);padding:11px 15px;border-radius:var(--r);border:1px solid var(--br);">
         <span style="font-size:.7rem;color:var(--tx3);">FTP</span>
         <input type="number" id="ftp-inp" value="340" class="act-input" style="width:60px;">
@@ -344,6 +362,30 @@
 <script src="js/sync.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/diagnostics.js"></script>
+<nav class="tabbar" id="tabbar">
+  <button data-tab="home" class="active" onclick="goTab('home',this)">
+    <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v10h12V10"/></svg>
+    Oggi
+  </button>
+  <button data-tab="plan" onclick="goTab('plan',this)">
+    <svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+    Piano
+  </button>
+  <button data-tab="calendar" onclick="goTab('calendar',this)">
+    <svg viewBox="0 0 24 24"><path d="M4 6h16v14H4z"/><path d="M4 10h16M9 4v4M15 4v4"/></svg>
+    Calendario
+  </button>
+  <button data-tab="activities" onclick="goTab('activities',this)">
+    <svg viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h6l-2-7-4 2"/></svg>
+    Attivita
+  </button>
+  <button data-tab="analytics" onclick="goTab('analytics',this)">
+    <svg viewBox="0 0 24 24"><path d="M4 20V9M10 20V4M16 20v-7M22 20H3"/></svg>
+    Analisi
+  </button>
+</nav>
+
 <script src="js/app.js"></script>
+<script src="js/ui-redesign.js"></script>
 </body>
 </html>
