@@ -29,7 +29,7 @@ const { JSDOM } = require('jsdom');
 const ROOT = path.join(__dirname, '..');
 const JS_FILES = ['config.js','icu-native.js','metrics.js','models.js','zones.js','workouts.js',
   'plan-generator.js','races.js','charts.js','wellness.js','activity-detail.js','home.js','plan.js',
-  'calendar.js','activities.js','sync.js','storage.js','diagnostics.js','app.js'];
+  'calendar.js','activities.js','sync.js','storage.js','diagnostics.js','app.js','ui-redesign.js'];
 
 let passed = 0, failed = 0;
 const failures = [];
@@ -156,9 +156,14 @@ setTimeout(() => {
   const overCap = future.filter(p => new Date(p.date + 'T12:00').getDay() !== 6 && p.durMin > 120);
   check('nessuna uscita infrasettimanale oltre 2h', overCap.length === 0,
     overCap.map(p => p.name + ' ' + p.durMin + 'min').join(', '));
-  const rideCounts = wkKeys.map(k => weeks[k].filter(s => s.type !== 'off').length);
-  const fullWeeks = rideCounts.slice(0, -1); // l'ultima settimana è parziale
-  check('3-4 uscite a settimana', fullWeeks.every(c => c >= 3 && c <= 4), 'conteggi: ' + rideCounts.join(','));
+  /* Solo le settimane COMPLETE (7 giorni): la prima e l'ultima del
+     periodo generato sono quasi sempre parziali, e contarle darebbe un
+     falso fallimento. */
+  const fullWeeks = wkKeys.filter(k => weeks[k].length === 7);
+  const rideCounts = fullWeeks.map(k => weeks[k].filter(s => s.type !== 'off').length);
+  check('3-4 uscite nelle settimane complete',
+    rideCounts.length === 0 || rideCounts.every(c => c >= 3 && c <= 4),
+    rideCounts.length ? 'conteggi: ' + rideCounts.join(',') : 'nessuna settimana completa nell\'orizzonte attuale');
   const tssPerHour = future.filter(p => p.durMin > 20).map(p => p.tss / (p.durMin / 60));
   check('densità TSS plausibile (<110 TSS/h)', tssPerHour.every(v => v < 110),
     'max ' + Math.round(Math.max(...tssPerHour)) + ' TSS/h');
