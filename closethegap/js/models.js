@@ -113,12 +113,16 @@ function pdmCurve(t, CP, Wp, Pmax) {
 }
 
 /* ---------- Efficiency Factor & Variability Index ---------- */
-function efSeries(acts, n) {
-  var f=[].concat(acts).filter(function(a){return (a.icu_ef!=null)||(a.np&&a.hr&&a.dur>2400);}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-(n||20));
+/* Finestra a GIORNI, non a numero di uscite: "ultime 20 attivita'"
+   copriva un periodo variabile e non confrontabile nel tempo. */
+function efSeries(acts, days) {
+  var cutoff = dateKey(new Date(new Date().setDate(new Date().getDate() - (days||90))));
+  var f=[].concat(acts).filter(function(a){return a.date>=cutoff && ((a.icu_ef!=null)||(a.np&&a.hr&&a.dur>2400));}).sort(function(a,b){return a.date.localeCompare(b.date);});
   return f.map(function(a){return {date:a.date, ef: a.icu_ef!=null?parseFloat(a.icu_ef.toFixed(3)):parseFloat((a.np/a.hr).toFixed(3)), native: a.icu_ef!=null};});
 }
-function viSeries(acts, n) {
-  var f=[].concat(acts).filter(function(a){return (a.icu_vi!=null)||(a.np&&a.avg_watts&&a.dur>2400);}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-(n||20));
+function viSeries(acts, days) {
+  var cutoffV = dateKey(new Date(new Date().setDate(new Date().getDate() - (days||90))));
+  var f=[].concat(acts).filter(function(a){return a.date>=cutoffV && ((a.icu_vi!=null)||(a.np&&a.avg_watts&&a.dur>2400));}).sort(function(a,b){return a.date.localeCompare(b.date);});
   return f.map(function(a){return {date:a.date, vi: a.icu_vi!=null?parseFloat(a.icu_vi.toFixed(3)):parseFloat((a.np/a.avg_watts).toFixed(3)), native: a.icu_vi!=null};});
 }
 
@@ -205,8 +209,9 @@ function decoupleSessionApprox(a) {
   return Math.max(0, Math.min(parseFloat(((vi-1)*15+(durH-1)*1.5).toFixed(1)), 15));
 }
 function buildDecoupleTimeline() {
-  var acts=[].concat(activities).filter(function(a){return a.icu_decoupling!=null||(a.np&&a.avg_watts&&a.dur>3600)||a.stream_decoupling_pct!=null;})
-    .sort(function(a,b){return a.date.localeCompare(b.date);}).slice(-15);
+  var cutoffD = dateKey(new Date(new Date().setDate(new Date().getDate() - 90)));
+  var acts=[].concat(activities).filter(function(a){return a.date>=cutoffD && (a.icu_decoupling!=null||(a.np&&a.avg_watts&&a.dur>3600)||a.stream_decoupling_pct!=null);})
+    .sort(function(a,b){return a.date.localeCompare(b.date);});
   return acts.map(function(a){
     if (a.icu_decoupling!=null) return {date:a.date,name:a.name,pct:parseFloat(a.icu_decoupling.toFixed(1)),real:true,source:'icu-native'};
     if (a.stream_decoupling_pct!=null) return {date:a.date,name:a.name,pct:a.stream_decoupling_pct,real:true,source:'strava-stream'};

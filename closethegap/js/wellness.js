@@ -137,23 +137,222 @@ function renderWellness() {
   renderWellnessCharts();
 }
 
-function renderWellnessCharts() {
-  var w = wellness.slice(-90);
-  var labels = w.map(function(x){return String(x.date).slice(5);});
-  if (w.some(function(x){return x.restingHR!=null;}) || w.some(function(x){return x.hrv!=null;})) {
-    mkChart('ch-wellness-hr','line',{labels:labels,datasets:[
-      {label:'FC riposo (bpm)',data:w.map(function(x){return x.restingHR;}),borderColor:'#ff4d4d',tension:.35,pointRadius:0,borderWidth:1.5,spanGaps:true,yAxisID:'y'},
-      {label:'HRV (ms)',data:w.map(function(x){return x.hrv;}),borderColor:'#22d46a',tension:.35,pointRadius:0,borderWidth:1.5,spanGaps:true,yAxisID:'y1'}
-    ]},{scales:{
-      y:{position:'left',ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.03)'}},
-      y1:{position:'right',ticks:{color:'#5d657c',font:{size:11}},grid:{display:false}},
-      x:{ticks:{color:'#5d657c',font:{size:11},maxTicksLimit:10},grid:{display:false}}
-    }});
+/* Media mobile a n giorni, allineata all'array (null dove non c'e'
+   abbastanza storico). Serve perche' i valori giornalieri di HRV e FC
+   a riposo sono troppo rumorosi per essere letti singolarmente: conta
+   il trend rispetto alla propria baseline. */
+function rollingMean(arr, field, n) {
+  var out = [], buf = [];
+  for (var i=0;i<arr.length;i++) {
+    var v = arr[i][field];
+    if (v != null) buf.push(v);
+    if (buf.length > n) buf.shift();
+    out.push(buf.length >= Math.min(3, n) ? buf.reduce(function(a,b){return a+b;},0)/buf.length : null);
   }
+  return out;
+}
+
+function renderWellnessCharts() {
+  var w = wellness.slice(-183); // 6 mesi, coerente con la pagina Oggi
+  var labels = w.map(function(x){return String(x.date).slice(5);});
+  var axis = {
+    x:{ticks:{color:'#5d657c',font:{size:10},maxTicksLimit:12,autoSkip:true},grid:{display:false}},
+    y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}
+  };
+
+  /* HRV: punti giornalieri tenui + media 7gg (il segnale) + baseline 42gg
+     (il riferimento). L'incrocio fra le due linee e' cio' che conta. */
+  if (w.some(function(x){return x.hrv!=null;})) {
+    mkChart('ch-wellness-hrv','line',{labels:labels,datasets:[
+      {label:'HRV giornaliero',data:w.map(function(x){return x.hrv;}),borderColor:'rgba(34,212,106,.22)',
+       pointRadius:1.5,pointBackgroundColor:'rgba(34,212,106,.35)',borderWidth:0,showLine:false,spanGaps:true},
+      {label:'Media 7 giorni',data:rollingMean(w,'hrv',7),borderColor:'#22d46a',tension:.35,pointRadius:0,borderWidth:2,spanGaps:true},
+      {label:'Baseline 42 giorni',data:rollingMean(w,'hrv',42),borderColor:'rgba(232,255,71,.55)',borderDash:[5,4],tension:.35,pointRadius:0,borderWidth:1.5,spanGaps:true}
+    ]},{scales:axis});
+  }
+
+  /* FC a riposo: stessa logica. In salita rispetto alla baseline e'
+     uno dei segnali piu' semplici di recupero incompleto. */
+  if (w.some(function(x){return x.restingHR!=null;})) {
+    mkChart('ch-wellness-hr','line',{labels:labels,datasets:[
+      {label:'FC riposo giornaliera',data:w.map(function(x){return x.restingHR;}),borderColor:'rgba(255,77,77,.22)',
+       pointRadius:1.5,pointBackgroundColor:'rgba(255,77,77,.35)',borderWidth:0,showLine:false,spanGaps:true},
+      {label:'Media 7 giorni',data:rollingMean(w,'restingHR',7),borderColor:'#ff4d4d',tension:.35,pointRadius:0,borderWidth:2,spanGaps:true},
+      {label:'Baseline 42 giorni',data:rollingMean(w,'restingHR',42),borderColor:'rgba(232,255,71,.55)',borderDash:[5,4],tension:.35,pointRadius:0,borderWidth:1.5,spanGaps:true}
+    ]},{scales:axis});
+  }
+
+  /* Sonno: barre giornaliere + media 7gg. La media conta piu' della
+     singola notte; la riga a 8h e' un riferimento, non un obbligo. */
   if (w.some(function(x){return x.sleepH!=null;})) {
     mkChart('ch-wellness-sleep','bar',{labels:labels,datasets:[
-      {label:'Sonno (h)',data:w.map(function(x){return x.sleepH;}),backgroundColor:'rgba(167,139,250,.55)',borderRadius:2,borderWidth:0},
-      {label:'8h',data:w.map(function(){return 8;}),type:'line',borderColor:'rgba(232,255,71,.35)',borderDash:[4,3],pointRadius:0,borderWidth:1}
-    ]},{scales:{x:{ticks:{color:'#5d657c',font:{size:11},maxTicksLimit:10},grid:{display:false}},y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.03)'}}}});
+      {label:'Sonno (h)',data:w.map(function(x){return x.sleepH;}),backgroundColor:'rgba(167,139,250,.45)',borderRadius:2,borderWidth:0},
+      {label:'Media 7 giorni',data:rollingMean(w,'sleepH',7),type:'line',borderColor:'#a78bfa',tension:.35,pointRadius:0,borderWidth:2,spanGaps:true},
+      {label:'8h',data:w.map(function(){return 8;}),type:'line',borderColor:'rgba(232,255,71,.3)',borderDash:[4,3],pointRadius:0,borderWidth:1}
+    ]},{scales:axis});
   }
+
+  /* VO2max stimato dal Garmin: si muove lentamente, quindi il trend su
+     mesi e' leggibile. E' una stima da FC/potenza, non un test da
+     laboratorio: guarda la direzione, non il valore assoluto. */
+  if (w.some(function(x){return x.vo2max!=null;})) {
+    mkChart('ch-wellness-vo2','line',{labels:labels,datasets:[
+      {label:'VO2max stimato (Garmin)',data:w.map(function(x){return x.vo2max;}),borderColor:'#3b82f6',
+       backgroundColor:'rgba(59,130,246,.08)',tension:.35,pointRadius:0,borderWidth:2,fill:true,spanGaps:true}
+    ]},{scales:axis});
+  }
+
+  /* Peso e W/kg: il peso entra direttamente nell'obiettivo, perche'
+     i W/kg salgono anche calando di massa, non solo alzando la potenza. */
+  if (w.some(function(x){return x.weight!=null;})) {
+    var wkg = w.map(function(x){ return (x.weight && x.eftp) ? parseFloat((x.eftp/x.weight).toFixed(2)) : null; });
+    mkChart('ch-wellness-weight','line',{labels:labels,datasets:[
+      {label:'Peso (kg)',data:w.map(function(x){return x.weight;}),borderColor:'#fbbf24',tension:.35,pointRadius:0,borderWidth:2,spanGaps:true,yAxisID:'y'},
+      {label:'W/kg (eFTP / peso)',data:wkg,borderColor:'#e8ff47',tension:.35,pointRadius:0,borderWidth:2,spanGaps:true,yAxisID:'y1'}
+    ]},{scales:{
+      x:axis.x,
+      y:{position:'left',ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}},
+      y1:{position:'right',ticks:{color:'#5d657c',font:{size:11}},grid:{display:false}}
+    }});
+  }
+}
+
+/* ============================================================
+   METRICHE DI CARICO E RECUPERO AGGIUNTIVE
+   Calcolate dai dati che gia' abbiamo (TSS giornaliero e sonno),
+   senza bisogno di nuovi endpoint.
+   ============================================================ */
+
+/* ---- ACWR: rapporto fra carico acuto (7gg) e cronico (28gg) ----
+   Idea di Gabbett: non conta il carico assoluto ma quanto rapidamente
+   cambia. La fascia 0.8-1.3 e' quella comunemente indicata come
+   "sostenibile"; sopra 1.5 il carico sta salendo molto in fretta.
+
+   ONESTA' SULL'EVIDENZA: l'ACWR e' popolare ma metodologicamente
+   contestato - Impellizzeri e altri hanno mostrato che il rapporto
+   soffre di artefatti matematici (il denominatore contiene il
+   numeratore) e che la relazione con gli infortuni e' piu' debole di
+   quanto sostenuto all'inizio. Qui e' un indicatore di tendenza per
+   accorgersi degli strappi nel carico, non una soglia da rispettare
+   alla lettera. */
+function computeACWR() {
+  var pmc = computePMC();
+  var byDate = {};
+  pmc.history.forEach(function(d){ byDate[d.date] = d.tss || 0; });
+  var dates = pmc.history.map(function(d){ return d.date; });
+  var out = [];
+  for (var i = 27; i < dates.length; i++) {
+    var acute = 0, chronic = 0;
+    for (var j = 0; j < 28; j++) {
+      var v = byDate[dates[i-j]] || 0;
+      chronic += v;
+      if (j < 7) acute += v;
+    }
+    var a = acute / 7, c = chronic / 28;
+    out.push({ date: dates[i], acwr: c > 0 ? parseFloat((a/c).toFixed(2)) : null });
+  }
+  return out;
+}
+
+/* ---- Monotonia e Strain (Foster) ----
+   Monotonia = media del carico giornaliero / sua deviazione standard
+   sui 7 giorni. Alta monotonia significa allenarsi sempre uguale, senza
+   alternare duro e facile: nei lavori di Foster e' associata a maggiore
+   rischio di malattia e sovraccarico, piu' del carico totale in se'.
+   Strain = carico settimanale x monotonia. */
+function computeMonotony() {
+  var pmc = computePMC();
+  var h = pmc.history;
+  var out = [];
+  for (var i = 6; i < h.length; i++) {
+    var vals = [];
+    for (var j = 0; j < 7; j++) vals.push(h[i-j].tss || 0);
+    var mean = vals.reduce(function(s,v){return s+v;},0) / 7;
+    var sd = Math.sqrt(vals.reduce(function(s,v){return s + Math.pow(v-mean,2);},0) / 7);
+    var mono = sd > 0.5 ? parseFloat((mean/sd).toFixed(2)) : null;
+    out.push({
+      date: h[i].date,
+      monotony: mono,
+      strain: mono ? Math.round(mean * 7 * mono) : null
+    });
+  }
+  return out;
+}
+
+/* ---- Debito di sonno ----
+   Deficit cumulato rispetto a un obiettivo, sugli ultimi 14 giorni.
+   Piu' leggibile della singola notte: una notte corta non conta, due
+   settimane sotto target si'. */
+function sleepDebt(targetHours, days) {
+  targetHours = targetHours || 8;
+  days = days || 14;
+  var recent = wellness.filter(function(w){ return w.sleepH != null; }).slice(-days);
+  if (!recent.length) return null;
+  var debt = recent.reduce(function(s,w){ return s + (targetHours - w.sleepH); }, 0);
+  return {
+    debtHours: parseFloat(debt.toFixed(1)),
+    nights: recent.length,
+    avg: parseFloat((recent.reduce(function(s,w){return s+w.sleepH;},0)/recent.length).toFixed(1)),
+    target: targetHours
+  };
+}
+
+function renderLoadCharts() {
+  var acwr = computeACWR().slice(-90);
+  if (acwr.length) {
+    var labels = acwr.map(function(d){ return d.date.slice(5); });
+    mkChart('ch-fitness-acwr','line',{labels:labels,datasets:[
+      {label:'ACWR (7gg / 28gg)',data:acwr.map(function(d){return d.acwr;}),borderColor:'#e8ff47',
+       tension:.35,pointRadius:0,borderWidth:2,spanGaps:true},
+      {label:'1.3 — limite alto',data:acwr.map(function(){return 1.3;}),borderColor:'rgba(255,77,77,.45)',
+       borderDash:[4,3],pointRadius:0,borderWidth:1},
+      {label:'0.8 — limite basso',data:acwr.map(function(){return 0.8;}),borderColor:'rgba(59,130,246,.45)',
+       borderDash:[4,3],pointRadius:0,borderWidth:1}
+    ]},{scales:{x:{ticks:{color:'#5d657c',font:{size:11},maxTicksLimit:10},grid:{display:false}},
+                y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.03)'}}}});
+  }
+
+  var mono = computeMonotony().slice(-90);
+  if (mono.length) {
+    var ml = mono.map(function(d){ return d.date.slice(5); });
+    mkChart('ch-fitness-monotony','line',{labels:ml,datasets:[
+      {label:'Monotonia',data:mono.map(function(d){return d.monotony;}),borderColor:'#a78bfa',
+       tension:.35,pointRadius:0,borderWidth:2,spanGaps:true,yAxisID:'y'},
+      {label:'2.0 — soglia di attenzione',data:mono.map(function(){return 2;}),borderColor:'rgba(255,77,77,.4)',
+       borderDash:[4,3],pointRadius:0,borderWidth:1,yAxisID:'y'},
+      {label:'Strain',data:mono.map(function(d){return d.strain;}),borderColor:'rgba(251,191,36,.65)',
+       tension:.35,pointRadius:0,borderWidth:1.5,spanGaps:true,yAxisID:'y1'}
+    ]},{scales:{
+      x:{ticks:{color:'#5d657c',font:{size:11},maxTicksLimit:10},grid:{display:false}},
+      y:{position:'left',ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.03)'}},
+      y1:{position:'right',ticks:{color:'#5d657c',font:{size:11}},grid:{display:false}}
+    }});
+  }
+
+  var el = document.getElementById('load-notes');
+  if (!el) return;
+  var lastAcwr = acwr.length ? acwr[acwr.length-1].acwr : null;
+  var lastMono = mono.length ? mono[mono.length-1].monotony : null;
+  var sd = sleepDebt(8, 14);
+  var parts = [];
+  if (lastAcwr != null) {
+    var aState = lastAcwr > 1.5 ? ['var(--red)','carico in rapida salita']
+               : lastAcwr > 1.3 ? ['var(--yel)','sopra la fascia consueta']
+               : lastAcwr < 0.8 ? ['var(--blu)','scarico o interruzione']
+               : ['var(--grn)','dentro la fascia sostenibile'];
+    parts.push('<strong style="color:'+aState[0]+';">ACWR '+lastAcwr+'</strong> — '+aState[1]);
+  }
+  if (lastMono != null) {
+    var mState = lastMono > 2 ? ['var(--yel)','allenamenti troppo simili fra loro: alterna di piu\' duro e facile']
+                              : ['var(--grn)','buona alternanza fra giorni duri e facili'];
+    parts.push('<strong style="color:'+mState[0]+';">Monotonia '+lastMono+'</strong> — '+mState[1]);
+  }
+  if (sd) {
+    var dState = sd.debtHours > 10 ? 'var(--red)' : sd.debtHours > 4 ? 'var(--yel)' : 'var(--grn)';
+    parts.push('<strong style="color:'+dState+';">Debito di sonno '+(sd.debtHours>0?'+':'')+sd.debtHours+'h</strong>'+
+      ' su '+sd.nights+' notti (media '+sd.avg+'h contro un obiettivo di '+sd.target+'h)');
+  }
+  el.innerHTML = parts.length
+    ? parts.map(function(p){ return '<div style="padding:5px 0;">'+p+'</div>'; }).join('')
+    : '<div class="empty">Servono piu\' dati per queste metriche.</div>';
 }

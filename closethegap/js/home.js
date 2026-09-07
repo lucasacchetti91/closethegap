@@ -14,14 +14,14 @@ function renderHome() {
   document.getElementById('k-ftp').textContent=FTP+'W';
   var ws=weekStats(0), wp=weekPlanned(0);
   renderWeekProgress(ws, wp);
-  var h=pmc.history.slice(-60);
+  var h=pmc.history.slice(-183); // ~6 mesi, non piu' 60 giorni
   mkChart('ch-mini-pmc','line',{labels:h.map(function(d){return d.date.slice(5);}),datasets:[
     {label:'CTL',data:h.map(function(d){return d.ctl;}),borderColor:'#3b82f6',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
     {label:'ATL',data:h.map(function(d){return d.atl;}),borderColor:'#ff4d4d',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
     {label:'TSB',data:h.map(function(d){return d.tsb;}),borderColor:'#e8ff47',tension:.4,pointRadius:0,fill:false,borderWidth:1.5}
-  ]});
+  ]},{scales:{x:{ticks:{color:'#5d657c',font:{size:11},maxTicksLimit:12},grid:{display:false}},y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}}});
   var wks=[];
-  for (var i=7;i>=0;i--) {
+  for (var i=25;i>=0;i--) { // 26 settimane = ~6 mesi
     var s=weekStats(i); var d=new Date(); d.setDate(d.getDate()-i*7);
     var m=new Date(d); m.setDate(d.getDate()-d.getDay()+1);
     wks.push({label:m.toLocaleDateString('it',{day:'2-digit',month:'2-digit'}),tss:Math.round(s.tss),km:Math.round(s.km/1000)});
@@ -31,7 +31,10 @@ function renderHome() {
   mkChart('ch-home-tss','bar',{labels:wks.map(function(w){return w.label;}),datasets:[
     {label:'TSS',data:wks.map(function(w){return w.tss;}),backgroundColor:'rgba(232,255,71,.5)',borderColor:'#e8ff47',borderWidth:1,borderRadius:3,yAxisID:'y'},
     {label:'Km',data:wks.map(function(w){return w.km;}),type:'line',borderColor:'#3b82f6',pointRadius:2,tension:.3,yAxisID:'y1'}
-  ]},{scales:{y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.03)'}},y1:{position:'right',ticks:{color:'#5d657c',font:{size:11}},grid:{display:false}}}});
+  ]},{scales:{
+    x:{ticks:{color:'#5d657c',font:{size:11},maxTicksLimit:13},grid:{display:false}},
+    y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.03)'}},
+    y1:{position:'right',ticks:{color:'#5d657c',font:{size:11}},grid:{display:false}}}});
   var rec=[].concat(activities).sort(function(a,b){return b.date.localeCompare(a.date);}).slice(0,5);
   document.getElementById('home-recent').innerHTML=rec.map(function(a){
     return '<div class="rl-item">'+

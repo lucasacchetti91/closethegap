@@ -140,20 +140,70 @@ async function syncICUZoneDefs() {
 /* Etichette per una serie di tempi-in-zona di lunghezza arbitraria.
    Se conosciamo le definizioni ICU le usiamo (con i watt/bpm reali),
    altrimenti etichettiamo Z1..Zn senza inventare intervalli. */
+/* I bound delle zone su Intervals.icu possono essere PERCENTUALI della
+   soglia oppure valori ASSOLUTI (watt / bpm), e la risposta non lo
+   dichiara. Vanno quindi dedotti, con prudenza.
+
+   BUG CORRETTO: la versione precedente considerava percentuale ogni
+   valore <= 200. Le zone cardiache assolute (es. 145, 160, 172, 180,
+   190 bpm) rientrano tutte in quella soglia, quindi venivano
+   moltiplicate: 145 diventava 145x180/100 = 261 bpm. Da qui i valori
+   assurdi nel grafico Distribuzione zona HR.
+
+   Discriminante usato: le percentuali di soglia partono in basso
+   (la cima della Z1 sta intorno al 55-70%), mentre i valori assoluti
+   partono gia' alti (oltre 100 bpm o 150 W). Se il bound piu' basso e'
+   sotto 90, sono percentuali. In caso di risultato implausibile si
+   preferisce non mostrare alcun intervallo piuttosto che mostrarne uno
+   sbagliato. */
+/* I confini di zona restituiti da Intervals.icu possono essere valori
+   ASSOLUTI (watt, bpm) oppure PERCENTUALI della soglia. Distinguerli con
+   una soglia fissa e' fragile: un confine assoluto basso e uno
+   percentuale alto ricadono nello stesso intervallo, e sbagliando si
+   ottengono zone cardiache senza senso (es. 216 bpm).
+
+   Criterio piu' solido: ogni sistema di zone e' ANCORATO alla soglia,
+   quindi in quello giusto un confine cade praticamente su di essa
+   (FTP per la potenza, LTHR per la FC). Si provano entrambe le letture
+   e si tiene quella in cui un confine si avvicina di piu' al
+   riferimento, scartando quelle fisiologicamente impossibili. */
+function detectZoneUnit(bounds, ref, ceiling) {
+  var nums = (bounds||[]).filter(function(v){ return typeof v === 'number' && isFinite(v); });
+  if (!nums.length || !ref) return null;
+
+  function score(vals) {
+    var mx = Math.max.apply(null, vals);
+    if (ceiling && mx > ceiling) return Infinity;      // impossibile
+    var best = Infinity;
+    vals.forEach(function(v){ best = Math.min(best, Math.abs(v - ref)); });
+    return best / ref;                                  // errore relativo
+  }
+  var asAbs = nums.slice();
+  var asPct = nums.map(function(v){ return v * ref / 100; });
+  var sAbs = score(asAbs), sPct = score(asPct);
+  if (sAbs === Infinity && sPct === Infinity) return null;
+  return sPct < sAbs ? 'percent' : 'absolute';
+}
+
 function zoneLabelsFor(count, kind) {
   var defs = ICU_ZONE_DEFS && ICU_ZONE_DEFS[kind];
   var out = [];
+  var ref = defs ? (kind==='power' ? (defs.ftp||FTP) : (defs.lthr||LTHR)) : null;
+  // limite di plausibilita': oltre questo il valore e' certamente sbagliato
+  var ceiling = kind==='power' ? (FTP||300)*4 : Math.max(HR_MAX||200, 210) + 15;
+  var unit = defs && defs.bounds ? detectZoneUnit(defs.bounds, ref, ceiling) : null;
+
   for (var i=0;i<count;i++) {
     var name = defs && defs.names && defs.names[i] ? defs.names[i] : 'Z'+(i+1);
     var range = null;
-    if (defs && defs.bounds) {
-      var ref = kind==='power' ? (defs.ftp||FTP) : (defs.lthr||LTHR);
+    if (defs && defs.bounds && unit && ref) {
       var hi = defs.bounds[i], lo = i===0 ? 0 : defs.bounds[i-1];
-      if (typeof hi === 'number' && ref) {
-        // i bound ICU possono essere percentuali o valori assoluti
-        var asAbs = hi <= 200 ? Math.round(hi*ref/100) : Math.round(hi);
-        var loAbs = lo === 0 ? 0 : (lo <= 200 ? Math.round(lo*ref/100) : Math.round(lo));
-        range = loAbs+'–'+asAbs+(kind==='power'?'W':'bpm');
+      if (typeof hi === 'number') {
+        var conv = function(v){ return v===0 ? 0 : Math.round(unit==='percent' ? v*ref/100 : v); };
+        var hiAbs = conv(hi), loAbs = conv(lo);
+        if (hiAbs <= ceiling && hiAbs > loAbs) {
+          range = loAbs+'\u2013'+hiAbs+(kind==='power'?'W':'bpm');
+        }
       }
     }
     out.push({name:name, range:range});
@@ -344,7 +394,9 @@ function normalizePowerCurve(raw) {
   if (!pts || !pts.length) return null;
 
   // Tiene solo le durate che l'app usa nei grafici
-  var wanted = [5,15,30,60,120,300,480,600,1200,1800,3600];
+  /* 1s e 3min aggiunti: servono ai riquadri dei best effort accanto
+     alla curva di potenza. */
+  var wanted = [1,5,15,30,60,120,180,300,480,600,1200,1800,3600];
   var labelFor = function(s){ return s<60 ? s+'s' : s<3600 ? Math.round(s/60)+'min' : '1h'; };
   var out = [];
   wanted.forEach(function(target){

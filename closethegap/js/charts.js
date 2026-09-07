@@ -34,8 +34,26 @@ function recalcAll() {
    li faceva ridisegnare anche quando non erano visibili, e mescolava
    due domande diverse (quanto carico metto dentro / come sto
    rispondendo). */
+/* Navigazione a chip in Analisi & Power: mostra solo i blocchi del
+   gruppo scelto. I contenitori di primo livello hanno data-group;
+   quelli senza restano sempre visibili (diagnostica, intestazioni). */
+function filterAnalytics(group, btn) {
+  var page = document.getElementById('page-analytics');
+  if (!page) return;
+  page.querySelectorAll('[data-group]').forEach(function(el){
+    if (el.closest('.chips')) return; // i chip stessi non si nascondono
+    el.style.display = (group === 'all' || el.dataset.group === group) ? '' : 'none';
+  });
+  var chips = document.querySelectorAll('#analytics-chips .chip');
+  for (var i=0;i<chips.length;i++) chips[i].classList.toggle('active', chips[i] === btn);
+  // i grafici nascosti non si ridimensionano: li ridisegniamo alla riapertura
+  if (typeof renderAnalytics === 'function') { try { renderAnalytics(); } catch(e){} }
+  window.scrollTo(0, 0);
+}
+
 function renderFitness() {
   try { renderWellness(); } catch(e) { console.warn('wellness:',e.message); }
+  try { renderLoadCharts(); } catch(e) { console.warn('carico:',e.message); }
 }
 
 function renderAnalytics() {
@@ -51,13 +69,21 @@ function renderAnalytics() {
   var mk=Object.keys(mm).sort();
   mkChart('ch-km','bar',{labels:mk,datasets:[{label:'Km',data:mk.map(function(k){return Math.round(mm[k]/1000);}),backgroundColor:'rgba(34,212,106,.4)',borderColor:'#22d46a',borderWidth:1,borderRadius:3}]});
   mkChart('ch-hours','bar',{labels:mk,datasets:[{label:'Ore',data:mk.map(function(k){return parseFloat((hm[k]/3600).toFixed(1));}),backgroundColor:'rgba(59,130,246,.4)',borderColor:'#3b82f6',borderWidth:1,borderRadius:3}]});
-  var showBE=['1min','5min','20min','1h'];
-  document.getElementById('power-kpis').innerHTML=
-    bestEfforts.filter(function(e){return showBE.indexOf(e.label)>=0;}).map(function(e){
-      return '<div class="pk"><div class="pkv">'+e.watts+'W</div><div class="pkl">'+e.label+' · '+Math.round(e.watts/FTP*100)+'%</div></div>';
-    }).join('')+
-    '<div class="pk"><div class="pkv" style="color:var(--acc);">'+FTP+'W</div><div class="pkl">FTP</div></div>'+
-    '<div class="pk"><div class="pkv">'+parseFloat((FTP/WEIGHT_KG).toFixed(1))+'</div><div class="pkl">W/kg</div></div>';
+  /* Durate richieste per i riquadri accanto alla curva. Si cerca la
+     corrispondenza per SECONDI, non per etichetta: le etichette
+     cambiano a seconda della sorgente (curva ICU o valori locali). */
+  var wantSecs = [1, 30, 60, 180, 300, 600, 1200];
+  var beHtml = wantSecs.map(function(sec){
+    var e = bestEfforts.reduce(function(b,x){
+      return (!b || Math.abs(x.secs-sec) < Math.abs(b.secs-sec)) ? x : b;
+    }, null);
+    if (!e || Math.abs(e.secs-sec) > Math.max(1, sec*0.15)) return '';
+    var lbl = sec<60 ? sec+'s' : (sec/60)+'min';
+    return '<div class="pk"><div class="pkv">'+e.watts+'W</div>'+
+           '<div class="pkl">'+lbl+' · '+Math.round(e.watts/FTP*100)+'% CP</div></div>';
+  }).join('');
+  document.getElementById('power-kpis').innerHTML = beHtml ||
+    '<div class="pk"><div class="pkl">Nessuna curva di potenza: premi "Sync metriche avanzate ICU".</div></div>';
   mkChart('ch-pc','line',{labels:bestEfforts.map(function(e){return e.label;}),datasets:[
     {label:'Best Power',data:bestEfforts.map(function(e){return e.watts;}),borderColor:'#e8ff47',backgroundColor:'rgba(232,255,71,.07)',tension:.4,pointRadius:3,pointBackgroundColor:'#e8ff47',fill:true,borderWidth:1.5},
     {label:'FTP',data:bestEfforts.map(function(){return FTP;}),borderColor:'rgba(59,130,246,.4)',borderDash:[4,4],pointRadius:0,fill:false,borderWidth:1}
@@ -341,16 +367,16 @@ function renderPDM() {
 }
 
 function renderEF() {
-  var series=efSeries(activities,20);
+  var series=efSeries(activities,90); // 90 giorni
   if(!series.length) return;
   mkChart('ch-ef','line',{
     labels:series.map(function(s){return s.date.slice(5)+(s.native?' ●':'');}),
     datasets:[{label:'EF (NP/HR, ● = nativo Intervals.icu)',data:series.map(function(s){return s.ef;}),borderColor:'#22d46a',backgroundColor:'rgba(34,212,106,.1)',tension:.3,pointRadius:series.map(function(s){return s.native?4:3;}),pointBackgroundColor:'#22d46a',fill:true,borderWidth:1.5}]
-  });
+  },{scales:{x:{ticks:{color:'#5d657c',font:{size:10},maxTicksLimit:14,autoSkip:true},grid:{display:false}},y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}}});
 }
 
 function renderVI() {
-  var series=viSeries(activities,20);
+  var series=viSeries(activities,90); // 90 giorni
   if(!series.length) return;
   var colors=series.map(function(s){return s.vi<1.05?'rgba(34,212,106,.7)':s.vi<1.10?'rgba(251,191,36,.7)':s.vi<1.15?'rgba(249,115,22,.7)':'rgba(255,77,77,.7)';});
   mkChart('ch-vi','bar',{
@@ -360,7 +386,7 @@ function renderVI() {
       {label:'1.05',data:series.map(function(){return 1.05;}),type:'line',borderColor:'rgba(34,212,106,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1},
       {label:'1.15',data:series.map(function(){return 1.15;}),type:'line',borderColor:'rgba(255,77,77,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1}
     ]
-  });
+  },{scales:{x:{ticks:{color:'#5d657c',font:{size:10},maxTicksLimit:14,autoSkip:true},grid:{display:false}},y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}}});
 }
 
 function renderWbal() {
@@ -554,5 +580,5 @@ function renderDecouple() {
       {label:'Decoupling % (● = nativo Intervals.icu · ○ = stream Strava)',data:timeline.map(function(d){return d.pct;}),backgroundColor:colors,borderRadius:3,borderWidth:0},
       {label:'Soglia 5%',data:timeline.map(function(){return 5;}),type:'line',borderColor:'rgba(255,77,77,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1}
     ]
-  });
+  },{scales:{x:{ticks:{color:'#5d657c',font:{size:10},maxTicksLimit:14,autoSkip:true},grid:{display:false}},y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}}});
 }
