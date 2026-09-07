@@ -347,6 +347,37 @@ setTimeout(() => {
     win.SEASON_START);
   check('la stagione parte da novembre 2025', win.SEASON_START === '2025-11-01', win.SEASON_START);
 
+  /* ---------- 10. Layout mobile ---------- */
+  section('Layout mobile');
+  /* I commenti vanno rimossi prima di analizzare il CSS: un commento
+     che cita la regola vecchia ("repeat(5,1fr)") faceva scattare un
+     falso positivo sulla regola nuova. */
+  const css = fs.readFileSync(path.join(ROOT, 'css', 'redesign.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const tabCount = win.document.querySelectorAll('#tabbar button').length;
+  check('tab bar: una voce per ogni pagina', tabCount === 6, tabCount + ' voci');
+  /* REGRESSIONE: la tab bar era fissata a repeat(5,1fr) mentre le voci
+     erano diventate 6, e la sesta finiva su una seconda riga. */
+  const fixedCols = css.match(/\.tabbar\{[^}]*repeat\((\d+),\s*1fr\)/s);
+  check('la tab bar non ha un numero di colonne fissato a mano',
+    !fixedCols || Number(fixedCols[1]) >= tabCount,
+    fixedCols ? 'repeat(' + fixedCols[1] + ') con ' + tabCount + ' voci' : 'usa grid-auto-flow');
+  check('ogni voce della tab bar ha una pagina corrispondente',
+    [...win.document.querySelectorAll('#tabbar button')]
+      .every(b => win.document.getElementById('page-' + b.dataset.tab)),
+    [...win.document.querySelectorAll('#tabbar button')].map(b => b.dataset.tab).join(','));
+
+  /* REGRESSIONE: gli elementi con white-space:nowrap nella topbar non
+     potevano restringersi e allargavano l'intera pagina oltre lo schermo. */
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const topbar = html.slice(html.indexOf('<div class="topbar"'), html.indexOf('</div>', html.indexOf('topbar-right')));
+  const nowrapIds = [...topbar.matchAll(/id="([a-z-]+)"[^>]*white-space:nowrap/g)].map(m => m[1]);
+  check('ogni elemento nowrap della topbar è gestito su mobile',
+    nowrapIds.every(id => new RegExp('#' + id + '\\{[^}]*(display:none|text-overflow|max-width)').test(css)),
+    nowrapIds.join(',') || 'nessuno');
+  check('rete di sicurezza contro lo sfondamento orizzontale',
+    /overflow-x:hidden/.test(css));
+
   console.log('\n' + '═'.repeat(60));
   console.log(failed === 0
     ? `✅ TUTTI I TEST SUPERATI (${passed})`
