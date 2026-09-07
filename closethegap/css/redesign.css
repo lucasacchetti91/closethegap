@@ -172,6 +172,35 @@ body{font-family:var(--font);letter-spacing:-.005em;-webkit-font-smoothing:antia
   .topbar-date{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;}
   .tb{min-height:40px;padding:0 14px;border-radius:10px;font-size:.75rem;}
   .hamburger-btn{width:44px;height:44px;margin-left:-8px;}
+
+  /* ---- SFONDAMENTO ORIZZONTALE ----
+     Causa: #sync-status e #import-status hanno white-space:nowrap e
+     stanno in un flex. Per impostazione predefinita un elemento flex
+     non si restringe sotto la larghezza del proprio contenuto
+     (min-width:auto), quindi un messaggio lungo come
+     "+0 nuove, 136 aggiornate" allargava la topbar oltre lo schermo e,
+     con essa, l'intera pagina: da qui le card che sembravano tagliate.
+     Si sblocca il restringimento con min-width:0 e si tronca il testo. */
+  .topbar{flex-wrap:wrap;row-gap:6px;}
+  .topbar > div{min-width:0;}
+  .topbar-right{min-width:0;flex-shrink:1;flex-wrap:wrap;justify-content:flex-end;}
+  #sync-status{
+    min-width:0;max-width:42vw;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  /* Messaggio di sync verboso: superfluo su mobile, la sua sola
+     lunghezza bastava a rompere il layout. */
+  #import-status{display:none;}
+  #icu-advanced-status{
+    display:block;width:100%;min-width:0;white-space:normal;
+  }
+
+  /* Rete di sicurezza: nessun figlio deve poter allargare la pagina. */
+  html,body{max-width:100%;overflow-x:hidden;}
+  .main,.content,.page{min-width:0;max-width:100%;}
+  .card,.hero-tsb,.goal-card{min-width:0;max-width:100%;box-sizing:border-box;}
+  .cw{max-width:100%;}
+  .cw canvas{max-width:100%!important;}
 }
 
 @media(max-width:640px){
@@ -222,7 +251,10 @@ body{font-family:var(--font);letter-spacing:-.005em;-webkit-font-smoothing:antia
 .tabbar{display:none;}
 @media(max-width:900px){
   .tabbar{
-    display:grid;grid-template-columns:repeat(5,1fr);
+    /* grid-auto-flow:column invece di repeat(5,1fr): le voci erano
+       diventate 6 con l'aggiunta di Fitness e la sesta finiva a capo.
+       Cosi' la barra si adatta da sola a qualunque numero di voci. */
+    display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
     position:fixed;left:0;right:0;bottom:0;z-index:25;
     background:rgba(13,15,20,.92);
     backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
@@ -231,9 +263,16 @@ body{font-family:var(--font);letter-spacing:-.005em;-webkit-font-smoothing:antia
   }
   .tabbar button{
     background:none;border:none;cursor:pointer;color:var(--tx3);
-    display:flex;flex-direction:column;align-items:center;gap:5px;
-    padding:6px 0;min-height:48px;font-family:var(--mono);
-    font-size:.6rem;letter-spacing:.04em;
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    padding:6px 1px;min-height:48px;font-family:var(--mono);
+    font-size:.55rem;letter-spacing:0;
+    min-width:0;                      /* senza questo il testo impedisce di restringersi */
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .tabbar button svg{flex-shrink:0;}
+  @media(max-width:400px){
+    .tabbar button{font-size:.5rem;}
+    .tabbar button svg{width:18px;height:18px;}
   }
   .tabbar button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;}
   .tabbar button.active{color:var(--acc);}
