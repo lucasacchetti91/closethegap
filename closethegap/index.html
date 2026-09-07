@@ -114,16 +114,12 @@
             <div id="week-progress"></div>
           </div>
           <div class="card">
-            <div class="ct">PMC — Ultimi 60 giorni</div>
-            <div class="cw" style="height:230px;"><canvas id="ch-mini-pmc"></canvas></div>
+            <div class="ct">PMC — Ultimi 6 mesi</div>
+            <div class="cw" style="height:320px;"><canvas id="ch-mini-pmc"></canvas></div>
           </div>
           <div class="card">
-            <div class="ct">TSS & Km — Ultime 8 Settimane</div>
-            <div class="cw" style="height:200px;"><canvas id="ch-home-tss"></canvas></div>
-          </div>
-          <div class="recent-list">
-            <div class="rl-title">Ultime Attività</div>
-            <div id="home-recent"></div>
+            <div class="ct">TSS & Km — Ultime 26 settimane</div>
+            <div class="cw" style="height:300px;"><canvas id="ch-home-tss"></canvas></div>
           </div>
         </div>
         <div class="right-panel">
@@ -134,6 +130,10 @@
           <div class="week-strip">
             <div class="ws-title">Settimana Corrente</div>
             <div class="ws-days" id="week-strip"></div>
+          </div>
+          <div class="recent-list">
+            <div class="rl-title">Ultime Attività</div>
+            <div id="home-recent"></div>
           </div>
           <div id="adapt-msg" style="display:none;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:var(--r);padding:13px;font-size:.74rem;color:var(--yel);line-height:1.6;"></div>
         </div>
@@ -179,13 +179,12 @@
 
     <!-- ANALYTICS -->
     <div class="page" id="page-analytics">
-      <div class="chips">
-        <button class="chip active">Potenza</button>
-        <button class="chip">Forma</button>
-        <button class="chip">Volume</button>
-        <button class="chip">Modelli</button>
-        <button class="chip">Recupero</button>
-        <span class="chip chip-range">90 gg ▾</span>
+      <div class="chips" id="analytics-chips" data-group="forma">
+        <button class="chip active" data-group="all" onclick="filterAnalytics('all',this)">Tutto</button>
+        <button class="chip" data-group="potenza" onclick="filterAnalytics('potenza',this)">Potenza</button>
+        <button class="chip" data-group="forma" onclick="filterAnalytics('forma',this)">Forma</button>
+        <button class="chip" data-group="volume" onclick="filterAnalytics('volume',this)">Volume</button>
+        <button class="chip" data-group="modelli" onclick="filterAnalytics('modelli',this)">Modelli</button>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;background:var(--s2);padding:11px 15px;border-radius:var(--r);border:1px solid var(--br);">
         <span style="font-size:.7rem;color:var(--tx3);">FTP</span>
@@ -212,22 +211,24 @@
         </div>
       </div>
       <div class="card"><div class="ct">PMC &mdash; CTL / ATL / TSB (120gg)</div><div class="cw" style="height:230px;"><canvas id="ch-pmc"></canvas></div></div>
-      <div class="g2">
+      <div class="g2" data-group="volume">
         <div class="card"><div class="ct">Km Mensili</div><div class="cw" style="height:160px;"><canvas id="ch-km"></canvas></div></div>
         <div class="card"><div class="ct">Ore Mensili</div><div class="cw" style="height:160px;"><canvas id="ch-hours"></canvas></div></div>
       </div>
       <div class="divider"></div>
-      <div class="card">
+      <div class="card" data-group="potenza">
         <div class="ct">Curva di Potenza &mdash; Best Efforts</div>
-        <div class="power-kpis" id="power-kpis"></div>
-        <div class="cw" style="height:200px;"><canvas id="ch-pc"></canvas></div>
+        <div class="pc-split">
+          <div class="cw" style="height:400px;"><canvas id="ch-pc"></canvas></div>
+          <div class="power-kpis pc-side" id="power-kpis"></div>
+        </div>
       </div>
-      <div class="g2">
+      <div class="g2" data-group="potenza">
         <div class="card"><div class="ct">Zone Potenza Coggan &mdash; <span id="pz-label">340W</span></div><div id="power-zones"></div></div>
         <div class="card"><div class="ct">W Medi per Uscita (ultimi 20)</div><div class="cw" style="height:190px;"><canvas id="ch-watts"></canvas></div></div>
       </div>
       <div class="divider"></div>
-      <div class="card">
+      <div class="card" data-group="volume">
         <div class="ct">Heat Map TSS &mdash; Ultimo Anno</div>
         <div class="hm-wrap" id="hm-wrap"></div>
         <div style="display:flex;gap:5px;align-items:center;margin-top:7px;font-size:.6rem;color:var(--tx3);">
@@ -240,36 +241,38 @@
           Piu
         </div>
       </div>
-      <div class="g2">
+      <div class="g2" data-group="potenza">
         <div class="card"><div class="ct">Distribuzione Zona Potenza</div><div id="zone-dist-power"></div><div id="zone-dist-power-note" style="font-size:.62rem;color:var(--tx3);margin-top:8px;"></div></div>
         <div class="card"><div class="ct">Distribuzione Zona HR &mdash; LTHR <span id="lthr-label">180</span>bpm</div><div id="zone-dist-hr"></div><div id="lthr-estimate-note" style="font-size:.62rem;color:var(--tx3);margin-top:8px;"></div></div>
       </div>
-      <div class="card">
+      <div class="card" data-group="volume">
         <div class="ct">Scatterplot TSS vs IF</div>
         <p style="font-size:.65rem;color:var(--tx3);margin-bottom:8px;">Recupero &middot; Volume &middot; Intensita &middot; Massimo &middot; Gara</p>
         <div class="cw" style="height:240px;"><canvas id="ch-scatter"></canvas></div>
       </div>
+      <div class="g2" data-group="modelli">
       <div class="card">
         <div class="ct">Modello Critical Power &mdash; CP / W'</div>
-        <div class="g3" style="margin-bottom:10px;">
+        <div class="g3 cp-kpis" style="margin-bottom:10px;">
           <div class="pk"><div class="pkv" id="cp-val">—</div><div class="pkl">Critical Power</div></div>
           <div class="pk"><div class="pkv" id="wp-val">—</div><div class="pkl">W' Riserva</div></div>
           <div class="pk"><div class="pkv" id="pmax-val">—</div><div class="pkl">P-max 5s</div></div>
         </div>
-        <div class="cw" style="height:200px;"><canvas id="ch-cp"></canvas></div>
+        <div class="cw" style="height:400px;"><canvas id="ch-cp"></canvas></div>
       </div>
-      <div class="divider"></div>
       <div class="card">
         <div class="ct">Power Duration Model &mdash; FTP Predictor</div>
-        <div class="g3" style="margin-bottom:14px;">
+        <div class="g3 cp-kpis" style="margin-bottom:14px;">
           <div class="pk"><div class="pkv" id="pdm-ftp">—</div><div class="pkl">FTP stimato</div><div class="pkw">Da best efforts</div></div>
           <div class="pk"><div class="pkv" id="pdm-cp">—</div><div class="pkl">Critical Power</div><div class="pkw">Modello Morton</div></div>
           <div class="pk"><div class="pkv" id="pdm-eta">—</div><div class="pkl">Giorni a 360W</div><div class="pkw">Al ritmo attuale</div></div>
         </div>
-        <div class="cw" style="height:220px;"><canvas id="ch-pdm"></canvas></div>
+        <div class="cw" style="height:400px;"><canvas id="ch-pdm"></canvas></div>
         <p style="font-size:.65rem;color:var(--tx3);margin-top:8px;" id="pdm-note"></p>
       </div>
-      <div class="g2">
+      </div>
+
+      <div class="g2" data-group="forma">
         <div class="card">
           <div class="ct">Efficiency Factor nel Tempo (NP/HR)</div>
           <p style="font-size:.68rem;color:var(--tx2);margin-bottom:8px;">Valori crescenti indicano miglioramento aerobico.</p>
@@ -281,7 +284,7 @@
           <div class="cw" style="height:180px;"><canvas id="ch-vi"></canvas></div>
         </div>
       </div>
-      <div class="g2">
+      <div class="g2" data-group="modelli">
         <div class="card">
           <div class="ct">W' Balance Model</div>
           <p style="font-size:.65rem;color:var(--tx2);margin-bottom:8px;">Punti evidenziati (&#9679; gialli) = calcolati da stream reali Strava (modello Skiba). Altri = stima a livello di sessione.</p>
@@ -294,19 +297,19 @@
           <div class="cw" style="height:160px;"><canvas id="ch-banister"></canvas></div>
         </div>
       </div>
-      <div class="card">
+      <div class="card" data-group="forma">
         <div class="ct">Decoupling Aerobico per Uscita</div>
         <p style="font-size:.68rem;color:var(--tx2);margin-bottom:10px;">&lt;5% = buon aerobico &middot; &gt;5% = drift cardiaco &middot; &#9679; = calcolato da stream reali Strava (1&#170; vs 2&#170; met&agrave; ride)</p>
         <div class="cw" style="height:180px;"><canvas id="ch-decouple"></canvas></div>
       </div>
 
-      <div class="card">
+      <div class="card" data-group="forma">
         <div class="ct">Proiezione FTP verso l'obiettivo</div>
         <div class="cw" style="height:200px;"><canvas id="ch-ftp-proj"></canvas></div>
         <div id="ftp-proj-note" style="font-size:.68rem;color:var(--tx2);margin-top:10px;line-height:1.6;"></div>
       </div>
 
-      <div class="card">
+      <div class="card" data-group="forma">
         <div class="ct">Proiezione forma al giorno gara</div>
         <div class="cw" style="height:200px;"><canvas id="ch-pmc-proj"></canvas></div>
         <div id="pmc-proj-note" style="font-size:.68rem;color:var(--tx2);margin-top:10px;line-height:1.6;"></div>
@@ -319,20 +322,68 @@
       <div id="wellness-render"></div>
       <div class="g2">
         <div class="card">
-          <div class="ct">FC a riposo &amp; HRV</div>
-          <div class="cw" style="height:210px;"><canvas id="ch-wellness-hr"></canvas></div>
+          <div class="ct">HRV &mdash; media 7gg vs baseline 42gg</div>
+          <div class="cw" style="height:240px;"><canvas id="ch-wellness-hrv"></canvas></div>
         </div>
         <div class="card">
-          <div class="ct">Sonno</div>
-          <div class="cw" style="height:210px;"><canvas id="ch-wellness-sleep"></canvas></div>
+          <div class="ct">FC a riposo &mdash; media 7gg vs baseline</div>
+          <div class="cw" style="height:240px;"><canvas id="ch-wellness-hr"></canvas></div>
         </div>
       </div>
+      <div class="card">
+        <div class="ct">Sonno &mdash; notti e media a 7 giorni</div>
+        <div class="cw" style="height:240px;"><canvas id="ch-wellness-sleep"></canvas></div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="ct">VO2max stimato</div>
+          <div class="cw" style="height:220px;"><canvas id="ch-wellness-vo2"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ct">Peso e W/kg</div>
+          <div class="cw" style="height:220px;"><canvas id="ch-wellness-weight"></canvas></div>
+        </div>
+      </div>
+      <div class="ct" style="margin:22px 0 10px;font-size:.82rem;">Carico e sostenibilit&agrave;
+        <span style="color:var(--tx3);font-weight:400;font-size:.85em;">&mdash; calcolate dal tuo TSS e dal sonno</span></div>
+      <div class="card" id="load-notes" style="font-size:.72rem;color:var(--tx2);line-height:1.6;margin-bottom:14px;"></div>
+      <div class="g2">
+        <div class="card">
+          <div class="ct">ACWR &mdash; carico acuto / cronico</div>
+          <div class="cw" style="height:210px;"><canvas id="ch-fitness-acwr"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ct">Monotonia &amp; Strain (Foster)</div>
+          <div class="cw" style="height:210px;"><canvas id="ch-fitness-monotony"></canvas></div>
+        </div>
+      </div>
+
       <div class="card" style="font-size:.68rem;color:var(--tx2);line-height:1.7;">
         <div class="ct">Come leggere questi dati</div>
         Il PMC (tab Analisi) misura il carico che <strong>metti dentro</strong>; questi dati dicono
-        come stai <strong>rispondendo</strong>. Il confronto &egrave; sempre fra la media a 7 giorni e la tua
-        baseline a 42: un singolo giorno storto non significa nulla, i dati HRV sono rumorosi.
+        come stai <strong>rispondendo</strong>. Il confronto &egrave; sempre fra la media a 7 giorni e la
+        baseline a 42: <strong>il valore di un singolo giorno non significa nulla</strong>, l'HRV &egrave;
+        una misura rumorosa. Il segnale utile &egrave; quando la linea a 7 giorni si stacca dalla
+        baseline e ci resta: HRV che scende o FC a riposo che sale indicano recupero incompleto.
         Quando due o pi&ugrave; segnali concordano, "Adatta Piano" alleggerisce la prossima sessione dura.
+        <br><br>
+        Il <strong>VO2max</strong> &egrave; una stima del Garmin ricavata da potenza e FC, non un test di
+        laboratorio: guarda la direzione nel tempo, non il numero. Il <strong>peso</strong> &egrave; qui
+        perch&eacute; entra direttamente nei W/kg: si pu&ograve; migliorare il rapporto anche senza alzare
+        la potenza, ma perdere peso a scapito del recupero &egrave; controproducente.
+        <br><br>
+        <span style="color:var(--tx3);">Readiness e stress non compaiono: il tuo Garmin non li invia a
+        Intervals.icu (verificato con la diagnostica). Se un giorno arrivassero, si aggiungerebbero da soli.</span>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--br);">
+          <strong>ACWR</strong>: rapporto fra il carico degli ultimi 7 giorni e quello degli ultimi 28.
+          Serve a vedere gli strappi nel carico, non il carico assoluto. &Egrave; un indicatore popolare
+          ma <strong>metodologicamente contestato</strong> &mdash; il denominatore contiene il numeratore, e la
+          relazione con gli infortuni si &egrave; rivelata pi&ugrave; debole di quanto sostenuto all'inizio:
+          usalo come segnale di tendenza, non come soglia da rispettare alla lettera.<br><br>
+          <strong>Monotonia</strong>: media del carico giornaliero divisa per la sua variabilit&agrave; su 7 giorni.
+          Alta monotonia significa allenarsi sempre allo stesso modo; nei lavori di Foster &egrave; associata
+          al sovraccarico pi&ugrave; del volume in s&eacute;. Sotto 2.0 &egrave; una buona alternanza.
+        </div>
       </div>
     </div>
 
