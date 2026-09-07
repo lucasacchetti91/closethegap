@@ -5,14 +5,14 @@
    perché chiama funzioni definite in tutti gli altri moduli.
    ============================================================ */
 
-var TITLES={home:'Oggi',plan:'Piano di Allenamento',calendar:'Calendario',activities:'Attivita',analytics:'Analisi & Power'};
+var TITLES={home:'Oggi',plan:'Piano di Allenamento',calendar:'Calendario',activities:'Attivita',analytics:'Analisi & Power',fitness:'Fitness'};
 function showPage(id,el) {
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
   document.getElementById('page-'+id).classList.add('active');
   if(el) el.classList.add('active');
   document.getElementById('topbar-title').textContent=TITLES[id]||id;
-  var fns={home:renderHome,plan:renderPlanPage,calendar:renderCal,activities:renderActs,analytics:renderAnalytics};
+  var fns={home:renderHome,plan:renderPlanPage,calendar:renderCal,activities:renderActs,analytics:renderAnalytics,fitness:renderFitness};
   if(fns[id]) fns[id]();
   closeSidebar(); // su mobile il drawer si chiude da solo dopo aver scelto una tab
 }

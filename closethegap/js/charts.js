@@ -30,6 +30,14 @@ function recalcAll() {
   renderAnalytics();
 }
 
+/* I grafici di recupero vivono ora nella sezione Fitness: tenerli qui
+   li faceva ridisegnare anche quando non erano visibili, e mescolava
+   due domande diverse (quanto carico metto dentro / come sto
+   rispondendo). */
+function renderFitness() {
+  try { renderWellness(); } catch(e) { console.warn('wellness:',e.message); }
+}
+
 function renderAnalytics() {
   var pmc=computePMC();
   var h=pmc.history.slice(-120);
@@ -80,7 +88,7 @@ function renderAnalytics() {
   try { renderDecouple(); } catch(e) { console.warn('decouple:',e.message); }
   try { renderFTPProjection(); } catch(e) { console.warn('ftpproj:',e.message); }
   try { renderPMCProjection(); } catch(e) { console.warn('pmcproj:',e.message); }
-  try { renderWellness(); } catch(e) { console.warn('wellness:',e.message); }
+
 }
 
 function renderHeatmap() {
