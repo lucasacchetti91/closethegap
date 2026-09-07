@@ -52,20 +52,45 @@ function renderHero() {
   flag.style.background = 'color-mix(in srgb, ' + state[2] + ' 12%, transparent)';
   document.getElementById('tsb-note').textContent = state[1];
 
-  var race = document.getElementById('hero-race');
-  if (race) {
-    var d = new Date(GOAL.date + 'T12:00');
-    if (!isNaN(d)) {
-      race.innerHTML = d.getDate() + '<span>' +
-        d.toLocaleDateString('it', { month: 'short' }).replace('.', '') + '</span>';
-      race.title = (GOAL.name ? GOAL.name + ' — ' : '') + GOAL.date;
-    }
+  /* ---- Card "FTP -> Obiettivo" ----
+     Il markup e' stato separato dalla card TSB, quindi qui vanno
+     riempiti anche il target, i W/kg, i giorni mancanti e la LTHR,
+     che prima non esistevano come campi a se'. */
+  var d = new Date(GOAL.date + 'T12:00');
+  var validDate = !isNaN(d.getTime());
+
+  var target = document.getElementById('gc-target');
+  if (target) target.textContent = GOAL.watts + 'W';
+
+  var wkg = document.getElementById('gc-wkg');
+  if (wkg && typeof WEIGHT_KG === 'number' && WEIGHT_KG > 0) {
+    wkg.textContent = (FTP / WEIGHT_KG).toFixed(1) + ' W/kg';
   }
+
+  var lthrEl = document.getElementById('hero-lthr');
+  if (lthrEl && typeof LTHR === 'number') lthrEl.textContent = LTHR;
+
+  var race = document.getElementById('hero-race');
+  if (race && validDate) {
+    race.textContent = d.getDate() + ' ' +
+      d.toLocaleDateString('it', { month: 'short' }).replace('.', '');
+    race.title = (GOAL.name ? GOAL.name + ' \u2014 ' : '') + GOAL.date;
+  }
+
+  var days = document.getElementById('gc-days');
+  if (days && validDate) {
+    var td = (typeof today === 'function') ? today() : new Date().toISOString().slice(0, 10);
+    var n = Math.round((d - new Date(td + 'T12:00')) / 86400000);
+    days.textContent = n > 0 ? n + ' gg' : (n === 0 ? 'oggi' : 'passata');
+  }
+
   var gap = document.getElementById('hero-gap');
   if (gap) {
     var delta = GOAL.watts - FTP;
-    gap.innerHTML = (delta > 0 ? '−' : '+') + Math.abs(delta) + '<span>W</span>';
-    gap.className = 'kv-s ' + (delta > 0 ? 'kv-pur' : 'kv-up');
+    gap.innerHTML = (delta > 0 ? '\u2212' : '+') + Math.abs(delta) + '<span>W</span>';
+    /* Mantiene gc-gap: e' la classe che ne definisce corpo e dimensione
+       nella nuova card. Sostituirla con kv-s la rimpicciolirebbe. */
+    gap.className = 'gc-gap ' + (delta > 0 ? 'kv-pur' : 'kv-up');
   }
 }
 
