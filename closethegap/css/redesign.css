@@ -239,3 +239,33 @@ body{font-family:var(--font);letter-spacing:-.005em;-webkit-font-smoothing:antia
   .tabbar button.active{color:var(--acc);}
   .tabbar button.active svg{stroke-width:2.2;}
 }
+
+/* ============================================================
+   CARD "FTP → OBIETTIVO"
+   Affiancata alla card TSB nella pagina Oggi. Sta sotto la regola 1
+   del sistema: il TSB resta il numero piu' grande, questa e' la
+   seconda voce e usa cifre piu' piccole.
+   ============================================================ */
+.hero-pair{display:grid;grid-template-columns:1.15fr 1fr;gap:12px;margin-bottom:12px;}
+@media(max-width:760px){.hero-pair{grid-template-columns:1fr;}}
+.hero-pair .hero-tsb{margin-bottom:0;}
+
+.goal-card{
+  background:var(--s2);border:1px solid var(--br);border-radius:var(--r2);
+  padding:16px 18px;display:flex;flex-direction:column;gap:8px;
+}
+.gc-head{display:flex;justify-content:space-between;align-items:center;}
+.gc-main{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+.gc-val{font-family:var(--mono);font-feature-settings:'tnum' 1;font-size:2rem;font-weight:700;
+        color:var(--acc);letter-spacing:-.03em;line-height:1;}
+.gc-arrow{color:var(--tx3);font-size:1.2rem;line-height:1;}
+.gc-target{font-family:var(--mono);font-feature-settings:'tnum' 1;font-size:2rem;font-weight:700;
+           color:var(--pur);letter-spacing:-.03em;line-height:1;}
+.gc-sub{font-family:var(--mono);font-size:.62rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;}
+.gc-foot{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+         margin-top:auto;padding-top:8px;border-top:1px solid var(--br);}
+.gc-gap{font-family:var(--mono);font-feature-settings:'tnum' 1;font-size:1.1rem;font-weight:700;letter-spacing:-.02em;}
+.gc-gap span{font-size:.62rem;font-weight:500;color:var(--tx3);margin-left:1px;}
+.gc-when{font-family:var(--mono);font-size:.6rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;
+         white-space:nowrap;}
+.gc-when span{color:var(--tx2);}
