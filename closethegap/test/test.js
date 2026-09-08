@@ -347,6 +347,43 @@ setTimeout(() => {
     win.SEASON_START);
   check('la stagione parte da novembre 2025', win.SEASON_START === '2025-11-01', win.SEASON_START);
 
+  /* ---------- 9bis. Libreria di allenamenti ---------- */
+  section('Formati di allenamento');
+  const pz = win.computePowerZones();
+  const CPt = 347, WPt = 29856;
+  const formats = ['seiler4x8','seiler4x16','norwegian4x4','eight3','fivex5fast','ronnestad4020',
+                   'ronnestad','bossi','fastart','overunder','sweetspot','wprime','torque'];
+  let allOk = true, detail = [];
+  formats.forEach(k => {
+    const s = win.buildByKey(k, '2026-09-10', 'Sett.1 · Costruzione', CPt, WPt, pz, 'Costruzione', null);
+    const ok = s && s.durMin > 20 && s.tss > 10 && !isNaN(s.tss) && s.blocks.length > 2 &&
+               (s.tss / (s.durMin / 60)) < 110;
+    if (!ok) { allOk = false; detail.push(k + '(' + (s ? s.durMin + 'min/' + s.tss + 'tss' : 'null') + ')'); }
+  });
+  check('tutti i formati producono sessioni valide', allOk, detail.join(', '));
+  check('almeno 13 formati disponibili', formats.length >= 13, formats.length + ' formati');
+
+  // In affilatura si tolgono ripetute, non si abbassa l'intensità
+  const build = win.buildByKey('seiler4x8', '2026-09-10', 'x', CPt, WPt, pz, 'Costruzione', null);
+  const taper = win.buildByKey('seiler4x8', '2026-09-10', 'x', CPt, WPt, pz, 'Affilatura', null);
+  const repsOf = s => s.blocks.filter(b => b.l === "8'").length;
+  check('in affilatura si riducono le ripetute', repsOf(taper) < repsOf(build),
+    repsOf(build) + ' -> ' + repsOf(taper));
+  const intOf = s => { const b = s.blocks.find(x => x.l === "8'"); return b ? b.hi : 0; };
+  check("l'intensità resta invariata in affilatura", intOf(taper) === intOf(build),
+    intOf(build) + '% -> ' + intOf(taper) + '%');
+
+  // Ogni chiave nei pool di rotazione deve essere costruibile
+  const keys = new Set();
+  [win.MIDWEEK_QUALITY_POOL, win.WEEKEND_POOL].forEach(pool =>
+    Object.values(pool).forEach(list => list.forEach(k => keys.add(k))));
+  const broken = [...keys].filter(k => {
+    try { const s = win.buildByKey(k, '2026-09-10', 'x', CPt, WPt, pz, 'Costruzione',
+      {count: 2, avgDurMin: 180, avgDecoupling: 4}); return !s || !s.name; }
+    catch (e) { return true; }
+  });
+  check('nessuna chiave orfana nei pool di rotazione', broken.length === 0, broken.join(', '));
+
   /* ---------- 10. Layout mobile ---------- */
   section('Layout mobile');
   /* I commenti vanno rimossi prima di analizzare il CSS: un commento
