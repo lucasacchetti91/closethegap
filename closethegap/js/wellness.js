@@ -62,6 +62,13 @@ async function syncWellness() {
       readiness: pickW(r,['readiness','readinessScore']),
       stress: pickW(r,['stress','avgStress','stressScore']),
       weight: pickW(r,['weight']),
+      /* BUG CORRETTO: vo2max e steps venivano disegnati da
+         renderWellnessCharts ma non erano MAI letti qui, quindi il
+         grafico del VO2max restava vuoto per costruzione. La
+         diagnostica li elencava fra i campi presenti nella risposta:
+         mancava solo la mappatura. */
+      vo2max: pickW(r,['vo2max','vo2Max','VO2max']),
+      steps: pickW(r,['steps']),
       eftp: eftp, wPrime: wPrime,
       ctl: r.ctl, atl: r.atl
     };
@@ -188,8 +195,17 @@ function renderWellnessCharts() {
     mkChart('ch-wellness-sleep','bar',{labels:labels,datasets:[
       {label:'Sonno (h)',data:w.map(function(x){return x.sleepH;}),backgroundColor:'rgba(167,139,250,.45)',borderRadius:2,borderWidth:0},
       {label:'Media 7 giorni',data:rollingMean(w,'sleepH',7),type:'line',borderColor:'#a78bfa',tension:.35,pointRadius:0,borderWidth:2,spanGaps:true},
-      {label:'8h',data:w.map(function(){return 8;}),type:'line',borderColor:'rgba(232,255,71,.3)',borderDash:[4,3],pointRadius:0,borderWidth:1}
-    ]},{scales:axis});
+      {label:'8h',data:w.map(function(){return 8;}),type:'line',borderColor:'rgba(232,255,71,.3)',borderDash:[4,3],pointRadius:0,borderWidth:1},
+      /* sleepScore era mappato ma non usato da nessun grafico: la
+         durata da sola non dice se il sonno e' stato ristoratore.
+         Su asse separato perche' e' un punteggio 0-100, non ore. */
+      {label:'Qualita\u2019 (0-100)',data:w.map(function(x){return x.sleepScore;}),type:'line',
+       borderColor:'rgba(34,212,106,.75)',tension:.35,pointRadius:0,borderWidth:1.5,spanGaps:true,yAxisID:'y1'}
+    ]},{scales:{
+      x:axis.x,
+      y:axis.y,
+      y1:{position:'right',min:0,max:100,ticks:{color:'#5d657c',font:{size:11}},grid:{display:false}}
+    }});
   }
 
   /* VO2max stimato dal Garmin: si muove lentamente, quindi il trend su
