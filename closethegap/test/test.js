@@ -28,7 +28,7 @@ const { JSDOM } = require('jsdom');
 
 const ROOT = path.join(__dirname, '..');
 const JS_FILES = ['config.js','icu-native.js','metrics.js','models.js','zones.js','workouts.js',
-  'plan-generator.js','races.js','charts.js','wellness.js','activity-detail.js','home.js','plan.js',
+  'plan-generator.js','races.js','export.js','compliance.js','charts.js','wellness.js','activity-detail.js','home.js','plan.js',
   'calendar.js','activities.js','sync.js','storage.js','diagnostics.js','app.js','ui-redesign.js'];
 
 let passed = 0, failed = 0;
@@ -421,6 +421,69 @@ setTimeout(async () => {
     catch (e) { return true; }
   });
   check('nessuna chiave orfana nei pool di rotazione', broken.length === 0, broken.join(', '));
+
+  /* ---------- 9quater. Export su Intervals.icu ---------- */
+  section('Export allenamenti');
+  win.ICU_ZONE_DEFS = { power: { bounds: [190, 260, 312, 364], ftp: 330 } };
+  const cpE = win.cpModel();
+  const sess = {
+    date: '2026-09-20', name: 'Test 2x10', type: 'z4', tss: 80, durMin: 50,
+    desc: 'prova',
+    blocks: [
+      { z: 1, l: 'WU', lo: 45, hi: 60, d: 15 },
+      { z: 4, l: "10'", lo: 92, hi: 100, d: 10 },
+      { z: 1, l: 'Rec', lo: 40, hi: 55, d: 5 },
+      { z: 5, l: '30/15', lo: 50, hi: 120, d: 9.75,
+        micro: { onSec: 30, offSec: 15, onPct: 120, offPct: 60 } },
+      { z: 1, l: 'CD', lo: 40, hi: 55, d: 10 }
+    ]
+  };
+  const ev = win.sessionToEvent(sess, cpE.CP, 330);
+  check('external_id derivato dalla data (rende idempotente)', ev.external_id === 'ctg-2026-09-20', ev.external_id);
+  check('categoria WORKOUT', ev.category === 'WORKOUT');
+  check('workout_doc con target POWER', ev.workout_doc.target === 'POWER');
+  /* REGRESSIONE POSSIBILE: se i target fossero scritti come percentuale
+     del NOSTRO CP invece che dell'FTP di Intervals.icu, i watt
+     sull'orologio sarebbero sbagliati ogni volta che i due differiscono. */
+  const wuStep = ev.workout_doc.steps[0];
+  const attesoW = Math.round(cpE.CP * 0.45);
+  const ottenutoW = Math.round(wuStep.power.start * 330 / 100);
+  check('i watt sono corretti anche con FTP ICU diverso dal CP',
+    Math.abs(ottenutoW - attesoW) <= 2, attesoW + 'W atteso, ' + ottenutoW + 'W risolto');
+  /* I micro-intervalli devono diventare step reali: un blocco unico
+     alla potenza media non farebbe suonare l'orologio ai cambi. */
+  const microSteps = ev.workout_doc.steps.filter(s => s.duration === 30 || s.duration === 15);
+  check('micro-intervalli espansi in step singoli', microSteps.length >= 20, microSteps.length + ' step');
+  check('durata totale coerente',
+    Math.abs(ev.workout_doc.duration - sess.durMin * 60) < 60,
+    ev.workout_doc.duration + 's contro ' + sess.durMin * 60 + 's');
+
+  /* ---------- 9quinquies. Aderenza al piano ---------- */
+  section('Aderenza');
+  const tdC = win.today();
+  const planned = [], acts = [];
+  for (let i = 1; i <= 20; i++) {
+    const dt = win.addDays(tdC, -i);
+    if (i % 3 === 1) {
+      planned.push({ date: dt, name: 'Soglia', type: 'z4', tss: 100, durMin: 70 });
+      acts.push({ id: 'c' + i, date: dt, dur: 3600, dist: 35000, _tss_override: 70 });
+    }
+  }
+  win.plannedHistory = [];
+  win.plan = planned; win.activities = acts;
+  const comp = win.computeCompliance(42);
+  check('rileva il carico sistematicamente sotto target',
+    comp.verdict.level === 'alti', comp.verdict.level + ' (' + Math.round(comp.avgQualityRatio * 100) + '%)');
+  check('conteggio sessioni corretto', comp.completed === acts.length && comp.planned === planned.length,
+    comp.completed + '/' + comp.planned);
+  /* Con pochi dati non si deve concludere nulla: sarebbe inseguire il rumore. */
+  win.plan = planned.slice(0, 2);
+  check('con meno di 4 sessioni non si esprime un giudizio',
+    win.computeCompliance(42).verdict.level === 'insufficiente');
+  win.plan = planned;
+  check('dichiara che la fonte è locale quando manca il registro ICU',
+    win.computeCompliance(42).source === 'locale');
+  win.plan = []; win.activities = []; win.plannedHistory = [];
 
   /* ---------- 10. Layout mobile ---------- */
   section('Layout mobile');
