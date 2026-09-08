@@ -143,6 +143,19 @@
     <!-- PLAN -->
     <div class="page" id="page-plan">
       <div id="races-render"></div>
+      <div id="compliance-render"></div>
+      <div class="card">
+        <div class="ct">Esporta sul Garmin</div>
+        <div style="font-size:.68rem;color:var(--tx2);line-height:1.6;margin-bottom:10px;">
+          Scrive le sessioni dei prossimi 21 giorni sul calendario di Intervals.icu, da cui il Garmin
+          le scarica come allenamenti strutturati. Riesportare <strong>aggiorna</strong> gli eventi gi&agrave;
+          inviati invece di duplicarli.
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="tb tb-acc" onclick="exportPlanToICU()">&#8681; Esporta 21 giorni</button>
+          <span id="export-status" style="font-size:.65rem;color:var(--tx3);"></span>
+        </div>
+      </div>
       <div id="plan-gen-meta" class="card" style="font-size:.72rem;color:var(--tx2);line-height:1.7;"></div>
       <div id="plan-render"></div>
     </div>
@@ -424,6 +437,8 @@
 <script src="js/zones.js"></script>
 <script src="js/workouts.js"></script>
 <script src="js/races.js"></script>
+<script src="js/export.js"></script>
+<script src="js/compliance.js"></script>
 <script src="js/plan-generator.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/wellness.js"></script>
