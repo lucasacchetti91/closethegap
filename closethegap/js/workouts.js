@@ -262,6 +262,108 @@ function buildZ2Simple(date, week, CP, pz, durMin, label) {
   return finishSession(date,week,label||'Z2 Aerobico','z2',blocks,CP,desc,'z2');
 }
 
+/* ============================================================
+   FORMATI A RIPETUTE CLASSICHE
+   Costruttore generico: invece di scrivere una funzione quasi identica
+   per ogni schema (4x8, 4x4, 8x3...), qui si descrive lo schema e il
+   codice lo trasforma in sessione. Aggiungerne uno nuovo costa una
+   riga di configurazione.
+
+   NOTA SULLA PRESCRIZIONE: negli studi di Seiler le ripetute NON erano
+   a percentuale fissa, ma "alla massima intensita' media sostenibile
+   per l'intera sessione". E' una differenza sostanziale: l'atleta si
+   autoregola e l'ultima ripetuta deve essere completabile. Le
+   percentuali qui sotto sono un punto di partenza, non un vincolo, e
+   la descrizione lo dice esplicitamente.
+   ============================================================ */
+var INTERVAL_FORMATS = {
+  seiler4x8: {
+    name: "Seiler 4x8'", reps: 4, repMin: 8, recMin: 2, z: 4, lo: 92, hi: 100, type: 'z4',
+    note: "Il formato con il miglior rapporto stimolo/fatica nello studio di Seiler et al. (2013): " +
+          "su 35 ciclisti amatori in 7 settimane, il gruppo 4x8' guadagno' l'11.4% combinato fra VO2peak, " +
+          "potenza al VO2peak e potenza a 4 mmol, contro il 5.6% del 4x16' e il 5.5% del 4x4'. " +
+          "Attenzione: gruppi da 9 persone e atleti da ~6h/settimana, quindi il dato e' indicativo, non definitivo."
+  },
+  seiler4x16: {
+    name: "Seiler 4x16'", reps: 4, repMin: 16, recMin: 3, z: 3, lo: 84, hi: 92, type: 'z3',
+    note: "Il braccio sub-soglia dello stesso studio: piu' volume a intensita' minore (~88% della FC di picco). " +
+          "Ha prodotto guadagni inferiori al 4x8' ma con fatica percepita molto piu' bassa: utile quando " +
+          "vuoi carico aerobico senza pagarlo nei giorni successivi."
+  },
+  norwegian4x4: {
+    name: "4x4' VO2max", reps: 4, repMin: 4, recMin: 3, z: 5, lo: 103, hi: 112, type: 'z5',
+    note: "Il classico protocollo norvegese, il piu' intenso dei tre (~94% della FC di picco, ~13 mmol di lattato). " +
+          "Nello studio di Seiler non ha battuto il 4x8', ma resta un formato duro e specifico per il VO2max."
+  },
+  eight3: {
+    name: "8x3'", reps: 8, repMin: 3, recMin: 3, z: 5, lo: 105, hi: 113, type: 'z5',
+    note: "Volume alto vicino al VO2max frazionato in blocchi brevi: piu' tempo totale sopra il 90% del VO2max " +
+          "rispetto a poche ripetute lunghe, con ogni singola ripetuta piu' gestibile."
+  },
+  fivex5fast: {
+    name: "5x5' partenza veloce", reps: 5, repMin: 5, recMin: 3, z: 5, lo: 104, hi: 110, type: 'z5',
+    fastStart: true,
+    note: "Primi 60-90 secondi decisamente piu' duri, poi si assesta. Il VO2 sale prima e ci resta piu' a lungo, " +
+          "a parita' di durata della ripetuta."
+  }
+};
+
+function buildIntervalFormat(key, date, week, CP, Wp, pz, phase) {
+  var f = INTERVAL_FORMATS[key];
+  if (!f) return null;
+  /* In affilatura e taper si riduce il numero di ripetute, non la
+     loro intensita': si mantiene lo stimolo togliendo volume. */
+  var reps = phase === 'Tapering Finale' ? Math.max(2, f.reps - 2)
+           : phase === 'Affilatura'      ? Math.max(2, f.reps - 1)
+           : f.reps;
+  var loW = Math.round(CP * f.lo / 100), hiW = Math.round(CP * f.hi / 100);
+
+  var blocks = [wuBlock(CP, 15)];
+  for (var i = 0; i < reps; i++) {
+    if (f.fastStart) {
+      var startHi = Math.min(f.hi + 8, Math.round((CP + Wp / 120) / CP * 100));
+      blocks.push({z: 6, l: 'Start', lo: f.hi, hi: startHi, d: 1.5});
+      blocks.push({z: f.z, l: 'Hold', lo: f.lo, hi: f.hi, d: f.repMin - 1.5});
+    } else {
+      blocks.push({z: f.z, l: f.repMin + "'", lo: f.lo, hi: f.hi, d: f.repMin});
+    }
+    if (i < reps - 1) blocks.push({z: 1, l: 'Rec', lo: 40, hi: 55, d: f.recMin});
+  }
+  blocks.push(cdBlock(CP, 10));
+
+  var title = f.fastStart
+    ? reps + "x" + f.repMin + "' partenza veloce"
+    : (key.indexOf('seiler') === 0 ? 'Seiler ' : '') + reps + 'x' + f.repMin + "'";
+  var desc = 'WU 15\', poi ' + reps + 'x' + f.repMin + "' a " + loW + '-' + hiW + 'W (' +
+    f.lo + '-' + f.hi + '% CP), rec ' + f.recMin + "' Z1, CD 10'. " +
+    (f.fastStart ? 'Primi 90 secondi sopra il target, poi assestati. ' : '') +
+    'Regolati per completare TUTTE le ripetute: se non arrivi in fondo all\'ultima, ' +
+    'sei partito troppo forte. ' + f.note;
+  return finishSession(date, week, title, f.type, blocks, CP, desc, key);
+}
+
+/* ---------- Microintervalli 40/20 (variante piu' impegnativa del 30/15) ---------- */
+function buildRonnestad4020(date, week, CP, Wp, pz, phase) {
+  var map = Math.round(CP + Wp / 300);
+  var onPct = Math.round(map / CP * 100);
+  var offPct = Math.round(onPct * 0.5);
+  var series = phase === 'Affilatura' ? 2 : 3;
+  var reps = 10;
+  var seriesMin = reps * (40 + 20) / 60; // 10'
+  var blocks = [wuBlock(CP, 15)];
+  for (var s = 0; s < series; s++) {
+    blocks.push({z: 5, l: reps + 'x40/20', lo: offPct, hi: onPct, d: seriesMin,
+                 micro: {onSec: 40, offSec: 20, onPct: onPct, offPct: offPct}});
+    if (s < series - 1) blocks.push({z: 1, l: 'Rec', lo: 40, hi: 55, d: 5});
+  }
+  blocks.push(cdBlock(CP, 10));
+  var desc = series + ' serie da ' + reps + 'x(40s a ' + map + 'W / 20s a ' + Math.round(map * 0.5) + 'W), rec 5\' fra le serie. ' +
+    'Variante piu' + '\u2019' + ' esigente del 30/15: la frazione di lavoro sale dal 67% al 67% ma i tratti duri durano di piu' + '\u2019' + ', ' +
+    'quindi il recupero fra un\'accelerazione e l\'altra e\' relativamente minore. ' +
+    'Se l\'ultima serie non regge, abbassa di 10-15W invece di accorciarla.';
+  return finishSession(date, week, series + 'x' + reps + 'x40/20', 'z5', blocks, CP, desc, 'ronnestad4020');
+}
+
 /* ---------- 11. Riposo ---------- */
 function buildOffDay(date, week) {
   return {date:date, week:week, name:'Riposo', type:'off', tss:0, durMin:0,
@@ -284,16 +386,21 @@ function buildRaceSpecificSession(date, week, CP, pz, raceProfile) {
    Ogni slot pesca da un pool filtrato per fase, ruotando con l'indice
    di settimana: così le sessioni cambiano davvero di settimana in
    settimana invece di ripetersi identiche. */
+/* Pool infrasettimanale: tutti formati che stanno sotto le 2h.
+   Il 4x16' di Seiler sta nel pool del weekend: con 98 minuti totali
+   rientrerebbe nel tetto infrasettimanale, ma e' un lavoro lungo e
+   continuo, e la tua preferenza e' di fare i lavori lunghi nel giro
+   del sabato. */
 var MIDWEEK_QUALITY_POOL = {
-  'Costruzione':   ['ronnestad','overunder','sweetspot','bossi','torque','fastart'],
-  'Picco Forma':   ['ronnestad','bossi','fastart','overunder','wprime'],
-  'Affilatura':    ['fastart','ronnestad','wprime'],
-  'Tapering Finale':['fastart','sweetspot']
+  'Costruzione':   ['seiler4x8','overunder','ronnestad','sweetspot','eight3','bossi','ronnestad4020','torque','fivex5fast'],
+  'Picco Forma':   ['seiler4x8','norwegian4x4','ronnestad4020','fivex5fast','eight3','bossi','ronnestad','overunder','wprime'],
+  'Affilatura':    ['fivex5fast','norwegian4x4','ronnestad','wprime'],
+  'Tapering Finale':['fivex5fast','sweetspot']
 };
 
 var WEEKEND_POOL = {
-  'Costruzione':   ['longthreshold','durability','longthreshold','sweetspotlong'],
-  'Picco Forma':   ['durability','racesim','longthreshold'],
+  'Costruzione':   ['longthreshold','durability','seiler4x16','sweetspotlong'],
+  'Picco Forma':   ['durability','racesim','longthreshold','seiler4x16'],
   'Affilatura':    ['longthreshold','durability'],
   'Tapering Finale':['z2long']
 };
@@ -301,6 +408,12 @@ var WEEKEND_POOL = {
 function buildByKey(key, date, week, CP, Wp, pz, phase, raceProfile) {
   switch(key) {
     case 'ronnestad':     return buildRonnestad3015(date, week, CP, Wp, pz, phase);
+    case 'ronnestad4020': return buildRonnestad4020(date, week, CP, Wp, pz, phase);
+    case 'seiler4x8':     return buildIntervalFormat('seiler4x8', date, week, CP, Wp, pz, phase);
+    case 'seiler4x16':    return buildIntervalFormat('seiler4x16', date, week, CP, Wp, pz, phase);
+    case 'norwegian4x4':  return buildIntervalFormat('norwegian4x4', date, week, CP, Wp, pz, phase);
+    case 'eight3':        return buildIntervalFormat('eight3', date, week, CP, Wp, pz, phase);
+    case 'fivex5fast':    return buildIntervalFormat('fivex5fast', date, week, CP, Wp, pz, phase);
     case 'bossi':         return buildBossiAlternating(date, week, CP, Wp, pz, phase);
     case 'fastart':       return buildFastStartVO2(date, week, CP, Wp, pz, phase);
     case 'overunder':     return buildOverUnder(date, week, CP, pz, phase);
