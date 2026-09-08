@@ -66,15 +66,25 @@ async function isJsonResponse(resp) {
   return true; // content-type assente o generico: proviamo comunque a parsare
 }
 
-async function icuFetch(path) {
+async function icuFetch(path, opts) {
+  /* opts opzionale: {method, body} per le scritture sul calendario.
+     Le richieste di scrittura NON vengono ritentate sul secondo proxy:
+     un POST andato a buon fine ma con risposta persa verrebbe rieseguito,
+     e per una scrittura questo significa un evento duplicato. Meglio un
+     errore visibile che un doppione silenzioso. */
+  opts = opts || {};
+  var isWrite = opts.method && opts.method !== 'GET';
+  var init = isWrite ? {method: opts.method, headers: {'Content-Type':'application/json'}, body: opts.body} : undefined;
+
   var fam = endpointFamily(path);
   var useFallbackFirst = !!icuFallbackFor[fam];
   var bases = useFallbackFirst ? [ICU_FALLBACK_BASE, ICU_WORKER] : [ICU_WORKER, ICU_FALLBACK_BASE];
+  if (isWrite) bases = bases.slice(0, 1);
   var lastStatus = null, htmlSeen = false;
 
   for (var i=0;i<bases.length;i++) {
     var resp;
-    try { resp = await fetch(bases[i] + path); }
+    try { resp = await fetch(bases[i] + path, init); }
     catch (e) { lastStatus = 'network'; continue; }
     if (resp.ok) {
       if (!(await isJsonResponse(resp))) { htmlSeen = true; continue; } // pagina HTML travestita da successo
@@ -527,6 +537,7 @@ async function syncICUAdvanced(opts) {
     try { await syncICUZoneDefs(); } catch(ze) { console.warn('Definizioni zone non disponibili:', ze.message); }
     try { await syncICUPowerCurve(); } catch(pe) { console.warn('Curva di potenza non disponibile:', pe.message); }
     try { await syncRaces(SEASON_START); } catch(re) { console.warn('Gare non disponibili:', re.message); }
+    try { await syncPlannedHistory(60); } catch(pe) { console.warn('Storico pianificato non disponibile:', pe.message); }
     applyDataDrivenZones();
     if (el && !silent) {
       el.textContent = '✅ ' + res.matched + '/' + res.total + ' attività arricchite con metriche native'

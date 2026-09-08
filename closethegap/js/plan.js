@@ -173,6 +173,9 @@ function renderPlanPage() {
 
   /* Gare dal calendario Intervals.icu: mostrate in cima, perché sono
      il vincolo attorno a cui è costruito tutto il resto. */
+  try { if (typeof renderCompliance === 'function') renderCompliance(); }
+  catch(e) { console.warn('aderenza:', e.message); }
+
   var rs = (typeof racesSummary === 'function') ? racesSummary() : null;
   var racesEl = document.getElementById('races-render');
   if (racesEl) {
@@ -282,6 +285,38 @@ function adaptPlan() {
     recMsg = '<br><span style="color:var(--grn);">Recupero nella norma (sonno/HRV/FC riposo in linea con la tua baseline).</span>';
   }
 
+  /* ---- L'aderenza entra nell'adattamento ----
+     Se nelle sessioni di qualita' chiudi sistematicamente sotto il
+     carico previsto, i target sono troppo alti e riproporli identici
+     non serve a niente. Si corregge il TSS delle prossime sessioni
+     dure nella direzione indicata dai fatti.
+     Cautela: si interviene solo con almeno 4 sessioni di qualita'
+     svolte e con uno scarto superiore al 15%, e la correzione e'
+     limitata a +/-12% per volta. Con pochi dati o scarti piccoli si
+     rischierebbe di inseguire il rumore. */
+  var comp = (typeof computeCompliance === 'function') ? computeCompliance(42) : null;
+  var compMsg = '';
+  if (comp && comp.avgQualityRatio != null && comp.qualityCount >= 4) {
+    var r = comp.avgQualityRatio;
+    if (r < 0.85 || r > 1.15) {
+      var factor = Math.max(0.88, Math.min(1.12, r));
+      var touched = 0;
+      plan.forEach(function(p){
+        if (p.date > td && (p.type==='z4'||p.type==='z5'||p.type==='z6') && !p.adaptNote) {
+          p.tss = Math.max(20, Math.round(p.tss * factor));
+          touched++;
+        }
+      });
+      if (touched) {
+        var dir = r < 1 ? 'ridotto' : 'aumentato';
+        compMsg = '<br><span style="color:var(--acc);">Aderenza: nelle ultime sessioni di qualità chiudi al ' +
+          Math.round(r*100) + '% del previsto — carico ' + dir + ' del ' +
+          Math.abs(Math.round((factor-1)*100)) + '% su ' + touched + ' sessioni future.</span>';
+        adapted += touched;
+      }
+    }
+  }
+
   var meta = lastPlanGenMeta || {};
   var col=tsb<-10?'#ff4d4d':tsb>5?'#22d46a':'#fbbf24';
   var msg='<strong style="color:'+col+';">TSB '+tsb+'</strong> · CTL '+Math.round(ctl)+' · ATL '+Math.round(atl)+'.<br>';
@@ -289,6 +324,7 @@ function adaptPlan() {
   msg+=meta.polarization ? ('polarizzazione '+meta.polarization.lowPct+'% bassa/'+meta.polarization.highPct+'% alta intensità ('+(meta.polarization.polarized?'ok, 80/20 rispettato':'sbilanciata, ridotte le sessioni qualità questa settimana')+')') : '';
   if (adapted>0) msg+='<br><strong>⚡ '+adapted+' sessione alleggerita.</strong>';
   msg+=recMsg;
+  msg+=compMsg;
   var el=document.getElementById('adapt-msg'); el.innerHTML=msg; el.style.display='block';
   renderTodayCard(today()); renderWeekStrip();
   if(document.getElementById('page-plan').classList.contains('active')) renderPlanPage();
