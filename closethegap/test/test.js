@@ -85,7 +85,7 @@ function bootApp(opts = {}) {
   return { win: dom.window, errors, store, calls };
 }
 
-setTimeout(() => {
+setTimeout(async () => {
   const { win, errors } = bootApp();
 
   /* ---------- 1. Avvio pulito ---------- */
@@ -346,6 +346,44 @@ setTimeout(() => {
   check('SEASON_START definito', typeof win.SEASON_START === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(win.SEASON_START),
     win.SEASON_START);
   check('la stagione parte da novembre 2025', win.SEASON_START === '2025-11-01', win.SEASON_START);
+
+  /* ---------- 9ter. Mappatura dei campi wellness ---------- */
+  section('Campi wellness');
+  /* REGRESSIONE: il grafico del VO2max era vuoto per costruzione.
+     renderWellnessCharts leggeva x.vo2max, ma la mappatura da API non
+     lo scriveva mai: nessun errore, nessun avviso, solo un riquadro
+     vuoto. Qui si fa passare un payload con gli stessi nomi di campo
+     osservati con la diagnostica e si verifica che arrivino a destino. */
+  const icuRow = {
+    id: '2026-09-01', ctl: 55, atl: 60, rampRate: 2.1, ctlLoad: 55, atlLoad: 60,
+    updated: '2026-09-01T06:00:00', weight: 70.5, restingHR: 51, hrv: 41,
+    sleepSecs: 23040, sleepScore: 74, sleepQuality: 3, vo2max: 62, steps: 8400,
+    tempWeight: 70.4, tempRestingHR: 52,
+    sportInfo: [{ type: 'Ride', eftp: 347, wPrime: 29856, pMax: 1103 }]
+  };
+  const prevFetch = win.fetch;
+  win.fetch = () => Promise.resolve({
+    ok: true, status: 200, headers: { get: () => 'application/json' },
+    json: () => Promise.resolve([icuRow])
+  });
+  await win.syncWellness();
+  win.fetch = prevFetch;
+  const rec = win.wellness[0] || {};
+  const expected = {
+    restingHR: 51, hrv: 41, sleepH: 6.4, sleepScore: 74,
+    weight: 70.5, vo2max: 62, steps: 8400, eftp: 347
+  };
+  Object.keys(expected).forEach(k => {
+    check('campo "' + k + '" mappato dall\'API', rec[k] === expected[k],
+      'atteso ' + expected[k] + ', ottenuto ' + rec[k]);
+  });
+  /* Ogni campo che i grafici LEGGONO deve esistere nella mappatura:
+     è il controllo che mancava. */
+  const wellSrc = fs.readFileSync(path.join(ROOT, 'js', 'wellness.js'), 'utf8');
+  const readFields = [...new Set([...wellSrc.matchAll(/\bx\.([a-zA-Z0-9_]+)/g)].map(m => m[1]))];
+  const unmapped = readFields.filter(f => rec[f] === undefined);
+  check('nessun campo letto dai grafici resta non mappato', unmapped.length === 0,
+    unmapped.join(', '));
 
   /* ---------- 9bis. Libreria di allenamenti ---------- */
   section('Formati di allenamento');
