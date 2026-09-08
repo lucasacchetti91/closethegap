@@ -26,7 +26,7 @@ const ICU_ACTIVITY_BASE = 'https://intervals.icu/api/v1/activity';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
@@ -46,11 +46,16 @@ export async function onRequest(context) {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
   // Solo GET: il proxy serve esclusivamente a leggere dati, mai a scriverli.
-  if (request.method !== 'GET') {
-    return new Response(
-      JSON.stringify({ error: 'Solo richieste GET sono permesse' }),
-      { status: 405, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
-    );
+  /* SCRITTURE: consentite SOLO sul calendario (/events), perche' e'
+     l'unico endpoint su cui l'app deve poter scrivere per esportare gli
+     allenamenti. Tutto il resto resta in sola lettura: un proxy che
+     accetta qualunque metodo su qualunque percorso e' un problema di
+     sicurezza, non una comodita'. */
+  const WRITE_METHODS = ['POST', 'PUT', 'DELETE'];
+  const isWrite = WRITE_METHODS.indexOf(request.method) >= 0;
+  if (request.method !== 'GET' && !isWrite) {
+    return new Response(JSON.stringify({ error: 'Metodo non permesso' }),
+      { status: 405, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
   }
 
   const ICU_API_KEY = (env && env.ICU_API_KEY) ? env.ICU_API_KEY : ICU_API_KEY_FALLBACK;
@@ -89,6 +94,13 @@ export async function onRequest(context) {
     }
   }
 
+  if (isWrite && pathParts[0] !== 'events') {
+    return new Response(
+      JSON.stringify({ error: 'Scrittura permessa solo su /events' }),
+      { status: 403, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } }
+    );
+  }
+
   if (!icuUrl) {
     return new Response(
       JSON.stringify({ error: denyReason || 'Richiesta non permessa' }),
@@ -98,11 +110,12 @@ export async function onRequest(context) {
 
   try {
     const icuResponse = await fetch(icuUrl, {
-      method: 'GET',
+      method: request.method,
       headers: {
         'Authorization': 'Basic ' + btoa('API_KEY:' + ICU_API_KEY),
         'Content-Type': 'application/json',
       },
+      body: isWrite ? await request.text() : undefined,
     });
 
     const body = await icuResponse.text();
