@@ -141,6 +141,12 @@ function generateFuturePlan(fromDate, toDateExclusive) {
   var raceConstraints = (typeof buildRaceConstraints === 'function')
     ? buildRaceConstraints(fromDate, toDateExclusive) : {};
 
+  /* Enfasi dettata dagli obiettivi della prossima gara A: se manca
+     soprattutto CP i lavori a soglia salgono nella rotazione, se manca
+     W' salgono quelli brevi e intensi. Nessun formato viene eliminato:
+     azzerare una qualita' per settimane e' controproducente. */
+  var raceEmph = (typeof activeRaceEmphasis === 'function') ? activeRaceEmphasis() : null;
+
   while (cur < toDateExclusive) {
     var weeksToGoal = weeksBetweenDates(cur, toDateExclusive);
     var phase = phaseForWeeksToGoal(weeksToGoal);
@@ -189,8 +195,12 @@ function generateFuturePlan(fromDate, toDateExclusive) {
         // Martedì: qualità corta infrasettimanale (sempre <2h); se la
         // polarizzazione reale è sbilanciata verso l'alta intensità,
         // diventa Z2 per riequilibrare (Seiler 80/20).
+        var midPool = (MIDWEEK_QUALITY_POOL[phase] || MIDWEEK_QUALITY_POOL['Costruzione']);
+        if (raceEmph && typeof weightPoolByEmphasis === 'function') {
+          midPool = weightPoolByEmphasis(midPool, raceEmph.emphasis);
+        }
         session = midweekQuality
-          ? buildByKey(pickFromPool(MIDWEEK_QUALITY_POOL, phase, weekIdx), date, weekLabel, CP, Wp, pz, phase, raceProfile)
+          ? buildByKey(midPool[weekIdx % midPool.length], date, weekLabel, CP, Wp, pz, phase, raceProfile)
           : buildZ2Simple(date, weekLabel, CP, pz, 75, 'Z2 Aerobico');
       } else if (dow===4 && ridesPerWeek>=3) {
         // Giovedì: seconda seduta infrasettimanale. In Costruzione ogni
@@ -235,5 +245,5 @@ function generateFuturePlan(fromDate, toDateExclusive) {
   }
 
   return {sessions: sessions, meta: {rampRate:rampRate, polarization:polarization, raceProfile:raceProfile,
-          CP:CP, Wp:Wp, racesPlanned: Object.keys(raceConstraints).filter(function(d){return raceConstraints[d].kind==='race';}).length}};
+          CP:CP, Wp:Wp, raceEmphasis: raceEmph, racesPlanned: Object.keys(raceConstraints).filter(function(d){return raceConstraints[d].kind==='race';}).length}};
 }

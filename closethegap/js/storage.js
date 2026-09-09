@@ -101,6 +101,7 @@ function renderSyncStatus(savedAt, syncing) {
 async function bootstrapData() {
   var savedAt = loadState();
   loadDetailCache();
+  if (typeof loadRaceTargets === 'function') loadRaceTargets();
   renderSyncStatus(savedAt, false);
 
   // Primo disegno immediato con quello che abbiamo (cache o seed RAW).

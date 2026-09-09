@@ -188,7 +188,8 @@ function renderPlanPage() {
               'border-radius:4px;padding:2px 7px;font-size:.6rem;font-weight:700;">'+r.priority+'</span>'+
             '<div style="flex:1;min-width:0;"><div style="font-size:.78rem;font-weight:600;">'+r.name+'</div>'+
             '<div style="font-size:.6rem;color:var(--tx3);">'+r.label+' · '+r.date+'</div></div>'+
-            '<div style="font-size:.72rem;color:var(--tx2);white-space:nowrap;">tra '+r.days+' gg</div></div>';
+            '<div style="font-size:.72rem;color:var(--tx2);white-space:nowrap;">tra '+r.days+' gg</div></div>'+
+            (r.priority === 'A' ? renderRaceTargets(r) : '');
         }).join('')+
         '<div style="font-size:.62rem;color:var(--tx3);margin-top:9px;line-height:1.5;">'+
         'Il piano scarica automaticamente prima di ogni gara (5 giorni per le A, 2 per le B) '+
@@ -328,4 +329,64 @@ function adaptPlan() {
   var el=document.getElementById('adapt-msg'); el.innerHTML=msg; el.style.display='block';
   renderTodayCard(today()); renderWeekStrip();
   if(document.getElementById('page-plan').classList.contains('active')) renderPlanPage();
+}
+
+/* Obiettivi di potenza per le gare A: colonna di valori editabili e
+   traduzione in CP/W' richiesti. Solo per le A: sulle gare B non ha
+   senso ridisegnare la stagione. */
+function renderRaceTargets(rSummary) {
+  var r = (typeof races !== 'undefined' ? races : []).find(function(x){ return x.date === rSummary.date; });
+  if (!r) return '';
+  var g = raceGapAnalysis(r);
+  if (!g) return '';
+
+  var cells = RACE_TARGET_DURATIONS.map(function(t){
+    var cur = Math.round(currentPowerAt(t));
+    var tgt = g.targets[t];
+    var d = tgt - cur;
+    var conflict = (g.required.conflicts || []).some(function(c){ return c.secs === t; });
+    return '<div style="text-align:center;min-width:0;">'+
+      '<div style="font-size:.55rem;color:var(--tx3);text-transform:uppercase;margin-bottom:3px;">'+RACE_TARGET_LABELS[t]+'</div>'+
+      '<input type="number" value="'+tgt+'" data-race="'+r.date+'" data-secs="'+t+'" '+
+        'onchange="onRaceTargetChange(this)" '+
+        'style="width:100%;max-width:66px;background:var(--s3);border:1px solid '+(conflict?'var(--red)':'var(--br2)')+';'+
+        'color:var(--tx);border-radius:5px;padding:5px 4px;font-family:var(--mono);font-size:.78rem;text-align:center;">'+
+      '<div style="font-size:.53rem;color:var(--tx3);margin-top:3px;">ora '+cur+'W</div>'+
+      '<div style="font-size:.53rem;color:'+(d>0?'var(--acc)':'var(--grn)')+';">'+(d>0?'+':'')+d+'W</div>'+
+    '</div>';
+  }).join('');
+
+  var feasCol = {realistico:'var(--grn)', ambizioso:'var(--yel)', improbabile:'var(--red)'}[g.feasibility];
+  var html = '<div style="padding:12px 0 4px;border-bottom:1px solid var(--br);">'+
+    '<div style="font-size:.58rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">'+
+      'Potenze target per competere</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px;">'+cells+'</div>'+
+    '<div style="font-size:.66rem;color:var(--tx2);line-height:1.6;">'+
+      'Per centrarli servono <strong>CP '+g.required.CP+'W</strong> ('+(g.cpGap>0?'+':'')+g.cpGap+'W) '+
+      'e <strong>W\' '+(g.required.Wp/1000).toFixed(1)+'kJ</strong> ('+(g.wpGap>0?'+':'')+(g.wpGap/1000).toFixed(1)+'kJ). '+
+      '<span style="color:'+feasCol+';">'+g.cpPerWeek+'W di CP a settimana per '+g.weeks+' settimane: '+g.feasibility+'.</span>';
+
+  if (!g.required.consistent) {
+    html += '<div style="margin-top:8px;padding:8px;background:rgba(255,77,77,.08);border:1px solid rgba(255,77,77,.25);border-radius:6px;color:var(--red);">'+
+      '<strong>Obiettivi incompatibili fra loro.</strong> Nessuna combinazione fisiologica di CP e W\' li soddisfa tutti: '+
+      g.required.conflicts.map(function(c){
+        return RACE_TARGET_LABELS[c.secs]+' mancherebbe di '+Math.abs(c.diff)+'W';
+      }).join(', ')+'. Le durate brevi dipendono da W\', quelle lunghe dal CP: chiedere molto a entrambi gli estremi '+
+      'implica due modelli diversi. Abbassa l\'obiettivo su cui puoi cedere.</div>';
+  }
+
+  var em = g.emphasis;
+  html += '<div style="margin-top:8px;font-size:.63rem;color:var(--tx3);">Enfasi del piano: '+
+    Math.round(em.cp*100)+'% soglia e sub-soglia, '+Math.round(em.wp*100)+'% lavori brevi. '+
+    'La rotazione degli allenamenti si riordina di conseguenza.</div>';
+  html += '</div></div>';
+  return html;
+}
+
+function onRaceTargetChange(input) {
+  var r = (typeof races !== 'undefined' ? races : []).find(function(x){ return x.date === input.dataset.race; });
+  if (!r) return;
+  setRaceTarget(r, parseInt(input.dataset.secs, 10), input.value);
+  makePlan();          // il piano si rimodella sui nuovi obiettivi
+  renderPlanPage();
 }
