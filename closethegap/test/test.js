@@ -28,7 +28,7 @@ const { JSDOM } = require('jsdom');
 
 const ROOT = path.join(__dirname, '..');
 const JS_FILES = ['config.js','icu-native.js','metrics.js','models.js','zones.js','workouts.js',
-  'plan-generator.js','races.js','export.js','compliance.js','charts.js','wellness.js','activity-detail.js','home.js','plan.js',
+  'plan-generator.js','races.js','race-targets.js','export.js','compliance.js','charts.js','wellness.js','activity-detail.js','home.js','plan.js',
   'calendar.js','activities.js','sync.js','storage.js','diagnostics.js','app.js','ui-redesign.js'];
 
 let passed = 0, failed = 0;
@@ -484,6 +484,69 @@ setTimeout(async () => {
   check('dichiara che la fonte è locale quando manca il registro ICU',
     win.computeCompliance(42).source === 'locale');
   win.plan = []; win.activities = []; win.plannedHistory = [];
+
+  /* ---------- 9sexies. Obiettivi di gara ---------- */
+  section('Obiettivi di gara');
+  win.ICU_NATIVE_CP = { eftp: 347, wPrime: 29856, pMax: 1103 };
+  const cur = win.cpModel();
+
+  // Target generati DAL modello: devono ricondurre allo stesso modello
+  const coherent = {};
+  win.RACE_TARGET_DURATIONS.forEach(t => { coherent[t] = win.predictedPower(t, cur); });
+  const solved = win.solveRequiredModel(coherent, cur.Pmax);
+  check('il solutore ricostruisce il modello di partenza',
+    Math.abs(solved.CP - cur.CP) <= 3 && Math.abs(solved.Wp - cur.Wp) / cur.Wp < 0.08,
+    'CP ' + solved.CP + ' vs ' + cur.CP + ', W\' ' + solved.Wp + ' vs ' + cur.Wp);
+  check('target coerenti riconosciuti come tali', solved.consistent === true);
+
+  /* REGRESSIONE: usando l'errore MEDIO, due scarti opposti si
+     compensano e un insieme impossibile passa per buono. */
+  const contradictory = Object.assign({}, coherent);
+  contradictory[30] = Math.round(coherent[30] * 1.09);      // molto più W'
+  contradictory[1200] = Math.round(coherent[1200] * 1.09);  // e molto più CP
+  const bad = win.solveRequiredModel(contradictory, cur.Pmax);
+  check('target contraddittori riconosciuti', bad.consistent === false,
+    'errore medio ' + bad.rmsePct + '%, conflitti ' + bad.conflicts.length);
+  check('indica QUALI durate confliggono', bad.conflicts.length >= 2,
+    bad.conflicts.map(c => win.RACE_TARGET_LABELS[c.secs]).join(','));
+
+  // Enfasi: gare diverse devono produrre priorità diverse
+  const rShort = { date: win.addDays(win.today(), 180), name: 'Corta', priority: 'A' };
+  const rLong = { date: win.addDays(win.today(), 180), name: 'Lunga', priority: 'A' };
+  win.races = [rShort];
+  win.RACE_TARGET_DURATIONS.forEach(t => win.setRaceTarget(rShort, t,
+    Math.round(win.predictedPower(t, cur) * (t <= 360 ? 1.09 : 1.01))));
+  const gShort = win.raceGapAnalysis(rShort);
+  win.races = [rLong];
+  win.RACE_TARGET_DURATIONS.forEach(t => win.setRaceTarget(rLong, t,
+    Math.round(win.predictedPower(t, cur) * (t >= 720 ? 1.08 : 1.01))));
+  const gLong = win.raceGapAnalysis(rLong);
+  check('gara corta → enfasi sui lavori brevi', gShort.emphasis.wp > gShort.emphasis.cp,
+    Math.round(gShort.emphasis.wp * 100) + '% breve');
+  check('gara lunga → enfasi sulla soglia', gLong.emphasis.cp > gLong.emphasis.wp,
+    Math.round(gLong.emphasis.cp * 100) + '% soglia');
+  /* REGRESSIONE: le due quote devono sommare a 100%. Usare il valore
+     assoluto al denominatore diluiva l'enfasi quando una qualità era
+     già oltre il target. */
+  [gShort, gLong].forEach((g, i) => {
+    check('le quote di enfasi sommano a 100% (' + (i ? 'lunga' : 'corta') + ')',
+      Math.abs(g.emphasis.cp + g.emphasis.wp - 1) < 0.01,
+      Math.round((g.emphasis.cp + g.emphasis.wp) * 100) + '%');
+  });
+
+  // La rotazione deve cambiare davvero
+  const base = win.MIDWEEK_QUALITY_POOL['Costruzione'];
+  const poolShort = win.weightPoolByEmphasis(base, gShort.emphasis);
+  const poolLong = win.weightPoolByEmphasis(base, gLong.emphasis);
+  check('la rotazione cambia con la gara obiettivo',
+    poolShort[0] !== poolLong[0], poolShort[0] + ' vs ' + poolLong[0]);
+  /* Nessun formato va eliminato: azzerare una qualità per settimane
+     sarebbe controproducente. */
+  check('nessun formato viene eliminato dalla rotazione',
+    base.every(k => poolShort.indexOf(k) >= 0) && base.every(k => poolLong.indexOf(k) >= 0));
+  check('la fattibilità viene valutata',
+    ['realistico', 'ambizioso', 'improbabile'].indexOf(gShort.feasibility) >= 0, gShort.feasibility);
+  win.races = [];
 
   /* ---------- 10. Layout mobile ---------- */
   section('Layout mobile');
