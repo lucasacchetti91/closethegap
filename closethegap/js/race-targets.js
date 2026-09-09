@@ -1,34 +1,38 @@
 /* ============================================================
    RACE-TARGETS.JS
-   Obiettivi di potenza per le gare A, definiti per durata
-   (30s / 3m / 6m / 12m / 20m) e tradotti in indicazioni di allenamento.
+   Obiettivi di forma per le gare A, espressi come CP e W' target.
 
-   L'IDEA CHIAVE, E PERCHE' NON SI INSEGUONO I CINQUE NUMERI.
-   Il modello a tre parametri ha solo DUE leve: CP e W' (Pmax e' quasi
-   fisso). Verificato sui tuoi valori:
+   PERCHE' DUE VALORI E NON CINQUE POTENZE PER DURATA.
+   Il modello a tre parametri ha solo due leve: CP e W' (Pmax si muove
+   poco e lentamente). Verificato sui valori reali:
      - alzare il CP di 15W aggiunge +15W a tutte le durate oltre i 3'
      - alzare il W' del 20% aggiunge +33W a 30s ma solo +5W a 20'
-   Cinque obiettivi indipendenti sono quindi sovra-specificati: possono
-   essere reciprocamente contraddittori senza che ci si accorga (es.
-   chiedere +40W a 20' e contemporaneamente +60W a 30s implica due CP
-   diversi). Invece di rincorrerli uno per uno, qui si RISOLVE il
-   problema al contrario: quale coppia (CP, W') li soddisfa meglio, di
-   quanto dista da quella attuale, e se i target sono coerenti fra loro.
+   Definire cinque potenze indipendenti era quindi sovra-specificato:
+   potevano contraddirsi (chiedere molto a 30s E a 20' implica due CP
+   diversi) e serviva un solutore inverso piu' un controllo di coerenza.
+   Impostando direttamente CP e W' il problema sparisce: qualunque
+   coppia e' internamente coerente per costruzione, e le potenze a ogni
+   durata si ricavano in avanti con una formula.
 
-   Da quel divario si ricava l'enfasi dell'allenamento: se manca
-   soprattutto CP servono lavori a soglia e sub-soglia; se manca
-   soprattutto W' servono lavori brevi e intensi.
+   Resta la parte utile: il divario rispetto a oggi, la fattibilita' nel
+   tempo disponibile, e l'enfasi che ne deriva per il piano.
    ============================================================ */
 
-var RACE_TARGET_DURATIONS = [30, 180, 360, 720, 1200]; // 30s, 3m, 6m, 12m, 20m
+var RACE_TARGET_DURATIONS = [30, 180, 360, 720, 1200]; // solo per mostrare cosa implicano
 var RACE_TARGET_LABELS = {30:'30s', 180:'3min', 360:'6min', 720:'12min', 1200:'20min'};
-var raceTargets = {};   // { 'ctg-race-<data>': {30:800, 180:500, ...} }
-var RACE_TARGETS_KEY = 'ctg_race_targets_v1';
+var raceTargets = {};   // { 'race-<data>': {cp: 366, wp: 34600} }
+var RACE_TARGETS_KEY = 'ctg_race_targets_v2';
 
 function loadRaceTargets() {
   try {
     var raw = localStorage.getItem(RACE_TARGETS_KEY);
     if (raw) raceTargets = JSON.parse(raw) || {};
+    /* La versione precedente salvava cinque potenze per durata sotto
+       un'altra chiave. Non viene convertita: era in uso da pochissimo e
+       una conversione richiederebbe di riportarsi dietro il solutore
+       inverso, cioe' la complessita' che questa modifica elimina.
+       La vecchia chiave viene rimossa per non lasciare dati orfani. */
+    localStorage.removeItem('ctg_race_targets_v1');
   } catch (e) { raceTargets = {}; }
   return raceTargets;
 }
@@ -38,148 +42,85 @@ function saveRaceTargets() {
 }
 function raceKey(r) { return 'race-' + r.date; }
 
-/* Potenza attuale prevista a una durata, dal modello in uso. */
-function currentPowerAt(secs) {
-  var cp = cpModel();
-  return predictedPower(secs, cp);
+/* Potenza prevista a una durata per una data coppia CP/W'. */
+function powerAtFor(secs, cp, wp, pmax) {
+  pmax = pmax || (cpModel().Pmax || 1100);
+  if (!pmax || pmax <= cp) return Math.round(cp + wp / secs);
+  return Math.round(wp / (secs + wp / (pmax - cp)) + cp);
 }
+function currentPowerAt(secs) { return predictedPower(secs, cpModel()); }
 
-/* Target predefiniti: si parte da quello che sai gia' fare, con un
-   margine di miglioramento realistico che si riduce sulle durate
-   lunghe (il CP si muove piu' lentamente della capacita' anaerobica).
-   Sono un punto di partenza da correggere a mano, non una previsione. */
-function defaultTargetsFor(r) {
-  var out = {};
-  RACE_TARGET_DURATIONS.forEach(function(t){
-    var margin = t <= 60 ? 1.06 : t <= 360 ? 1.05 : 1.04;
-    out[t] = Math.round(currentPowerAt(t) * margin);
-  });
-  return out;
+/* Default: stato attuale con un margine di miglioramento plausibile.
+   Il W' risponde piu' in fretta del CP, quindi ha un margine maggiore.
+   Sono un punto di partenza da correggere, non una previsione. */
+function defaultTargetsFor() {
+  var cur = cpModel();
+  return { cp: Math.round(cur.CP * 1.05), wp: Math.round(cur.Wp * 1.10) };
 }
 
 function getRaceTargets(r) {
   var k = raceKey(r);
-  if (!raceTargets[k]) raceTargets[k] = defaultTargetsFor(r);
+  if (!raceTargets[k] || raceTargets[k].cp == null) raceTargets[k] = defaultTargetsFor();
   return raceTargets[k];
 }
-function setRaceTarget(r, secs, watts) {
+function setRaceTarget(r, field, value) {
   var k = raceKey(r);
-  if (!raceTargets[k]) raceTargets[k] = defaultTargetsFor(r);
-  var v = parseInt(watts, 10);
-  if (isFinite(v) && v > 50 && v < 2000) raceTargets[k][secs] = v;
+  if (!raceTargets[k] || raceTargets[k].cp == null) raceTargets[k] = defaultTargetsFor();
+  var v = parseFloat(value);
+  if (!isFinite(v)) return raceTargets[k];
+  if (field === 'cp' && v > 100 && v < 600) raceTargets[k].cp = Math.round(v);
+  if (field === 'wp' && v > 1 && v < 80) raceTargets[k].wp = Math.round(v * 1000); // inserito in kJ
   saveRaceTargets();
   return raceTargets[k];
 }
 
-/* ---- Risoluzione inversa: quale (CP, W') soddisfa i target? ----
-   Il modello di Morton non e' invertibile in forma chiusa, quindi si
-   cerca il minimo dell'errore con una griglia grossolana seguita da un
-   raffinamento. E' un problema a due variabili su un dominio piccolo:
-   costa niente ed evita di dipendere da una libreria di ottimizzazione. */
-function solveRequiredModel(targets, Pmax) {
-  var cur = cpModel();
-  Pmax = Pmax || cur.Pmax || 1100;
-  var ts = RACE_TARGET_DURATIONS.filter(function(t){ return targets[t]; });
-  if (ts.length < 2) return null;
-
-  function err(cp, wp) {
-    var e = 0;
-    ts.forEach(function(t){
-      var pred = wp / (t + wp / (Pmax - cp)) + cp;
-      var d = (pred - targets[t]) / targets[t];
-      e += d * d;
-    });
-    return e / ts.length;
-  }
-
-  var best = {cp: cur.CP, wp: cur.Wp, e: Infinity};
-  function search(cpLo, cpHi, cpStep, wpLo, wpHi, wpStep) {
-    for (var cp = cpLo; cp <= cpHi; cp += cpStep) {
-      if (cp >= Pmax - 20) continue;
-      for (var wp = wpLo; wp <= wpHi; wp += wpStep) {
-        var e = err(cp, wp);
-        if (e < best.e) best = {cp: cp, wp: wp, e: e};
-      }
-    }
-  }
-  search(200, Math.min(500, Pmax - 30), 5, 5000, 60000, 1000);
-  search(best.cp - 6, best.cp + 6, 1, Math.max(3000, best.wp - 1500), best.wp + 1500, 100);
-
-  /* COERENZA: non basta l'errore MEDIO.
-     Due scarti opposti si compensano nella media e un insieme di
-     target impossibile passerebbe per buono: nei test un caso con -29W
-     a 30s e -20W a 20' dava un errore medio del 3.1%, sotto qualunque
-     soglia ragionevole. Si guardano quindi gli scarti SINGOLI, e si
-     segnalano le durate che il modello non riesce a raggiungere. */
-  var perDuration = ts.map(function(t){
-    var pred = Math.round(best.wp / (t + best.wp / (Pmax - best.cp)) + best.cp);
-    var diff = pred - targets[t];
-    return {
-      secs: t, target: targets[t], modelled: pred, diff: diff,
-      offPct: parseFloat((diff / targets[t] * 100).toFixed(1)),
-      conflicting: Math.abs(diff) > Math.max(8, targets[t] * 0.02)
-    };
-  });
-  var conflicts = perDuration.filter(function(d){ return d.conflicting; });
-  return {
-    CP: Math.round(best.cp),
-    Wp: Math.round(best.wp),
-    Pmax: Math.round(Pmax),
-    rmsePct: parseFloat((Math.sqrt(best.e) * 100).toFixed(1)),
-    consistent: conflicts.length === 0,
-    conflicts: conflicts,
-    perDuration: perDuration
-  };
-}
-
-/* Divario fra dove sei e dove dovresti arrivare. */
+/* Divario fra dove sei e dove vuoi arrivare, e cosa ne consegue. */
 function raceGapAnalysis(r) {
-  var targets = getRaceTargets(r);
+  var t = getRaceTargets(r);
   var cur = cpModel();
-  var req = solveRequiredModel(targets, cur.Pmax);
-  if (!req) return null;
-
-  var cpGap = req.CP - cur.CP;
-  var wpGap = req.Wp - cur.Wp;
+  var cpGap = t.cp - cur.CP;
+  var wpGap = t.wp - cur.Wp;
   var cpGapPct = cpGap / cur.CP;
   var wpGapPct = wpGap / cur.Wp;
   var weeks = Math.max(1, Math.round((new Date(r.date + 'T12:00') - new Date(today() + 'T12:00')) / (7 * 86400000)));
 
-  /* Enfasi: quale delle due leve pesa di piu'. Si usano i divari
-     RELATIVI, perche' 15W di CP e 3kJ di W' non sono confrontabili
-     in valore assoluto. */
-  /* Solo i divari POSITIVI contano: se una qualita' e' gia' oltre il
-     target non va allenata di piu'. Usare il valore assoluto al
-     denominatore era un errore, perche' un W' in eccesso diluiva
-     l'enfasi sul CP e le due quote non sommavano a 100%.
-     Se entrambe le qualita' sono gia' a posto si torna a un piano
-     equilibrato di mantenimento. */
-  var cpNeed = Math.max(cpGapPct, 0);
-  var wpNeed = Math.max(wpGapPct, 0);
+  /* Enfasi: contano solo i divari POSITIVI. Se una qualita' e' gia'
+     oltre il target non va allenata di piu', e non deve nemmeno
+     diluire l'altra: usare il valore assoluto al denominatore faceva
+     sommare le due quote a meno del 100%. */
+  var cpNeed = Math.max(cpGapPct, 0), wpNeed = Math.max(wpGapPct, 0);
   var totalNeed = cpNeed + wpNeed;
   var emphasis = totalNeed > 0
     ? {cp: cpNeed / totalNeed, wp: wpNeed / totalNeed}
     : {cp: 0.5, wp: 0.5, atTarget: true};
 
-  /* Fattibilita': ~1.5W/settimana di CP e' un ritmo gia' buono per un
-     atleta allenato; oltre i 2.5 e' improbabile senza un salto di
-     volume. Il W' risponde piu' in fretta ma ha un tetto piu' basso. */
+  /* ~1.5W/settimana di CP e' un ritmo gia' buono per un atleta
+     allenato; oltre 2.5 e' improbabile senza un salto di volume. */
   var cpPerWeek = cpGap / weeks;
-  var feasibility = cpPerWeek <= 1.5 ? 'realistico'
+  var feasibility = cpGap <= 0 ? 'gia raggiunto'
+                  : cpPerWeek <= 1.5 ? 'realistico'
                   : cpPerWeek <= 2.5 ? 'ambizioso'
                   : 'improbabile';
 
   return {
-    race: r, targets: targets, current: {CP: cur.CP, Wp: cur.Wp, Pmax: cur.Pmax},
-    required: req, cpGap: cpGap, wpGap: wpGap,
+    race: r, targets: t,
+    current: {CP: cur.CP, Wp: cur.Wp, Pmax: cur.Pmax},
+    cpGap: cpGap, wpGap: wpGap,
     cpGapPct: parseFloat((cpGapPct * 100).toFixed(1)),
     wpGapPct: parseFloat((wpGapPct * 100).toFixed(1)),
     weeks: weeks, cpPerWeek: parseFloat(cpPerWeek.toFixed(2)),
-    feasibility: feasibility, emphasis: emphasis
+    feasibility: feasibility, emphasis: emphasis,
+    /* Cosa implicano quei due numeri alle durate che contano in gara.
+       Sola lettura: e' la direzione "in avanti", quella senza ambiguita'. */
+    implied: RACE_TARGET_DURATIONS.map(function(secs){
+      var now = currentPowerAt(secs);
+      var tgt = powerAtFor(secs, t.cp, t.wp, cur.Pmax);
+      return {secs: secs, now: now, target: tgt, diff: tgt - now};
+    })
   };
 }
 
-/* Quali durate allena ciascun formato: serve per pesare la rotazione. */
+/* Quali qualita' allena ciascun formato: serve per pesare la rotazione. */
 var WORKOUT_FOCUS = {
   wprime:        {wp: 1.0, cp: 0.0},
   ronnestad:     {wp: 0.7, cp: 0.3},
@@ -200,28 +141,24 @@ var WORKOUT_FOCUS = {
   racesim:       {wp: 0.3, cp: 0.7}
 };
 
-/* Riordina un pool dando piu' spazio ai formati che allenano la leva
-   piu' carente, SENZA eliminare gli altri: azzerare una delle due
-   qualita' per settimane e' controproducente, e la varieta' resta uno
-   dei criteri del generatore. */
+/* Riordina la rotazione dando piu' spazio ai formati che allenano la
+   leva piu' carente, SENZA eliminare gli altri: azzerare una qualita'
+   per settimane e' controproducente. */
 function weightPoolByEmphasis(pool, emphasis) {
   if (!emphasis || !pool || !pool.length) return pool;
   var scored = pool.map(function(k, i){
     var f = WORKOUT_FOCUS[k] || {wp: 0.5, cp: 0.5};
-    var score = f.cp * emphasis.cp + f.wp * emphasis.wp;
-    return {k: k, score: score, i: i};
+    return {k: k, score: f.cp * emphasis.cp + f.wp * emphasis.wp, i: i};
   });
   scored.sort(function(a, b){ return b.score - a.score || a.i - b.i; });
-  // i due formati piu' pertinenti compaiono due volte nella rotazione
   var out = [];
   scored.forEach(function(s, idx){
     out.push(s.k);
-    if (idx < 2) out.push(s.k);
+    if (idx < 2) out.push(s.k); // i due piu' pertinenti tornano piu' spesso
   });
   return out;
 }
 
-/* Enfasi della gara A piu' vicina: e' quella che guida il piano. */
 function activeRaceEmphasis() {
   if (typeof races === 'undefined' || !races.length) return null;
   var td = today();

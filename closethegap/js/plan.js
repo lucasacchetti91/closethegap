@@ -331,62 +331,65 @@ function adaptPlan() {
   if(document.getElementById('page-plan').classList.contains('active')) renderPlanPage();
 }
 
-/* Obiettivi di potenza per le gare A: colonna di valori editabili e
-   traduzione in CP/W' richiesti. Solo per le A: sulle gare B non ha
-   senso ridisegnare la stagione. */
+/* Obiettivi per le gare A: CP e W' editabili, e cosa implicano alle
+   durate che contano in gara. Solo per le A: sulle B non ha senso
+   ridisegnare la stagione. */
 function renderRaceTargets(rSummary) {
   var r = (typeof races !== 'undefined' ? races : []).find(function(x){ return x.date === rSummary.date; });
   if (!r) return '';
   var g = raceGapAnalysis(r);
   if (!g) return '';
 
-  var cells = RACE_TARGET_DURATIONS.map(function(t){
-    var cur = Math.round(currentPowerAt(t));
-    var tgt = g.targets[t];
-    var d = tgt - cur;
-    var conflict = (g.required.conflicts || []).some(function(c){ return c.secs === t; });
+  function field(label, id, value, unit, cur, gap) {
+    return '<div style="flex:1;min-width:110px;">'+
+      '<div style="font-size:.55rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">'+label+'</div>'+
+      '<div style="display:flex;align-items:baseline;gap:5px;">'+
+        '<input type="number" step="'+(id==='wp'?'0.1':'1')+'" value="'+value+'" '+
+          'data-race="'+r.date+'" data-field="'+id+'" onchange="onRaceTargetChange(this)" '+
+          'style="width:80px;background:var(--s3);border:1px solid var(--br2);color:var(--tx);'+
+          'border-radius:5px;padding:6px 7px;font-family:var(--mono);font-size:.95rem;">'+
+        '<span style="font-size:.65rem;color:var(--tx3);">'+unit+'</span>'+
+      '</div>'+
+      '<div style="font-size:.55rem;color:var(--tx3);margin-top:4px;">ora '+cur+unit+
+        ' &middot; <span style="color:'+(gap>0?'var(--acc)':'var(--grn)')+';">'+(gap>0?'+':'')+gap+unit+'</span></div>'+
+    '</div>';
+  }
+
+  var implied = g.implied.map(function(d){
     return '<div style="text-align:center;min-width:0;">'+
-      '<div style="font-size:.55rem;color:var(--tx3);text-transform:uppercase;margin-bottom:3px;">'+RACE_TARGET_LABELS[t]+'</div>'+
-      '<input type="number" value="'+tgt+'" data-race="'+r.date+'" data-secs="'+t+'" '+
-        'onchange="onRaceTargetChange(this)" '+
-        'style="width:100%;max-width:66px;background:var(--s3);border:1px solid '+(conflict?'var(--red)':'var(--br2)')+';'+
-        'color:var(--tx);border-radius:5px;padding:5px 4px;font-family:var(--mono);font-size:.78rem;text-align:center;">'+
-      '<div style="font-size:.53rem;color:var(--tx3);margin-top:3px;">ora '+cur+'W</div>'+
-      '<div style="font-size:.53rem;color:'+(d>0?'var(--acc)':'var(--grn)')+';">'+(d>0?'+':'')+d+'W</div>'+
+      '<div style="font-size:.53rem;color:var(--tx3);text-transform:uppercase;">'+RACE_TARGET_LABELS[d.secs]+'</div>'+
+      '<div style="font-size:.78rem;font-weight:700;font-family:var(--mono);">'+d.target+'W</div>'+
+      '<div style="font-size:.53rem;color:'+(d.diff>0?'var(--acc)':'var(--tx3)')+';">'+(d.diff>0?'+':'')+d.diff+'</div>'+
     '</div>';
   }).join('');
 
-  var feasCol = {realistico:'var(--grn)', ambizioso:'var(--yel)', improbabile:'var(--red)'}[g.feasibility];
-  var html = '<div style="padding:12px 0 4px;border-bottom:1px solid var(--br);">'+
-    '<div style="font-size:.58rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">'+
-      'Potenze target per competere</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px;">'+cells+'</div>'+
-    '<div style="font-size:.66rem;color:var(--tx2);line-height:1.6;">'+
-      'Per centrarli servono <strong>CP '+g.required.CP+'W</strong> ('+(g.cpGap>0?'+':'')+g.cpGap+'W) '+
-      'e <strong>W\' '+(g.required.Wp/1000).toFixed(1)+'kJ</strong> ('+(g.wpGap>0?'+':'')+(g.wpGap/1000).toFixed(1)+'kJ). '+
-      '<span style="color:'+feasCol+';">'+g.cpPerWeek+'W di CP a settimana per '+g.weeks+' settimane: '+g.feasibility+'.</span>';
-
-  if (!g.required.consistent) {
-    html += '<div style="margin-top:8px;padding:8px;background:rgba(255,77,77,.08);border:1px solid rgba(255,77,77,.25);border-radius:6px;color:var(--red);">'+
-      '<strong>Obiettivi incompatibili fra loro.</strong> Nessuna combinazione fisiologica di CP e W\' li soddisfa tutti: '+
-      g.required.conflicts.map(function(c){
-        return RACE_TARGET_LABELS[c.secs]+' mancherebbe di '+Math.abs(c.diff)+'W';
-      }).join(', ')+'. Le durate brevi dipendono da W\', quelle lunghe dal CP: chiedere molto a entrambi gli estremi '+
-      'implica due modelli diversi. Abbassa l\'obiettivo su cui puoi cedere.</div>';
-  }
-
+  var feasCol = {realistico:'var(--grn)','gia raggiunto':'var(--grn)',ambizioso:'var(--yel)',improbabile:'var(--red)'}[g.feasibility];
   var em = g.emphasis;
-  html += '<div style="margin-top:8px;font-size:.63rem;color:var(--tx3);">Enfasi del piano: '+
-    Math.round(em.cp*100)+'% soglia e sub-soglia, '+Math.round(em.wp*100)+'% lavori brevi. '+
-    'La rotazione degli allenamenti si riordina di conseguenza.</div>';
-  html += '</div></div>';
-  return html;
+
+  return '<div style="padding:12px 0 4px;border-bottom:1px solid var(--br);">'+
+    '<div style="font-size:.58rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">'+
+      'Forma target per competere</div>'+
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">'+
+      field('CP target','cp',g.targets.cp,'W',g.current.CP,g.cpGap)+
+      field("W' target",'wp',(g.targets.wp/1000).toFixed(1),'kJ',(g.current.Wp/1000).toFixed(1),parseFloat((g.wpGap/1000).toFixed(1)))+
+    '</div>'+
+    '<div style="font-size:.55rem;color:var(--tx3);text-transform:uppercase;margin-bottom:5px;">Potenze che ne derivano</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px;">'+implied+'</div>'+
+    '<div style="font-size:.66rem;color:var(--tx2);line-height:1.6;">'+
+      '<span style="color:'+feasCol+';">'+
+        (g.cpGap>0 ? g.cpPerWeek+'W di CP a settimana per '+g.weeks+' settimane: '+g.feasibility+'.'
+                   : 'CP gia\' al livello target.')+'</span>'+
+      '<div style="margin-top:6px;color:var(--tx3);">Enfasi del piano: '+
+        Math.round(em.cp*100)+'% soglia e sub-soglia, '+Math.round(em.wp*100)+'% lavori brevi'+
+        (em.atTarget ? ' (entrambe a target: piano di mantenimento)' : '')+'.</div>'+
+    '</div>'+
+  '</div>';
 }
 
 function onRaceTargetChange(input) {
   var r = (typeof races !== 'undefined' ? races : []).find(function(x){ return x.date === input.dataset.race; });
   if (!r) return;
-  setRaceTarget(r, parseInt(input.dataset.secs, 10), input.value);
+  setRaceTarget(r, input.dataset.field, input.value);
   makePlan();          // il piano si rimodella sui nuovi obiettivi
   renderPlanPage();
 }
