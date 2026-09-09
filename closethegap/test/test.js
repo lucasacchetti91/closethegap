@@ -28,7 +28,7 @@ const { JSDOM } = require('jsdom');
 
 const ROOT = path.join(__dirname, '..');
 const JS_FILES = ['config.js','icu-native.js','metrics.js','models.js','zones.js','workouts.js',
-  'plan-generator.js','races.js','race-targets.js','export.js','compliance.js','charts.js','wellness.js','activity-detail.js','home.js','plan.js',
+  'plan-generator.js','seasons.js','races.js','race-targets.js','export.js','compliance.js','charts.js','wellness.js','activity-detail.js','home.js','plan.js',
   'calendar.js','activities.js','sync.js','storage.js','diagnostics.js','app.js','ui-redesign.js'];
 
 let passed = 0, failed = 0;
@@ -544,6 +544,51 @@ setTimeout(async () => {
   check('valori fuori scala rifiutati', win.getRaceTargets(rA).cp !== 5000,
     'cp=' + win.getRaceTargets(rA).cp);
   win.races = [];
+
+  /* ---------- 9septies. Stagioni ---------- */
+  section('Confronto stagioni');
+  check('la stagione va da novembre a ottobre',
+    win.seasonOf('2025-11-01') === 2026 && win.seasonOf('2026-10-31') === 2026 &&
+    win.seasonOf('2026-11-01') === 2027,
+    win.seasonOf('2025-11-01') + '/' + win.seasonOf('2026-10-31') + '/' + win.seasonOf('2026-11-01'));
+  check('etichetta leggibile', win.seasonLabel(2026) === '2025/26', win.seasonLabel(2026));
+
+  const seasonActs = [];
+  [[2025, 100], [2026, 60]].forEach(([y, n]) => {
+    for (let i = 0; i < n; i++) {
+      const dt = new Date((y - 1) + '-11-01T12:00');
+      dt.setDate(dt.getDate() + Math.floor(i * 300 / n));
+      seasonActs.push({ id: y + '-' + i, date: dt.toISOString().slice(0, 10),
+        dur: 5400, dist: 50000, elev: 500, np: 260, hr: 150, _tss_override: 70,
+        icu_zone_times: [1800, 2400, 700, 400, 100, 0, 0, 0] });
+    }
+  });
+  const prevActs = win.activities, prevWell = win.wellness;
+  win.activities = seasonActs;
+  win.wellness = seasonActs.filter((_, i) => i % 5 === 0)
+    .map((a, i) => ({ date: a.date, eftp: 320 + i }));
+  const summaries = win.allSeasonSummaries();
+  check('due stagioni distinte riconosciute', summaries.length === 2, summaries.map(s => s.label).join(','));
+  check('le attività non si mescolano fra stagioni',
+    summaries[0].rides === 100 && summaries[1].rides === 60,
+    summaries.map(s => s.rides).join('/'));
+  check('la distribuzione di intensità usa il dato nativo',
+    summaries[0].polarization && summaries[0].polarization.lowPct > 0,
+    summaries[0].polarization ? summaries[0].polarization.lowPct + '%' : 'n/d');
+  /* Senza tempo-in-zona nativo NON si deve stimare: meglio "n/d" che
+     un numero inventato. */
+  win.activities = seasonActs.map(a => { const c = Object.assign({}, a); delete c.icu_zone_times; return c; });
+  check('senza dato nativo la distribuzione resta non disponibile',
+    win.allSeasonSummaries()[0].polarization === null);
+
+  /* La resa dei formati non può essere ricostruita all'indietro:
+     nelle stagioni passate non è registrato QUALE allenamento fosse. */
+  win.formatLog = {};
+  const prod = win.formatProductivity(3);
+  check('senza registro dei formati non si inventano risultati',
+    prod.ready === false && /registro dei formati|30 giorni/.test(prod.reason), prod.reason.slice(0, 50));
+
+  win.activities = prevActs; win.wellness = prevWell;
 
   /* ---------- 10. Layout mobile ---------- */
   section('Layout mobile');
