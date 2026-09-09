@@ -198,6 +198,7 @@
         <button class="chip" data-group="forma" onclick="filterAnalytics('forma',this)">Forma</button>
         <button class="chip" data-group="volume" onclick="filterAnalytics('volume',this)">Volume</button>
         <button class="chip" data-group="modelli" onclick="filterAnalytics('modelli',this)">Modelli</button>
+        <button class="chip" data-group="stagioni" onclick="filterAnalytics('stagioni',this)">Stagioni</button>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;background:var(--s2);padding:11px 15px;border-radius:var(--r);border:1px solid var(--br);">
         <span style="font-size:.7rem;color:var(--tx3);">FTP</span>
@@ -314,6 +315,10 @@
         <div class="ct">Decoupling Aerobico per Uscita</div>
         <p style="font-size:.68rem;color:var(--tx2);margin-bottom:10px;">&lt;5% = buon aerobico &middot; &gt;5% = drift cardiaco &middot; &#9679; = calcolato da stream reali Strava (1&#170; vs 2&#170; met&agrave; ride)</p>
         <div class="cw" style="height:180px;"><canvas id="ch-decouple"></canvas></div>
+      </div>
+
+      <div data-group="stagioni">
+        <div id="seasons-render"></div>
       </div>
 
       <div class="card" data-group="forma">
@@ -436,6 +441,7 @@
 <script src="js/models.js"></script>
 <script src="js/zones.js"></script>
 <script src="js/workouts.js"></script>
+<script src="js/seasons.js"></script>
 <script src="js/races.js"></script>
 <script src="js/race-targets.js"></script>
 <script src="js/export.js"></script>
