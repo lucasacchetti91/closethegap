@@ -270,7 +270,7 @@ function normalizeZoneTimes(raw) {
    che prima non avevamo modo di calcolare con la stessa affidabilità. */
 async function syncICUNativeMetrics(daysBack) {
   var td = today();
-  var from = SEASON_START;
+  var from = HISTORY_START;   // storico completo, non solo la stagione in corso
   var resp = await icuFetch('/activities?oldest=' + from + '&newest=' + td + '&fields=' + encodeURIComponent(ICU_ACTIVITY_FIELDS));
   if (!resp.ok) throw new Error('ICU activities HTTP ' + resp.status);
   var icuActs = await resp.json();

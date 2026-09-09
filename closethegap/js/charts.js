@@ -112,6 +112,7 @@ function renderAnalytics() {
   try { renderWbal(); } catch(e) { console.warn('wbal:',e.message); }
   try { renderBanister(); } catch(e) { console.warn('banister:',e.message); }
   try { renderDecouple(); } catch(e) { console.warn('decouple:',e.message); }
+  try { renderSeasons(); } catch(e) { console.warn('stagioni:',e.message); }
   try { renderFTPProjection(); } catch(e) { console.warn('ftpproj:',e.message); }
   try { renderPMCProjection(); } catch(e) { console.warn('pmcproj:',e.message); }
 
@@ -581,4 +582,93 @@ function renderDecouple() {
       {label:'Soglia 5%',data:timeline.map(function(){return 5;}),type:'line',borderColor:'rgba(255,77,77,.4)',borderDash:[3,3],pointRadius:0,borderWidth:1}
     ]
   },{scales:{x:{ticks:{color:'#5d657c',font:{size:10},maxTicksLimit:14,autoSkip:true},grid:{display:false}},y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}}});
+}
+
+
+/* ============================================================
+   CONFRONTO FRA STAGIONI
+   ============================================================ */
+function renderSeasons() {
+  var el = document.getElementById('seasons-render');
+  if (!el) return;
+  if (typeof recordCompletedFormats === 'function') recordCompletedFormats();
+  var seasons = allSeasonSummaries();
+
+  if (seasons.length < 1) { el.innerHTML = '<div class="empty">Nessun dato stagionale.</div>'; return; }
+
+  var cols = ['Stagione','Uscite','Ore','Km','Dislivello','TSS','TSS/sett','eFTP inizio','eFTP picco','Var.','Z1-2'];
+  var html = '<div class="card"><div class="ct">Confronto stagioni</div>' +
+    '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.68rem;">' +
+    '<thead><tr>' + cols.map(function(c){
+      return '<th style="text-align:left;padding:6px 8px;color:var(--tx3);font-weight:500;font-size:.58rem;' +
+             'text-transform:uppercase;border-bottom:1px solid var(--br2);white-space:nowrap;">' + c + '</th>';
+    }).join('') + '</tr></thead><tbody>';
+
+  seasons.forEach(function(s){
+    var gainCol = s.eftpGain == null ? 'var(--tx3)' : s.eftpGain > 0 ? 'var(--grn)' : 'var(--red)';
+    html += '<tr>' +
+      '<td style="padding:7px 8px;font-weight:700;border-bottom:1px solid var(--br);">' + s.label +
+        (s.complete ? '' : ' <span style="color:var(--acc);font-size:.85em;">in corso</span>') + '</td>' +
+      '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + s.rides + (s.races ? ' <span style="color:var(--pur);">('+s.races+' gare)</span>' : '') + '</td>' +
+      '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + s.hours + '</td>' +
+      '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + s.km.toLocaleString('it') + '</td>' +
+      '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + Math.round(s.elevM/1000) + 'k</td>' +
+      '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + s.tss.toLocaleString('it') + '</td>' +
+      '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + s.tssPerWeek + '</td>' +
+      '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + (s.eftpStart || '—') + '</td>' +
+      '<td style="padding:7px 8px;border-bottom:1px solid var(--br);font-weight:600;">' + (s.eftpPeak || '—') + '</td>' +
+      '<td style="padding:7px 8px;border-bottom:1px solid var(--br);color:' + gainCol + ';font-weight:600;">' +
+        (s.eftpGain == null ? '—' : (s.eftpGain > 0 ? '+' : '') + s.eftpGain + 'W') + '</td>' +
+      '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' +
+        (s.polarization ? s.polarization.lowPct + '%' : '<span style="color:var(--tx3);">n/d</span>') + '</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  var incomplete = seasons.filter(function(s){ return !s.polarization; });
+  if (incomplete.length) {
+    html += '<div style="font-size:.6rem;color:var(--tx3);margin-top:9px;line-height:1.5;">' +
+      'La distribuzione Z1-2 richiede il tempo-in-zona nativo di Intervals.icu, disponibile solo per le uscite ' +
+      'sincronizzate con le metriche avanzate. Per ' + incomplete.map(function(s){return s.label;}).join(', ') +
+      ' non c\'è copertura sufficiente e il valore non viene stimato.</div>';
+  }
+  html += '</div>';
+
+  // ---- resa dei formati ----
+  var prod = formatProductivity(3);
+  html += '<div class="card"><div class="ct">Resa dei formati di allenamento</div>';
+  if (!prod.ready) {
+    html += '<div style="font-size:.7rem;color:var(--tx2);line-height:1.7;">' + prod.reason +
+      '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--br);color:var(--tx3);">' +
+      '<strong>Perché non si può ricostruire all\'indietro.</strong> Per sapere quale formato rende servirebbe sapere ' +
+      'quale allenamento è stato svolto, e nelle stagioni passate quel dato non esiste: un\'uscita chiamata ' +
+      '"Pedalata pomeridiana" non dice se era un 4x8\' o un fondo. L\'app registra il formato solo per le sessioni ' +
+      'che genera, quindi il registro parte da adesso.</div></div>';
+  } else {
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.68rem;"><thead><tr>' +
+      ['Formato','Casi','Δ eFTP a 28gg','TSS nel periodo'].map(function(c){
+        return '<th style="text-align:left;padding:6px 8px;color:var(--tx3);font-weight:500;font-size:.58rem;text-transform:uppercase;border-bottom:1px solid var(--br2);">' + c + '</th>';
+      }).join('') + '</tr></thead><tbody>';
+    prod.rows.forEach(function(r){
+      var dim = r.enough ? '' : 'opacity:.45;';
+      html += '<tr style="' + dim + '">' +
+        '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + r.format + '</td>' +
+        '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + r.cases + (r.enough ? '' : ' <span style="color:var(--yel);">pochi</span>') + '</td>' +
+        '<td style="padding:7px 8px;border-bottom:1px solid var(--br);font-weight:600;color:' + (r.avgGain > 0 ? 'var(--grn)' : 'var(--tx2)') + ';">' +
+          (r.avgGain > 0 ? '+' : '') + r.avgGain + 'W</td>' +
+        '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + r.avgVolume + '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '<div style="font-size:.62rem;color:var(--yel);margin-top:12px;padding-top:10px;border-top:1px solid var(--br);line-height:1.6;">' +
+    '<strong>Come leggere questa tabella — e come non leggerla.</strong> È descrittiva, non stabilisce nessi di causa. ' +
+    'I formati non sono distribuiti a caso: il VO2max si concentra in costruzione e la soglia in base, quindi la fase ' +
+    'si confonde con il formato. Il volume varia insieme al tipo di lavoro, il campione è minuscolo, e i blocchi duri ' +
+    'si affrontano quando si sta bene — quindi la forma sale comunque. La colonna del TSS è lì apposta: se un formato ' +
+    'mostra guadagni maggiori ma con volume molto più alto, la spiegazione più semplice è il volume. ' +
+    'Serve a farsi domande, non a scartare un allenamento.</div>';
+  html += '</div>';
+
+  el.innerHTML = html;
 }

@@ -117,6 +117,31 @@ async function runDiagnostics() {
   diagLine('');
 
   // ---------- 3. Wellness ----------
+  diagLine('[2b] PROFONDITA\' DELLO STORICO');
+  try {
+    /* Quanto indietro arrivano davvero i dati su Intervals.icu? Serve a
+       sapere se ha senso spostare HISTORY_START piu' indietro, o se
+       vanno prima caricati su ICU i dati delle stagioni passate. */
+    var probe = await icuFetch('/activities?oldest=2015-01-01&newest=' + today() + '&fields=id,start_date_local,type');
+    var all = await probe.json();
+    var rides = (all||[]).filter(function(a){ return (a.type||'').toLowerCase().match(/ride|cycling/); })
+                         .map(function(a){ return String(a.start_date_local||'').slice(0,10); })
+                         .filter(Boolean).sort();
+    if (!rides.length) { diagLine('  Nessuna attivita\' trovata.'); }
+    else {
+      diagLine('  Attivita\' in bici totali su Intervals.icu: ' + rides.length);
+      diagLine('  Dalla piu\' vecchia: ' + rides[0] + '  alla piu\' recente: ' + rides[rides.length-1]);
+      var perSeason = {};
+      rides.forEach(function(d){ var s = seasonLabel(seasonOf(d)); perSeason[s] = (perSeason[s]||0)+1; });
+      Object.keys(perSeason).sort().forEach(function(s){
+        diagLine('    stagione ' + s + ': ' + perSeason[s] + ' uscite');
+      });
+      diagLine('  HISTORY_START attuale: ' + HISTORY_START +
+        (rides[0] < HISTORY_START ? '  ← ci sono dati PIU\' VECCHI: spostalo indietro in js/config.js' : '  (copre tutto lo storico disponibile)'));
+    }
+  } catch (e) { diagLine('  ✗ Errore: ' + e.message); }
+  diagLine('');
+
   diagLine('[3] CAMPI WELLNESS (/wellness) — dati Garmin');
   try {
     var fromW = dateKey(new Date(new Date().setDate(new Date().getDate() - 30)));

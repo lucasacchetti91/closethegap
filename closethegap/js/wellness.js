@@ -35,7 +35,7 @@ function pickW(o, keys) {
 
 async function syncWellness() {
   var td = today();
-  var from = SEASON_START; // stagione intera
+  var from = HISTORY_START; // storico completo: serve ai confronti fra stagioni
   var resp = await icuFetch('/wellness?oldest=' + from + '&newest=' + td);
   if (!resp.ok) throw new Error('Wellness HTTP ' + resp.status);
   var rows = await resp.json();

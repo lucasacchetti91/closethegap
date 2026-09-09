@@ -32,7 +32,7 @@ async function syncIntervals(opts) {
   }
   try {
     var td=today();
-    var from=SEASON_START; // tutta la stagione, non una finestra di 120 giorni
+    var from=HISTORY_START; // storico completo
     var p='oldest='+from+'&newest='+td;
     var wResp=await icuFetch('/wellness?'+p);
     if(!wResp.ok) throw new Error('Wellness HTTP '+wResp.status);

@@ -14,7 +14,25 @@ function zc(z) { return ZC[z] || '#4a5168'; }
 /* Inizio della stagione 2026: tutti i caricamenti storici partono da qui,
    così PMC, progressione eFTP e distribuzioni coprono l'intera stagione
    invece di una finestra mobile di pochi mesi. */
-var SEASON_START = '2025-11-01';
+var SEASON_START = '2025-11-01';   // stagione in corso (retrocompatibilita')
+
+/* Da dove parte lo STORICO scaricato. Distinto da SEASON_START: la
+   stagione corrente serve per PMC e piano, lo storico per i confronti
+   fra stagioni. Se Intervals.icu ha dati piu' vecchi (li riceve da
+   Strava/Garmin), basta spostare questa data indietro: non serve
+   nessun importatore.
+   La diagnostica riporta fin dove arrivano davvero i dati sul tuo
+   account, cosi' si sa quanto ha senso chiedere. */
+var HISTORY_START = '2023-11-01';
+
+/* Una stagione ciclistica va da novembre a ottobre. */
+function seasonOf(dateStr) {
+  var d = new Date(dateStr + 'T12:00');
+  var y = d.getFullYear();
+  return (d.getMonth() >= 10) ? (y + 1) : y;   // da novembre conta per l'anno dopo
+}
+function seasonLabel(y) { return (y - 1) + '/' + String(y).slice(2); }
+function seasonBounds(y) { return {from: (y - 1) + '-11-01', to: y + '-10-31'}; }
 
 var ICU_WORKER = 'https://closethegap-proxy.luca-sacchetti91.workers.dev';
 
