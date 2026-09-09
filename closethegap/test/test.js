@@ -489,63 +489,60 @@ setTimeout(async () => {
   section('Obiettivi di gara');
   win.ICU_NATIVE_CP = { eftp: 347, wPrime: 29856, pMax: 1103 };
   const cur = win.cpModel();
+  const rA = { date: win.addDays(win.today(), 180), name: 'Obiettivo', priority: 'A' };
+  win.races = [rA];
 
-  // Target generati DAL modello: devono ricondurre allo stesso modello
-  const coherent = {};
-  win.RACE_TARGET_DURATIONS.forEach(t => { coherent[t] = win.predictedPower(t, cur); });
-  const solved = win.solveRequiredModel(coherent, cur.Pmax);
-  check('il solutore ricostruisce il modello di partenza',
-    Math.abs(solved.CP - cur.CP) <= 3 && Math.abs(solved.Wp - cur.Wp) / cur.Wp < 0.08,
-    'CP ' + solved.CP + ' vs ' + cur.CP + ', W\' ' + solved.Wp + ' vs ' + cur.Wp);
-  check('target coerenti riconosciuti come tali', solved.consistent === true);
+  /* Alzare SOLO il W' deve concentrare i guadagni sulle durate brevi,
+     alzare SOLO il CP deve spostarle tutte in modo uniforme. E' la
+     proprietà del modello su cui poggia l'intera funzione. */
+  win.setRaceTarget(rA, 'cp', cur.CP);
+  win.setRaceTarget(rA, 'wp', cur.Wp / 1000 * 1.25);
+  const gWp = win.raceGapAnalysis(rA);
+  const short30 = gWp.implied.find(d => d.secs === 30).diff;
+  const long20 = gWp.implied.find(d => d.secs === 1200).diff;
+  check("alzare W' aiuta molto più le durate brevi", short30 > long20 * 3,
+    '+' + short30 + 'W a 30s contro +' + long20 + 'W a 20min');
+  check("alzare W' porta l'enfasi sui lavori brevi", gWp.emphasis.wp > 0.8,
+    Math.round(gWp.emphasis.wp * 100) + '% breve');
 
-  /* REGRESSIONE: usando l'errore MEDIO, due scarti opposti si
-     compensano e un insieme impossibile passa per buono. */
-  const contradictory = Object.assign({}, coherent);
-  contradictory[30] = Math.round(coherent[30] * 1.09);      // molto più W'
-  contradictory[1200] = Math.round(coherent[1200] * 1.09);  // e molto più CP
-  const bad = win.solveRequiredModel(contradictory, cur.Pmax);
-  check('target contraddittori riconosciuti', bad.consistent === false,
-    'errore medio ' + bad.rmsePct + '%, conflitti ' + bad.conflicts.length);
-  check('indica QUALI durate confliggono', bad.conflicts.length >= 2,
-    bad.conflicts.map(c => win.RACE_TARGET_LABELS[c.secs]).join(','));
+  win.setRaceTarget(rA, 'cp', cur.CP + 28);
+  win.setRaceTarget(rA, 'wp', cur.Wp / 1000);
+  const gCp = win.raceGapAnalysis(rA);
+  const diffs = gCp.implied.filter(d => d.secs >= 180).map(d => d.diff);
+  check('alzare il CP sposta le durate lunghe in modo uniforme',
+    Math.max(...diffs) - Math.min(...diffs) <= 3, diffs.join('/'));
+  check('alzare il CP porta l\'enfasi sulla soglia', gCp.emphasis.cp > 0.9,
+    Math.round(gCp.emphasis.cp * 100) + '% soglia');
 
-  // Enfasi: gare diverse devono produrre priorità diverse
-  const rShort = { date: win.addDays(win.today(), 180), name: 'Corta', priority: 'A' };
-  const rLong = { date: win.addDays(win.today(), 180), name: 'Lunga', priority: 'A' };
-  win.races = [rShort];
-  win.RACE_TARGET_DURATIONS.forEach(t => win.setRaceTarget(rShort, t,
-    Math.round(win.predictedPower(t, cur) * (t <= 360 ? 1.09 : 1.01))));
-  const gShort = win.raceGapAnalysis(rShort);
-  win.races = [rLong];
-  win.RACE_TARGET_DURATIONS.forEach(t => win.setRaceTarget(rLong, t,
-    Math.round(win.predictedPower(t, cur) * (t >= 720 ? 1.08 : 1.01))));
-  const gLong = win.raceGapAnalysis(rLong);
-  check('gara corta → enfasi sui lavori brevi', gShort.emphasis.wp > gShort.emphasis.cp,
-    Math.round(gShort.emphasis.wp * 100) + '% breve');
-  check('gara lunga → enfasi sulla soglia', gLong.emphasis.cp > gLong.emphasis.wp,
-    Math.round(gLong.emphasis.cp * 100) + '% soglia');
   /* REGRESSIONE: le due quote devono sommare a 100%. Usare il valore
-     assoluto al denominatore diluiva l'enfasi quando una qualità era
-     già oltre il target. */
-  [gShort, gLong].forEach((g, i) => {
-    check('le quote di enfasi sommano a 100% (' + (i ? 'lunga' : 'corta') + ')',
+     assoluto al denominatore le faceva sommare a meno. */
+  [gWp, gCp].forEach((g, i) => {
+    check('le quote di enfasi sommano a 100% (' + (i ? 'CP' : "W'") + ')',
       Math.abs(g.emphasis.cp + g.emphasis.wp - 1) < 0.01,
       Math.round((g.emphasis.cp + g.emphasis.wp) * 100) + '%');
   });
 
-  // La rotazione deve cambiare davvero
+  // Obiettivo già raggiunto: nessuna enfasi, piano di mantenimento
+  win.setRaceTarget(rA, 'cp', cur.CP - 5);
+  win.setRaceTarget(rA, 'wp', cur.Wp / 1000 - 2);
+  const gDone = win.raceGapAnalysis(rA);
+  check('target già raggiunti → piano di mantenimento equilibrato',
+    gDone.emphasis.atTarget === true && gDone.feasibility === 'gia raggiunto',
+    gDone.feasibility);
+
+  // La rotazione cambia davvero, senza perdere formati
   const base = win.MIDWEEK_QUALITY_POOL['Costruzione'];
-  const poolShort = win.weightPoolByEmphasis(base, gShort.emphasis);
-  const poolLong = win.weightPoolByEmphasis(base, gLong.emphasis);
-  check('la rotazione cambia con la gara obiettivo',
-    poolShort[0] !== poolLong[0], poolShort[0] + ' vs ' + poolLong[0]);
-  /* Nessun formato va eliminato: azzerare una qualità per settimane
-     sarebbe controproducente. */
+  const poolWp = win.weightPoolByEmphasis(base, gWp.emphasis);
+  const poolCp = win.weightPoolByEmphasis(base, gCp.emphasis);
+  check('la rotazione cambia con l\'obiettivo', poolWp[0] !== poolCp[0],
+    poolWp[0] + ' vs ' + poolCp[0]);
   check('nessun formato viene eliminato dalla rotazione',
-    base.every(k => poolShort.indexOf(k) >= 0) && base.every(k => poolLong.indexOf(k) >= 0));
-  check('la fattibilità viene valutata',
-    ['realistico', 'ambizioso', 'improbabile'].indexOf(gShort.feasibility) >= 0, gShort.feasibility);
+    base.every(k => poolWp.indexOf(k) >= 0) && base.every(k => poolCp.indexOf(k) >= 0));
+
+  // Valori assurdi non devono entrare
+  win.setRaceTarget(rA, 'cp', 5000);
+  check('valori fuori scala rifiutati', win.getRaceTargets(rA).cp !== 5000,
+    'cp=' + win.getRaceTargets(rA).cp);
   win.races = [];
 
   /* ---------- 10. Layout mobile ---------- */
