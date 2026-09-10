@@ -31,6 +31,9 @@ function closeSidebar() {
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});
 }
+var bs=document.getElementById('build-stamp');
+if (bs && typeof CTG_BUILD === 'string') bs.textContent = 'build ' + CTG_BUILD;
+
 document.getElementById('topbar-date').textContent=new Date().toLocaleDateString('it',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
 /* Avvio: carica la cache locale e disegna subito, poi sincronizza in

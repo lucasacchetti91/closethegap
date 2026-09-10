@@ -1,3 +1,9 @@
+/* Marcatore di versione. Serve a rispondere senza ambiguita' alla
+   domanda "il sito sta servendo i file che ho appena caricato?".
+   Compare nella diagnostica e in fondo alla barra laterale, ed e'
+   leggibile da console con CTG_BUILD. */
+var CTG_BUILD = '20260910-1309';
+
 /* ============================================================
    CONFIG.JS
    Costanti globali, colori, dati grezzi attività, best efforts.

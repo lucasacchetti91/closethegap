@@ -44,6 +44,9 @@ async function runDiagnostics() {
   if (btn) { btn.disabled = true; btn.textContent = 'Verifica in corso…'; }
   diagReport = '';
   diagLine('=== DIAGNOSTICA CLOSE THE GAP — ' + new Date().toISOString().slice(0,16) + ' ===');
+  diagLine('Build dei file serviti: ' + (typeof CTG_BUILD === 'string' ? CTG_BUILD : 'non disponibile'));
+  diagLine('Service worker attivo: ' + (navigator.serviceWorker && navigator.serviceWorker.controller
+    ? navigator.serviceWorker.controller.scriptURL : 'nessuno'));
   diagLine('');
 
   // ---------- 1. Proxy ----------
