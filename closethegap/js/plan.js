@@ -355,14 +355,6 @@ function renderRaceTargets(rSummary) {
     '</div>';
   }
 
-  var implied = g.implied.map(function(d){
-    return '<div style="text-align:center;min-width:0;">'+
-      '<div style="font-size:.53rem;color:var(--tx3);text-transform:uppercase;">'+RACE_TARGET_LABELS[d.secs]+'</div>'+
-      '<div style="font-size:.78rem;font-weight:700;font-family:var(--mono);">'+d.target+'W</div>'+
-      '<div style="font-size:.53rem;color:'+(d.diff>0?'var(--acc)':'var(--tx3)')+';">'+(d.diff>0?'+':'')+d.diff+'</div>'+
-    '</div>';
-  }).join('');
-
   var feasCol = {realistico:'var(--grn)','gia raggiunto':'var(--grn)',ambizioso:'var(--yel)',improbabile:'var(--red)'}[g.feasibility];
   var em = g.emphasis;
 
@@ -373,8 +365,6 @@ function renderRaceTargets(rSummary) {
       field('CP target','cp',g.targets.cp,'W',g.current.CP,g.cpGap)+
       field("W' target",'wp',(g.targets.wp/1000).toFixed(1),'kJ',(g.current.Wp/1000).toFixed(1),parseFloat((g.wpGap/1000).toFixed(1)))+
     '</div>'+
-    '<div style="font-size:.55rem;color:var(--tx3);text-transform:uppercase;margin-bottom:5px;">Potenze che ne derivano</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px;">'+implied+'</div>'+
     '<div style="font-size:.66rem;color:var(--tx2);line-height:1.6;">'+
       '<span style="color:'+feasCol+';">'+
         (g.cpGap>0 ? g.cpPerWeek+'W di CP a settimana per '+g.weeks+' settimane: '+g.feasibility+'.'

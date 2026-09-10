@@ -421,16 +421,30 @@ function normalizePowerCurve(raw) {
   return out.length >= 4 ? out : null;
 }
 
+var bestEffortsSeason = null;   // record della stagione in corso
+var bestEffortsAllTime = null;  // record assoluti
+
+/* Due curve: quella della stagione in corso e quella di sempre.
+   Servono per capire se un valore e' un record personale o solo il
+   massimo di un anno in cui non hai ancora fatto quello sforzo. */
 async function syncICUPowerCurve() {
-  var resp = await icuFetch('/power-curves.json?type=Ride&curves=all');
-  var raw = await resp.json();
-  var curve = normalizePowerCurve(raw);
-  if (curve) {
-    bestEfforts = curve;
-    BEST_EFFORTS_SOURCE = 'icu';
-    return curve.length;
-  }
-  return 0;
+  var out = 0;
+  // curva assoluta
+  try {
+    var rAll = await icuFetch('/power-curves.json?type=Ride&curves=all');
+    var cAll = normalizePowerCurve(await rAll.json());
+    if (cAll) { bestEffortsAllTime = cAll; bestEfforts = cAll; BEST_EFFORTS_SOURCE = 'icu'; out += cAll.length; }
+  } catch (e) { console.warn('Curva assoluta non disponibile:', e.message); }
+
+  // curva della stagione in corso
+  try {
+    var sb = seasonBounds(seasonOf(today()));
+    var rS = await icuFetch('/power-curves.json?type=Ride&curves=all&oldest=' + sb.from + '&newest=' + today());
+    var cS = normalizePowerCurve(await rS.json());
+    if (cS) { bestEffortsSeason = cS; out += cS.length; }
+  } catch (e) { console.warn('Curva di stagione non disponibile:', e.message); }
+
+  return out;
 }
 var icuLastStreamShape = null; // diagnostica: cosa e' realmente arrivato dall'API
 

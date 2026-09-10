@@ -31,21 +31,70 @@ function calcEF(a) { var np=calcNP(a); return (np&&a.hr)?parseFloat((np/a.hr).to
 /* PMC: CTL = EMA 42gg dei TSS giornalieri, ATL = EMA 7gg.
    TSB = CTL - ATL del giorno PRECEDENTE (forma all'inizio della giornata,
    prima che il TSS di oggi venga "assorbito"). */
+/* Performance Management Chart.
+
+   FONTE DEI VALORI: si usano CTL e ATL calcolati da Intervals.icu, che
+   arrivano gia' pronti nei record wellness. Ricalcolarli in proprio
+   produceva numeri diversi da quelli che leggi su Intervals.icu, per
+   due motivi distinti:
+
+   1) SEED A ZERO. Il calcolo partiva da CTL=0 alla prima attivita'
+      della finestra scaricata. Ma una media esponenziale a 42 giorni
+      impiega circa 42 giorni a convergere, e Intervals.icu ha anni di
+      storico PRIMA di quella data: il suo CTL li' non e' zero. Per
+      settimane il nostro valore restava quindi piu' basso del vero.
+
+   2) COSTANTI DI TEMPO. 42 e 7 giorni sono i valori predefiniti, ma
+      Intervals.icu permette di cambiarli per atleta (espone infatti
+      ctl_days e atl_days). Se li hai modificati, un calcolo con le
+      costanti fisse non potra' mai coincidere.
+
+   Il calcolo proprio resta come ripiego quando manca il dato nativo, e
+   per proiettare il futuro (dove ICU ovviamente non ha valori). In quel
+   caso parte dall'ultimo valore ICU noto invece che da zero. */
 function computePMC() {
   var sorted = [].concat(activities).sort(function(a,b){return a.date.localeCompare(b.date);});
-  if (!sorted.length) return {ctl:0,atl:0,tsb:0,history:[]};
+  if (!sorted.length) return {ctl:0,atl:0,tsb:0,history:[],source:'vuoto'};
+
+  // indice dei valori nativi per data
+  var icu = {};
+  if (typeof wellness !== 'undefined' && wellness.length) {
+    wellness.forEach(function(w){
+      if (w.date && w.ctl != null && w.atl != null) icu[String(w.date)] = {ctl:w.ctl, atl:w.atl};
+    });
+  }
+  var hasIcu = Object.keys(icu).length > 0;
+
   var start=new Date(sorted[0].date), end=new Date();
-  var ctl=0,atl=0,pc=0,pa=0,history=[];
-  for (var d=new Date(start);d<=end;d.setDate(d.getDate()+1)) {
+  var ctl=0, atl=0, seeded=false;
+  // se ci sono valori nativi, si parte dal primo disponibile invece che da zero
+  if (hasIcu) {
+    var firstKey = Object.keys(icu).sort()[0];
+    if (firstKey <= dateKey(start)) { ctl = icu[firstKey].ctl; atl = icu[firstKey].atl; seeded = true; }
+  }
+  var pc=ctl, pa=atl, history=[], usedNative=0;
+
+  for (var d=new Date(start); d<=end; d.setDate(d.getDate()+1)) {
     var ds=dateKey(d);
     var tss=activities.filter(function(a){return a.date===ds;}).reduce(function(s,a){return s+calcTSS(a);},0);
     var tsb=parseFloat((pc-pa).toFixed(1));
-    ctl=parseFloat((ctl+(tss-ctl)/42).toFixed(2));
-    atl=parseFloat((atl+(tss-atl)/7).toFixed(2));
-    history.push({date:ds,ctl:parseFloat(ctl.toFixed(1)),atl:parseFloat(atl.toFixed(1)),tsb:tsb,tss:tss});
+
+    if (icu[ds]) {                 // dato nativo: ha la precedenza
+      ctl = icu[ds].ctl; atl = icu[ds].atl; usedNative++;
+    } else {                        // ripiego: media esponenziale standard
+      ctl=parseFloat((ctl+(tss-ctl)/42).toFixed(2));
+      atl=parseFloat((atl+(tss-atl)/7).toFixed(2));
+    }
+    history.push({date:ds,ctl:parseFloat(ctl.toFixed(1)),atl:parseFloat(atl.toFixed(1)),tsb:tsb,tss:tss,
+                  native: !!icu[ds]});
     pc=ctl; pa=atl;
   }
-  return {ctl:Math.round(ctl),atl:Math.round(atl),tsb:Math.round(pc-pa),history:history};
+  return {
+    ctl:Math.round(ctl), atl:Math.round(atl), tsb:Math.round(pc-pa), history:history,
+    source: usedNative > history.length*0.8 ? 'intervals.icu'
+          : usedNative > 0 ? 'misto' : 'calcolo locale',
+    nativeDays: usedNative, seeded: seeded
+  };
 }
 
 function weekStats(wb) {

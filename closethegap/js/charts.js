@@ -58,36 +58,116 @@ function renderFitness() {
 
 function renderAnalytics() {
   var pmc=computePMC();
+  var srcEl=document.getElementById('pmc-source');
+  if (srcEl) {
+    srcEl.textContent = pmc.source === 'intervals.icu' ? '(valori di Intervals.icu)'
+      : pmc.source === 'misto' ? '(' + pmc.nativeDays + 'gg da Intervals.icu, il resto calcolato)'
+      : '(calcolo locale: sincronizza per allinearlo a Intervals.icu)';
+  }
   var h=pmc.history.slice(-120);
   mkChart('ch-pmc','line',{labels:h.map(function(d){return d.date.slice(5);}),datasets:[
     {label:'CTL',data:h.map(function(d){return d.ctl;}),borderColor:'#3b82f6',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
     {label:'ATL',data:h.map(function(d){return d.atl;}),borderColor:'#ff4d4d',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
     {label:'TSB',data:h.map(function(d){return d.tsb;}),borderColor:'#e8ff47',tension:.4,pointRadius:0,fill:false,borderWidth:1.5}
   ]});
-  var mm={},hm={};
-  activities.forEach(function(a){var m=a.date.slice(0,7);mm[m]=(mm[m]||0)+a.dist;hm[m]=(hm[m]||0)+a.dur;});
-  var mk=Object.keys(mm).sort();
-  mkChart('ch-km','bar',{labels:mk,datasets:[{label:'Km',data:mk.map(function(k){return Math.round(mm[k]/1000);}),backgroundColor:'rgba(34,212,106,.4)',borderColor:'#22d46a',borderWidth:1,borderRadius:3}]});
-  mkChart('ch-hours','bar',{labels:mk,datasets:[{label:'Ore',data:mk.map(function(k){return parseFloat((hm[k]/3600).toFixed(1));}),backgroundColor:'rgba(59,130,246,.4)',borderColor:'#3b82f6',borderWidth:1,borderRadius:3}]});
+  /* Km e ore della STAGIONE corrente: tutti i mesi da novembre a
+     ottobre, anche quelli ancora vuoti, cosi' la timeline resta
+     leggibile e si vede a che punto si e' arrivati. */
+  var curSeason = seasonOf(today());
+  var sbnd = seasonBounds(curSeason);
+  var mm={}, hm={}, monthKeys=[];
+  var cursor = new Date(sbnd.from + 'T12:00'), lastM = new Date(sbnd.to + 'T12:00');
+  while (cursor <= lastM) {
+    var mkey = cursor.getFullYear() + '-' + String(cursor.getMonth()+1).padStart(2,'0');
+    monthKeys.push(mkey); mm[mkey]=0; hm[mkey]=0;
+    cursor.setMonth(cursor.getMonth()+1);
+  }
+  activities.forEach(function(a){
+    var m=a.date.slice(0,7);
+    if (mm[m] !== undefined) { mm[m]+=(a.dist||0); hm[m]+=(a.dur||0); }
+  });
+  var MONTH_IT=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  var monthLabels = monthKeys.map(function(k){ return MONTH_IT[parseInt(k.slice(5),10)-1]; });
+  var volAxis = {
+    x:{ticks:{color:'#5d657c',font:{size:11}},grid:{display:false}},
+    y:{ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.03)'},beginAtZero:true}
+  };
+  mkChart('ch-km','bar',{labels:monthLabels,datasets:[
+    {label:'Km '+seasonLabel(curSeason),data:monthKeys.map(function(k){return Math.round(mm[k]/1000);}),
+     backgroundColor:'rgba(34,212,106,.45)',borderColor:'#22d46a',borderWidth:1,borderRadius:3}
+  ]},{scales:volAxis});
+  mkChart('ch-hours','bar',{labels:monthLabels,datasets:[
+    {label:'Ore '+seasonLabel(curSeason),data:monthKeys.map(function(k){return parseFloat((hm[k]/3600).toFixed(1));}),
+     backgroundColor:'rgba(59,130,246,.45)',borderColor:'#3b82f6',borderWidth:1,borderRadius:3}
+  ]},{scales:volAxis});
   /* Durate richieste per i riquadri accanto alla curva. Si cerca la
      corrispondenza per SECONDI, non per etichetta: le etichette
      cambiano a seconda della sorgente (curva ICU o valori locali). */
+  /* Best effort su DUE colonne: stagione in corso e record assoluti.
+     Il confronto serve a distinguere "e' il mio massimo di quest'anno"
+     da "e' il mio massimo di sempre": senza, un valore basso puo'
+     significare sia un calo di forma sia semplicemente che quello
+     sforzo quest'anno non l'hai ancora fatto. */
   var wantSecs = [1, 30, 60, 180, 300, 600, 1200];
-  var beHtml = wantSecs.map(function(sec){
-    var e = bestEfforts.reduce(function(b,x){
+  function findBE(list, sec) {
+    if (!list || !list.length) return null;
+    var e = list.reduce(function(b,x){
       return (!b || Math.abs(x.secs-sec) < Math.abs(b.secs-sec)) ? x : b;
     }, null);
-    if (!e || Math.abs(e.secs-sec) > Math.max(1, sec*0.15)) return '';
+    return (e && Math.abs(e.secs-sec) <= Math.max(1, sec*0.15)) ? e : null;
+  }
+  var seasonList = (typeof bestEffortsSeason !== 'undefined') ? bestEffortsSeason : null;
+  var allList = (typeof bestEffortsAllTime !== 'undefined' && bestEffortsAllTime) ? bestEffortsAllTime : bestEfforts;
+
+  var beRows = wantSecs.map(function(sec){
+    var eS = findBE(seasonList, sec), eA = findBE(allList, sec);
+    if (!eS && !eA) return '';
     var lbl = sec<60 ? sec+'s' : (sec/60)+'min';
-    return '<div class="pk"><div class="pkv">'+e.watts+'W</div>'+
-           '<div class="pkl">'+lbl+' · '+Math.round(e.watts/FTP*100)+'% CP</div></div>';
+    function cell(e, isSeason) {
+      if (!e) return '<div class="be-cell"><div class="be-w" style="color:var(--tx3);">—</div></div>';
+      // record di stagione che eguaglia l'assoluto: massimo di sempre fatto quest'anno
+      var isPB = isSeason && eA && e.watts >= eA.watts;
+      return '<div class="be-cell"'+(isPB?' style="outline:1px solid var(--acc);"':'')+'>'+
+        '<div class="be-w"'+(isPB?' style="color:var(--acc);"':'')+'>'+e.watts+'</div>'+
+        '<div class="be-sub">'+Math.round(e.watts/FTP*100)+'%</div></div>';
+    }
+    return '<div class="be-row"><span class="be-dur">'+lbl+'</span>'+cell(eS,true)+cell(eA,false)+'</div>';
   }).join('');
+
+  var beHtml = beRows
+    ? '<div class="be-row" style="padding-bottom:2px;"><span></span>'+
+      '<div class="be-col-head">Stagione</div><div class="be-col-head">Sempre</div></div>' + beRows +
+      (seasonList ? '' : '<div style="font-size:.55rem;color:var(--tx3);margin-top:6px;line-height:1.4;">'+
+        'La colonna di stagione compare dopo un "Sync metriche avanzate ICU".</div>')
+    : '';
   document.getElementById('power-kpis').innerHTML = beHtml ||
     '<div class="pk"><div class="pkl">Nessuna curva di potenza: premi "Sync metriche avanzate ICU".</div></div>';
-  mkChart('ch-pc','line',{labels:bestEfforts.map(function(e){return e.label;}),datasets:[
-    {label:'Best Power',data:bestEfforts.map(function(e){return e.watts;}),borderColor:'#e8ff47',backgroundColor:'rgba(232,255,71,.07)',tension:.4,pointRadius:3,pointBackgroundColor:'#e8ff47',fill:true,borderWidth:1.5},
-    {label:'FTP',data:bestEfforts.map(function(){return FTP;}),borderColor:'rgba(59,130,246,.4)',borderDash:[4,4],pointRadius:0,fill:false,borderWidth:1}
-  ]});
+  /* Due curve: stagione contro record assoluti. La distanza fra le due
+     dice a colpo d'occhio su quali durate sei sotto il tuo massimo. */
+  var pcSecs = (allList||bestEfforts).map(function(e){return e.secs;});
+  mkChart('ch-pc','line',{datasets:[
+    {label:'Record assoluti',data:(allList||bestEfforts).map(function(e){return {x:e.secs,y:e.watts};}),
+     borderColor:'rgba(139,146,168,.85)',backgroundColor:'rgba(139,146,168,.06)',tension:.35,
+     pointRadius:2,pointBackgroundColor:'#8b92a8',fill:true,borderWidth:1.5},
+    (seasonList ? {label:'Stagione '+seasonLabel(seasonOf(today())),
+      data:seasonList.map(function(e){return {x:e.secs,y:e.watts};}),
+      borderColor:'#e8ff47',backgroundColor:'rgba(232,255,71,.10)',tension:.35,
+      pointRadius:3,pointBackgroundColor:'#e8ff47',fill:true,borderWidth:2}
+     : {label:'Stagione (sincronizza per vederla)',data:[],borderColor:'transparent',pointRadius:0}),
+    {label:'CP '+FTP+'W',data:[{x:1,y:FTP},{x:3600,y:FTP}],
+     borderColor:'rgba(59,130,246,.4)',borderDash:[4,4],pointRadius:0,borderWidth:1}
+  ]},{
+    plugins:{tooltip:{callbacks:{label:function(c){ return fmtSecs(c.parsed.x)+' · '+Math.round(c.parsed.y)+'W'; }}}},
+    scales:{
+      x:{type:'logarithmic',min:1,max:3600,
+         title:{display:true,text:'Durata (scala logaritmica)',color:'#5d657c',font:{size:11}},
+         ticks:{color:'#5d657c',font:{size:11},callback:function(v){
+           return [1,5,15,30,60,300,600,1200,3600].indexOf(v)>=0 ? fmtSecs(v) : ''; }},
+         grid:{color:'rgba(255,255,255,.03)'}},
+      y:{title:{display:true,text:'Potenza (W)',color:'#5d657c',font:{size:11}},
+         ticks:{color:'#5d657c',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}
+    }
+  });
   document.getElementById('pz-label').textContent=FTP+'W';
   var zoneColors={1:'#4a5168',2:'#22d46a',3:'#fbbf24',4:'#f97316',5:'#ff4d4d',6:'#a78bfa',7:'#ec4899'};
   var PZ=computePowerZones().map(function(z){return {n:z.label,lo:z.lo,hi:z.hi,c:zoneColors[z.z]};});
@@ -632,42 +712,6 @@ function renderSeasons() {
       'sincronizzate con le metriche avanzate. Per ' + incomplete.map(function(s){return s.label;}).join(', ') +
       ' non c\'è copertura sufficiente e il valore non viene stimato.</div>';
   }
-  html += '</div>';
-
-  // ---- resa dei formati ----
-  var prod = formatProductivity(3);
-  html += '<div class="card"><div class="ct">Resa dei formati di allenamento</div>';
-  if (!prod.ready) {
-    html += '<div style="font-size:.7rem;color:var(--tx2);line-height:1.7;">' + prod.reason +
-      '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--br);color:var(--tx3);">' +
-      '<strong>Perché non si può ricostruire all\'indietro.</strong> Per sapere quale formato rende servirebbe sapere ' +
-      'quale allenamento è stato svolto, e nelle stagioni passate quel dato non esiste: un\'uscita chiamata ' +
-      '"Pedalata pomeridiana" non dice se era un 4x8\' o un fondo. L\'app registra il formato solo per le sessioni ' +
-      'che genera, quindi il registro parte da adesso.</div></div>';
-  } else {
-    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.68rem;"><thead><tr>' +
-      ['Formato','Casi','Δ eFTP a 28gg','TSS nel periodo'].map(function(c){
-        return '<th style="text-align:left;padding:6px 8px;color:var(--tx3);font-weight:500;font-size:.58rem;text-transform:uppercase;border-bottom:1px solid var(--br2);">' + c + '</th>';
-      }).join('') + '</tr></thead><tbody>';
-    prod.rows.forEach(function(r){
-      var dim = r.enough ? '' : 'opacity:.45;';
-      html += '<tr style="' + dim + '">' +
-        '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + r.format + '</td>' +
-        '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + r.cases + (r.enough ? '' : ' <span style="color:var(--yel);">pochi</span>') + '</td>' +
-        '<td style="padding:7px 8px;border-bottom:1px solid var(--br);font-weight:600;color:' + (r.avgGain > 0 ? 'var(--grn)' : 'var(--tx2)') + ';">' +
-          (r.avgGain > 0 ? '+' : '') + r.avgGain + 'W</td>' +
-        '<td style="padding:7px 8px;border-bottom:1px solid var(--br);">' + r.avgVolume + '</td>' +
-      '</tr>';
-    });
-    html += '</tbody></table></div>';
-  }
-  html += '<div style="font-size:.62rem;color:var(--yel);margin-top:12px;padding-top:10px;border-top:1px solid var(--br);line-height:1.6;">' +
-    '<strong>Come leggere questa tabella — e come non leggerla.</strong> È descrittiva, non stabilisce nessi di causa. ' +
-    'I formati non sono distribuiti a caso: il VO2max si concentra in costruzione e la soglia in base, quindi la fase ' +
-    'si confonde con il formato. Il volume varia insieme al tipo di lavoro, il campione è minuscolo, e i blocchi duri ' +
-    'si affrontano quando si sta bene — quindi la forma sale comunque. La colonna del TSS è lì apposta: se un formato ' +
-    'mostra guadagni maggiori ma con volume molto più alto, la spiegazione più semplice è il volume. ' +
-    'Serve a farsi domande, non a scartare un allenamento.</div>';
   html += '</div>';
 
   el.innerHTML = html;
