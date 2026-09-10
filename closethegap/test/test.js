@@ -600,6 +600,52 @@ setTimeout(async () => {
 
   win.activities = prevActs; win.wellness = prevWell;
 
+  /* ---------- 9octies. Curve di potenza stagione vs sempre ---------- */
+  section('Curve di potenza');
+  /* REGRESSIONE: il parametro `curves` non accetta date. Passando
+     oldest/newest venivano ignorati e si otteneva due volte la curva
+     ASSOLUTA: la colonna "stagione" mostrava i record di sempre. */
+  const allC = [{secs:30,watts:828},{secs:60,watts:676},{secs:300,watts:428},{secs:1200,watts:360}];
+  const seaC = [{secs:30,watts:828},{secs:60,watts:640},{secs:300,watts:415},{secs:1200,watts:360}];
+  let pair = win.assignSeasonAndAllTime(allC, seaC);
+  check('riconosce la curva di stagione (ordine assoluta, stagione)',
+    pair.season && pair.season[1].watts === 640, pair.season ? pair.season[1].watts : 'null');
+  pair = win.assignSeasonAndAllTime(seaC, allC);
+  check('riconosce la curva di stagione anche a ordine invertito',
+    pair.season && pair.season[1].watts === 640, pair.season ? pair.season[1].watts : 'null');
+  /* La stagione è un sottoinsieme dello storico: non può superare
+     l'assoluta a nessuna durata. Se accade, i dati non sono
+     interpretabili e non si deve mostrare nulla di inventato. */
+  const weird = [{secs:30,watts:900},{secs:60,watts:600},{secs:300,watts:450},{secs:1200,watts:340}];
+  check('curve incoerenti → nessuna colonna stagione',
+    win.assignSeasonAndAllTime(allC, weird).season === null);
+  check('estrae più curve dalla forma {list:[...]}',
+    win.extractAllCurves({list:[{secs:[30,60,300,1200],watts:[828,676,428,360]},
+                                {secs:[30,60,300,1200],watts:[828,640,415,360]}]}).length === 2);
+
+  /* ---------- 9nonies. PMC su tutta la stagione ---------- */
+  section('PMC');
+  /* REGRESSIONE: CTL/ATL venivano ricalcolati da zero e non
+     coincidevano con Intervals.icu, che li fornisce già pronti. */
+  const prevW = win.wellness, prevA = win.activities;
+  const pmcActs = [], pmcWell = [];
+  for (let i = 200; i >= 0; i--) {
+    const dt = new Date(); dt.setDate(dt.getDate() - i);
+    const ds = dt.toISOString().slice(0, 10);
+    pmcActs.push({ id: 'p' + i, date: ds, dur: 3600, _tss_override: 70 });
+    pmcWell.push({ date: ds, ctl: 62, atl: 58 });
+  }
+  win.activities = pmcActs; win.wellness = [];
+  const local = win.computePMC();
+  win.wellness = pmcWell;
+  const native = win.computePMC();
+  check('i valori nativi hanno la precedenza sul calcolo locale',
+    native.ctl === 62 && native.atl === 58 && native.source === 'intervals.icu',
+    'CTL ' + native.ctl + ' ATL ' + native.atl + ' (' + native.source + ')');
+  check('il calcolo locale resta come ripiego', local.source === 'calcolo locale');
+  check('la fonte viene dichiarata', ['intervals.icu','misto','calcolo locale'].indexOf(native.source) >= 0);
+  win.activities = prevA; win.wellness = prevW;
+
   /* ---------- 10. Layout mobile ---------- */
   section('Layout mobile');
   /* I commenti vanno rimossi prima di analizzare il CSS: un commento
