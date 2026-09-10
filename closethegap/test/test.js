@@ -167,8 +167,18 @@ setTimeout(async () => {
   const tssPerHour = future.filter(p => p.durMin > 20).map(p => p.tss / (p.durMin / 60));
   check('densità TSS plausibile (<110 TSS/h)', tssPerHour.every(v => v < 110),
     'max ' + Math.round(Math.max(...tssPerHour)) + ' TSS/h');
+  /* La varietà va misurata sul POOL, non sul piano generato: se la
+     gara obiettivo è vicina, l'orizzonte è tutto in Tapering Finale,
+     fase che per progetto usa pochi formati. Un'asserzione sul piano
+     dipendeva quindi dalla data del giorno e falliva a intermittenza. */
+  const poolMethods = new Set(win.MIDWEEK_QUALITY_POOL['Costruzione']);
+  check('almeno 6 formati diversi nel pool di costruzione', poolMethods.size >= 6,
+    poolMethods.size + ' formati');
   const methods = new Set(future.map(p => p.method).filter(Boolean));
-  check('almeno 4 formati di allenamento diversi', methods.size >= 4, [...methods].join(', '));
+  const buildWeeks = new Set(future.filter(p => /Costruzione/.test(p.week || '')).map(p => p.week));
+  check('varietà nel piano generato quando la fase lo consente',
+    buildWeeks.size < 4 || methods.size >= 4,
+    buildWeeks.size + ' settimane di costruzione, ' + methods.size + ' formati: ' + [...methods].join(', '));
 
   /* ---------- 6. Best mean power ---------- */
   section('Best effort');
