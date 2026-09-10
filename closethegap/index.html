@@ -224,10 +224,14 @@
           <pre style="font-size:.62rem;line-height:1.55;color:var(--tx2);background:var(--s1);border:1px solid var(--br);border-radius:6px;padding:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;max-height:460px;overflow-y:auto;"></pre>
         </div>
       </div>
-      <div class="card"><div class="ct">PMC &mdash; CTL / ATL / TSB (120gg)</div><div class="cw" style="height:230px;"><canvas id="ch-pmc"></canvas></div></div>
-      <div class="g2" data-group="volume">
-        <div class="card"><div class="ct">Km Mensili</div><div class="cw" style="height:160px;"><canvas id="ch-km"></canvas></div></div>
-        <div class="card"><div class="ct">Ore Mensili</div><div class="cw" style="height:160px;"><canvas id="ch-hours"></canvas></div></div>
+      <!-- PMC alto e stretto (2/3), con km e ore della stagione impilati a destra -->
+      <div class="pmc-split" data-group="forma">
+        <div class="card"><div class="ct">PMC &mdash; CTL / ATL / TSB <span id="pmc-source" style="color:var(--tx3);font-weight:400;font-size:.8em;"></span></div>
+          <div class="cw" style="height:460px;"><canvas id="ch-pmc"></canvas></div></div>
+        <div class="pmc-side">
+          <div class="card"><div class="ct">Km &mdash; stagione</div><div class="cw" style="height:210px;"><canvas id="ch-km"></canvas></div></div>
+          <div class="card"><div class="ct">Ore &mdash; stagione</div><div class="cw" style="height:210px;"><canvas id="ch-hours"></canvas></div></div>
+        </div>
       </div>
       <div class="divider"></div>
       <div class="card" data-group="potenza">
