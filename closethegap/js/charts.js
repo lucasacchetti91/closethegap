@@ -64,7 +64,12 @@ function renderAnalytics() {
       : pmc.source === 'misto' ? '(' + pmc.nativeDays + 'gg da Intervals.icu, il resto calcolato)'
       : '(calcolo locale: sincronizza per allinearlo a Intervals.icu)';
   }
-  var h=pmc.history.slice(-120);
+  /* Timeline dell'INTERA stagione, non degli ultimi 120 giorni: il PMC
+     serve a leggere l'andamento di un ciclo completo, e tagliarlo a
+     una finestra mobile nascondeva proprio la fase di costruzione. */
+  var pmcSb = seasonBounds(seasonOf(today()));
+  var h=pmc.history.filter(function(d){ return d.date >= pmcSb.from && d.date <= pmcSb.to; });
+  if (h.length < 30) h = pmc.history.slice(-120);   // stagione appena iniziata: si mostra il recente
   mkChart('ch-pmc','line',{labels:h.map(function(d){return d.date.slice(5);}),datasets:[
     {label:'CTL',data:h.map(function(d){return d.ctl;}),borderColor:'#3b82f6',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},
     {label:'ATL',data:h.map(function(d){return d.atl;}),borderColor:'#ff4d4d',tension:.4,pointRadius:0,fill:false,borderWidth:1.5},

@@ -428,23 +428,85 @@ var bestEffortsAllTime = null;  // record assoluti
    Servono per capire se un valore e' un record personale o solo il
    massimo di un anno in cui non hai ancora fatto quello sforzo. */
 async function syncICUPowerCurve() {
+  /* IL PARAMETRO curves NON ACCETTA DATE.
+     Prende una lista di specifiche temporali (es. "1y,42d,all"). La
+     versione precedente passava oldest/newest, che venivano
+     semplicemente ignorati: entrambe le chiamate restituivano la curva
+     ASSOLUTA, e la colonna "stagione" mostrava quindi i record di
+     sempre. Ora si chiedono le due curve in una sola richiesta,
+     esprimendo la stagione come numero di giorni trascorsi. */
+  var sb = seasonBounds(seasonOf(today()));
+  var seasonDays = Math.max(1, Math.round((new Date(today()+'T12:00') - new Date(sb.from+'T12:00')) / 86400000));
   var out = 0;
-  // curva assoluta
   try {
-    var rAll = await icuFetch('/power-curves.json?type=Ride&curves=all');
-    var cAll = normalizePowerCurve(await rAll.json());
-    if (cAll) { bestEffortsAllTime = cAll; bestEfforts = cAll; BEST_EFFORTS_SOURCE = 'icu'; out += cAll.length; }
-  } catch (e) { console.warn('Curva assoluta non disponibile:', e.message); }
-
-  // curva della stagione in corso
-  try {
-    var sb = seasonBounds(seasonOf(today()));
-    var rS = await icuFetch('/power-curves.json?type=Ride&curves=all&oldest=' + sb.from + '&newest=' + today());
-    var cS = normalizePowerCurve(await rS.json());
-    if (cS) { bestEffortsSeason = cS; out += cS.length; }
-  } catch (e) { console.warn('Curva di stagione non disponibile:', e.message); }
-
+    var resp = await icuFetch('/power-curves.json?type=Ride&curves=' + seasonDays + 'd,all');
+    var raw = await resp.json();
+    icuPowerCurveRawSample = raw;
+    var curves = extractAllCurves(raw);
+    if (curves.length >= 2) {
+      /* Quale delle due e' la stagione? Non ci si affida all'ordine:
+         per definizione la curva di stagione non puo' superare quella
+         assoluta a NESSUNA durata, quindi l'assegnazione si verifica
+         sui dati. */
+      var pair = assignSeasonAndAllTime(curves[0], curves[1]);
+      if (pair) {
+        bestEffortsSeason = pair.season;
+        bestEffortsAllTime = pair.allTime;
+        bestEfforts = pair.allTime;
+        BEST_EFFORTS_SOURCE = 'icu';
+        out = pair.allTime.length;
+      }
+    } else if (curves.length === 1) {
+      // una sola curva: e' l'assoluta, la stagione resta non disponibile
+      bestEffortsAllTime = curves[0];
+      bestEfforts = curves[0];
+      bestEffortsSeason = null;
+      BEST_EFFORTS_SOURCE = 'icu';
+      out = curves[0].length;
+    }
+  } catch (e) {
+    console.warn('Curve di potenza non disponibili:', e.message);
+  }
   return out;
+}
+
+/* Estrae TUTTE le curve presenti nella risposta, non solo la prima. */
+function extractAllCurves(raw) {
+  var out = [];
+  function tryOne(o) {
+    var c = normalizePowerCurve(o);
+    if (c && c.length >= 4) out.push(c);
+  }
+  if (Array.isArray(raw)) raw.forEach(tryOne);
+  else if (raw && typeof raw === 'object') {
+    if (Array.isArray(raw.list)) raw.list.forEach(tryOne);
+    else tryOne(raw);
+  }
+  return out;
+}
+
+/* La curva di stagione non puo' essere superiore all'assoluta a nessuna
+   durata: e' un sottoinsieme dello stesso storico. Si usa questa
+   proprieta' per capire quale sia quale, e per accorgersi se i dati non
+   tornano invece di mostrare numeri sbagliati. */
+function assignSeasonAndAllTime(a, b) {
+  function dominates(x, y) {           // x >= y ovunque (con tolleranza)
+    var checked = 0, ok = 0;
+    x.forEach(function(px){
+      var py = y.find(function(q){ return q.secs === px.secs; });
+      if (!py) return;
+      checked++;
+      if (px.watts >= py.watts - 1) ok++;
+    });
+    return checked >= 3 && ok === checked;
+  }
+  if (dominates(a, b)) return {allTime: a, season: b};
+  if (dominates(b, a)) return {allTime: b, season: a};
+  /* Nessuna domina l'altra: i dati non sono coerenti con la definizione.
+     Meglio mostrare solo l'assoluta che presentare come "stagione" una
+     curva di cui non sappiamo la provenienza. */
+  console.warn('Curve di potenza: impossibile distinguere stagione e assoluta, mostro solo l\'assoluta.');
+  return {allTime: a, season: null};
 }
 var icuLastStreamShape = null; // diagnostica: cosa e' realmente arrivato dall'API
 
