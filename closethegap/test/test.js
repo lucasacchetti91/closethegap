@@ -646,6 +646,48 @@ setTimeout(async () => {
   check('la fonte viene dichiarata', ['intervals.icu','misto','calcolo locale'].indexOf(native.source) >= 0);
   win.activities = prevA; win.wellness = prevW;
 
+  /* ---------- 9decies. Polarizzazione ---------- */
+  section('Distribuzione di intensità');
+  const zt = [3200, 6100, 2400, 1500, 500, 200, 107];
+  const polActs = [];
+  for (let i = 0; i < 20; i++) {
+    polActs.push({ id: 'pol' + i, date: win.addDays(win.today(), -i),
+      dur: 14400, avg_watts: 234, icu_zone_times: zt });
+  }
+  const prevPA = win.activities;
+  win.activities = polActs;
+  const pol = win.polarizationCheck();
+  /* REGRESSIONE: le tre fasce devono sommare esattamente a 100.
+     Tre arrotondamenti indipendenti davano 99 o 101, e percentuali che
+     non tornano fanno giustamente dubitare del calcolo. */
+  check('le tre fasce sommano esattamente a 100%',
+    pol.lowPct + pol.midPct + pol.highPct === 100,
+    pol.lowPct + '+' + pol.midPct + '+' + pol.highPct + '=' + (pol.lowPct + pol.midPct + pol.highPct));
+  check('la fascia moderata (Z3) viene riportata', typeof pol.midPct === 'number' && pol.midPct > 0,
+    pol.midPct + '%');
+
+  /* REGRESSIONE PIÙ SERIA: classificare l'uscita per potenza MEDIA
+     assegnava tutte le 4h a una sola zona, e il risultato era sempre
+     "~98% bassa / 0% alta" — cioè polarizzato qualunque cosa si
+     facesse, così il controllo di sicurezza non scattava mai. */
+  check('usa il tempo in zona reale, non la potenza media',
+    pol.highPct >= 10, 'alta intensità ' + pol.highPct + '% (con la media sarebbe 0%)');
+  check('con molta Z3 non viene dichiarato polarizzato', pol.polarized === false,
+    'Z3 ' + pol.midPct + '%');
+
+  // Senza il dato nativo si dichiara l'indisponibilità invece di stimare
+  win.activities = polActs.map(a => { const c = Object.assign({}, a); delete c.icu_zone_times; return c; });
+  const polNo = win.polarizationCheck();
+  check('senza tempo in zona non si stima nulla',
+    polNo.available === false && polNo.polarized === null, 'available=' + polNo.available);
+  check('viene spiegato perché non è disponibile', !!polNo.reason);
+
+  // Profilo davvero polarizzato
+  win.activities = polActs.map(a => Object.assign({}, a, { icu_zone_times: [5000, 5000, 900, 900, 300, 100, 50] }));
+  check('un profilo realmente polarizzato viene riconosciuto',
+    win.polarizationCheck().polarized === true);
+  win.activities = prevPA;
+
   /* ---------- 10. Layout mobile ---------- */
   section('Layout mobile');
   /* I commenti vanno rimossi prima di analizzare il CSS: un commento
