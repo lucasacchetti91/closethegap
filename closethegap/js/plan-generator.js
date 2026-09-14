@@ -72,20 +72,67 @@ function demonstratedRampRate() {
   return Math.min(Math.max(Math.round(p75), 3), 8);
 }
 
+/* Distribuzione reale di intensita' negli ultimi 42 giorni (Seiler).
+
+   BUG CORRETTO: la versione precedente classificava OGNI USCITA in base
+   alla sua potenza MEDIA e assegnava l'intera durata a quell'unica
+   zona. Ma la media di un'uscita sta quasi sempre in Z1-Z2 anche
+   quando contiene 40 minuti sopra soglia: una gran fondo di 4h a 234W
+   di media finiva tutta in Z2. Il risultato era sempre "98% bassa /
+   0% alta", cioe' "polarizzato" qualunque cosa si facesse, e il
+   controllo di sicurezza che trasforma il martedi' in Z2 non poteva
+   scattare. E' lo stesso errore gia' corretto nei grafici di
+   distribuzione zone, che qui era rimasto.
+
+   Ora si usa il tempo-in-zona reale calcolato da Intervals.icu. Se non
+   e' disponibile per abbastanza uscite, la funzione lo DICHIARA
+   (available:false) invece di produrre un numero inventato, e il
+   generatore non prende decisioni su quella base.
+
+   Le fasce sono tre, come nel modello polarizzato: bassa (Z1-Z2),
+   moderata (Z3) e alta (Z4+). Le prime due percentuali da sole non
+   sommano a 100: manca la moderata, che ora viene riportata. */
 function polarizationCheck() {
-  var cutoff = new Date(); cutoff.setDate(cutoff.getDate()-42);
-  var recent = activities.filter(function(a){ return new Date(a.date) >= cutoff && a.avg_watts; });
-  var pz = computePowerZones();
-  var timeByZone = {};
-  recent.forEach(function(a){
-    for (var i=0;i<pz.length;i++){
-      if (a.avg_watts>=pz[i].lo && a.avg_watts<pz[i].hi){ timeByZone[pz[i].z]=(timeByZone[pz[i].z]||0)+a.dur; break; }
-    }
+  var cutoff = dateKey(new Date(new Date().setDate(new Date().getDate()-42)));
+  var recent = activities.filter(function(a){ return a.date >= cutoff; });
+  var withZones = recent.filter(function(a){ return a.icu_zone_times && a.icu_zone_times.length; });
+
+  if (withZones.length < Math.max(3, recent.length * 0.5)) {
+    return {
+      available: false, lowPct: null, midPct: null, highPct: null,
+      polarized: null, sampleDays: recent.length, coverage: withZones.length,
+      reason: 'Tempo in zona disponibile solo per ' + withZones.length + ' delle ' + recent.length +
+              ' uscite recenti: non basta per una stima attendibile. Premi "Sync metriche avanzate ICU".'
+    };
+  }
+
+  var sums = [];
+  withZones.forEach(function(a){
+    a.icu_zone_times.forEach(function(v,i){ sums[i] = (sums[i]||0) + (v||0); });
   });
-  var total = Object.keys(timeByZone).reduce(function(s,k){return s+timeByZone[k];},0) || 1;
-  var lowPct = ((timeByZone[1]||0)+(timeByZone[2]||0))/total*100;
-  var highPct = ((timeByZone[4]||0)+(timeByZone[5]||0)+(timeByZone[6]||0)+(timeByZone[7]||0))/total*100;
-  return {lowPct:Math.round(lowPct), highPct:Math.round(highPct), polarized: lowPct>=75, sampleDays: recent.length};
+  var total = sums.reduce(function(s,v){ return s + (v||0); }, 0) || 1;
+  var low  = (sums[0]||0) + (sums[1]||0);           // Z1-Z2
+  var mid  = (sums[2]||0);                           // Z3
+  var high = sums.slice(3).reduce(function(s,v){ return s + (v||0); }, 0); // Z4 e oltre
+
+  /* Arrotondamento che preserva il totale: tre arrotondamenti
+     indipendenti possono dare 99 o 101, e vedere percentuali che non
+     sommano a 100 fa giustamente dubitare del calcolo. Il resto viene
+     assegnato alla fascia piu' grande, dove pesa meno in proporzione. */
+  var raw = [low/total*100, mid/total*100, high/total*100];
+  var pcts = raw.map(Math.round);
+  var drift = 100 - pcts.reduce(function(s,v){ return s+v; }, 0);
+  if (drift !== 0) {
+    var biggest = raw.indexOf(Math.max.apply(null, raw));
+    pcts[biggest] += drift;
+  }
+  var lowPct = pcts[0], midPct = pcts[1], highPct = pcts[2];
+  return {
+    available: true,
+    lowPct: lowPct, midPct: midPct, highPct: highPct,
+    polarized: lowPct >= 75 && midPct <= 15,
+    sampleDays: recent.length, coverage: withZones.length
+  };
 }
 
 function raceDemandProfile() {
@@ -162,7 +209,9 @@ function generateFuturePlan(fromDate, toDateExclusive) {
     // I formati vengono pescati dalla libreria in workouts.js ruotando
     // con l'indice di settimana, così non si ripetono identici.
     var ridesPerWeek = (phase==='Tapering Finale' || phase==='Affilatura') ? 3 : 4;
-    var midweekQuality = !(!polarization.polarized && polarization.sampleDays>10);
+    /* Se la distribuzione non e' misurabile non si prende alcuna
+       decisione su quella base: si mantiene la sessione di qualita'. */
+    var midweekQuality = !(polarization.available && polarization.polarized === false && polarization.sampleDays > 10);
     var weekIdx = weekNum-1;
 
     var daysLeftInWindow = Math.min(7, Math.round((new Date(toDateExclusive+'T12:00')-new Date(cur+'T12:00'))/86400000));

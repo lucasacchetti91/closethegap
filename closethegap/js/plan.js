@@ -167,7 +167,7 @@ function renderPlanPage() {
       '<strong style="color:var(--acc);">Generazione piano futuro — metodi usati</strong><br>'+
       'CP attuale: <strong>'+meta.CP+'W</strong> · W\': <strong>'+Math.round(meta.Wp/1000)+'kJ</strong> (individualizza tutte le zone)<br>'+
       'Ramp rate applicato: <strong>'+meta.rampRate+' CTL/settimana</strong> (dal tuo storico, clampato 3-8 per sicurezza)<br>'+
-      (meta.polarization ? ('Polarizzazione ultimi 42gg: <strong>'+meta.polarization.lowPct+'% bassa / '+meta.polarization.highPct+'% alta intensità</strong> ('+(meta.polarization.polarized?'80/20 rispettato':'sbilanciata verso l\'alta intensità — sessioni qualità ridotte')+')<br>') : '') +
+      (meta.polarization ? polarizationText(meta.polarization) : '') +
       (meta.raceProfile ? ('Profilo gare analizzate: <strong>'+meta.raceProfile.count+' gare</strong>, '+meta.raceProfile.avgDurMin+"' medi, decoupling medio "+meta.raceProfile.avgDecoupling+'%') : '');
   }
 
@@ -322,7 +322,7 @@ function adaptPlan() {
   var col=tsb<-10?'#ff4d4d':tsb>5?'#22d46a':'#fbbf24';
   var msg='<strong style="color:'+col+';">TSB '+tsb+'</strong> · CTL '+Math.round(ctl)+' · ATL '+Math.round(atl)+'.<br>';
   msg+='Piano futuro rigenerato: ramp rate '+(meta.rampRate||'—')+' CTL/sett (dal tuo storico) · ';
-  msg+=meta.polarization ? ('polarizzazione '+meta.polarization.lowPct+'% bassa/'+meta.polarization.highPct+'% alta intensità ('+(meta.polarization.polarized?'ok, 80/20 rispettato':'sbilanciata, ridotte le sessioni qualità questa settimana')+')') : '';
+  msg+=meta.polarization ? polarizationText(meta.polarization, true) : '';
   if (adapted>0) msg+='<br><strong>⚡ '+adapted+' sessione alleggerita.</strong>';
   msg+=recMsg;
   msg+=compMsg;
@@ -382,4 +382,25 @@ function onRaceTargetChange(input) {
   setRaceTarget(r, input.dataset.field, input.value);
   makePlan();          // il piano si rimodella sui nuovi obiettivi
   renderPlanPage();
+}
+
+
+/* Testo della distribuzione di intensita'.
+   Mostra TUTTE E TRE le fasce: bassa, moderata e alta. Le prime due da
+   sole non sommano a 100 perche' manca la Z3, e vederne solo due era
+   motivo di confusione legittima. */
+function polarizationText(p, compact) {
+  if (!p || !p.available) {
+    var why = p && p.reason ? p.reason : 'Distribuzione di intensità non disponibile.';
+    return compact ? why : '<span style="color:var(--yel);">' + why + '</span><br>';
+  }
+  var verdict = p.polarized
+    ? 'distribuzione polarizzata'
+    : p.midPct > 15
+      ? 'troppo tempo in Z3: è la zona che affatica senza il beneficio né del facile né del duro'
+      : 'sbilanciata verso l\'alta intensità — sessioni di qualità ridotte';
+  var body = 'Intensità ultimi 42gg: <strong>' + p.lowPct + '% bassa (Z1-2) · ' +
+             p.midPct + '% moderata (Z3) · ' + p.highPct + '% alta (Z4+)</strong> — ' + verdict +
+             '<span style="color:var(--tx3);"> · su ' + p.coverage + ' uscite con tempo in zona reale</span>';
+  return compact ? body : body + '<br>';
 }
