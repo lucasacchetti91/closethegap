@@ -400,7 +400,8 @@ setTimeout(async () => {
   const pz = win.computePowerZones();
   const CPt = 347, WPt = 29856;
   const formats = ['seiler4x8','seiler4x16','norwegian4x4','eight3','fivex5fast','ronnestad4020',
-                   'ronnestad','bossi','fastart','overunder','sweetspot','wprime','torque'];
+                   'ronnestad','bossi','fastart','overunder','sweetspot','wprime','torque',
+                   'sprints','z2sprints','raceattacks','pyramid','progressive'];
   let allOk = true, detail = [];
   formats.forEach(k => {
     const s = win.buildByKey(k, '2026-09-10', 'Sett.1 · Costruzione', CPt, WPt, pz, 'Costruzione', null);
@@ -409,7 +410,7 @@ setTimeout(async () => {
     if (!ok) { allOk = false; detail.push(k + '(' + (s ? s.durMin + 'min/' + s.tss + 'tss' : 'null') + ')'); }
   });
   check('tutti i formati producono sessioni valide', allOk, detail.join(', '));
-  check('almeno 13 formati disponibili', formats.length >= 13, formats.length + ' formati');
+  check('almeno 18 formati disponibili', formats.length >= 18, formats.length + ' formati');
 
   // In affilatura si tolgono ripetute, non si abbassa l'intensità
   const build = win.buildByKey('seiler4x8', '2026-09-10', 'x', CPt, WPt, pz, 'Costruzione', null);
@@ -687,6 +688,48 @@ setTimeout(async () => {
   check('un profilo realmente polarizzato viene riconosciuto',
     win.polarizationCheck().polarized === true);
   win.activities = prevPA;
+
+  /* ---------- 9undecies. TSS delle sessioni brevi e intense ---------- */
+  section('TSS con sforzi brevissimi');
+  win.ICU_NATIVE_CP = { eftp: 347, wPrime: 29856, pMax: 1103 };
+  const pzT = win.computePowerZones();
+  /* REGRESSIONE: la Normalized Power si calcola su una media mobile a
+     30 secondi. Elevando alla quarta l'intensità del blocco così com'è,
+     12 secondi a ~285% del CP pesavano come un blocco intero: uscivano
+     137 TSS per 8 sprint e 247 TSS/h per una seduta di attacchi. */
+  const sp = win.buildByKey('sprints', '2026-09-20', 'x', 347, 29856, pzT, 'Costruzione', null);
+  check('8 sprint da 12s non producono un TSS assurdo',
+    sp.tss / (sp.durMin / 60) < 80, Math.round(sp.tss / (sp.durMin / 60)) + ' TSS/h');
+  const ra = win.buildByKey('raceattacks', '2026-09-20', 'x', 347, 29856, pzT, 'Costruzione', null);
+  check('la seduta di attacchi ha densità plausibile',
+    ra.tss / (ra.durMin / 60) < 110, Math.round(ra.tss / (ra.durMin / 60)) + ' TSS/h');
+
+  /* REGRESSIONE: la potenza d'attacco veniva da CP + W'/45, cioè
+     dall'iperbole a 2 parametri, che sulle durate brevi esplode:
+     dava ~1010W, quasi Pmax, che è uno sprint e non un attacco. */
+  const atk = ra.blocks.find(b => b.l === 'Attacco');
+  check("l'attacco resta sotto il massimo sostenibile 30s",
+    atk && atk.hi * 347 / 100 < win.predictedPower(30, win.cpModel()),
+    Math.round(atk.hi * 347 / 100) + 'W contro ' + win.predictedPower(30, win.cpModel()) + 'W');
+  check("l'attacco è comunque sopra soglia", atk && atk.hi > 130, atk ? atk.hi + '% CP' : '');
+
+  /* Gli sprint devono puntare vicino a Pmax: è la qualità che nessun
+     altro formato allenava. */
+  const spBlock = sp.blocks.find(b => b.l === '12s');
+  const pmaxT = win.pdmModel().Pmax;
+  check('gli sprint puntano vicino a Pmax',
+    spBlock && spBlock.hi * 347 / 100 > pmaxT * 0.8,
+    Math.round(spBlock.hi * 347 / 100) + 'W su Pmax ' + pmaxT + 'W');
+
+  /* Nessun formato deve superare la densità plausibile. */
+  const dense = Object.keys(win.WORKOUT_FOCUS).filter(k => {
+    try {
+      const x = win.buildByKey(k, '2026-09-20', 'x', 347, 29856, pzT, 'Costruzione',
+        { count: 4, avgDurMin: 185, avgDecoupling: 3 });
+      return x && x.tss / (x.durMin / 60) > 110;
+    } catch (e) { return false; }
+  });
+  check('nessun formato supera i 110 TSS/h', dense.length === 0, dense.join(', '));
 
   /* ---------- 10. Layout mobile ---------- */
   section('Layout mobile');
