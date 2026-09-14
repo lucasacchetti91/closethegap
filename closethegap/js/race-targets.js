@@ -138,7 +138,17 @@ var WORKOUT_FOCUS = {
   sweetspotlong: {wp: 0.0, cp: 1.0},
   torque:        {wp: 0.2, cp: 0.8},
   durability:    {wp: 0.0, cp: 1.0},
-  racesim:       {wp: 0.3, cp: 0.7}
+  racesim:       {wp: 0.3, cp: 0.7},
+  /* I lavori neuromuscolari allenano Pmax, che NON e' una delle due
+     leve degli obiettivi di gara (li' si imposta CP e W'): il modello
+     lo assume costante. Peso basso su entrambe le dimensioni, cosi'
+     restano in rotazione senza mai dominarla: servono a mantenere una
+     qualita', non a colmare un divario dichiarato. */
+  sprints:       {wp: 0.3, cp: 0.0},
+  z2sprints:     {wp: 0.1, cp: 0.5},
+  raceattacks:   {wp: 0.7, cp: 0.3},
+  pyramid:       {wp: 0.5, cp: 0.5},
+  progressive:   {wp: 0.1, cp: 0.9}
 };
 
 /* Riordina la rotazione dando piu' spazio ai formati che allenano la

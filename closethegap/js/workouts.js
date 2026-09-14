@@ -42,23 +42,50 @@
    potenza (stessa logica della Normalized Power). Gestisce anche i
    micro-intervalli, dove il pattern on/off va pesato al suo interno e
    non appiattito su una media semplice. */
+/* Calcolo del TSS di una sessione pianificata.
+
+   LA MEDIA MOBILE A 30 SECONDI NON E' UN DETTAGLIO.
+   La Normalized Power e' definita come media alla QUARTA POTENZA di una
+   media mobile a 30 secondi, non della potenza istantanea. Una versione
+   precedente elevava alla quarta l'intensita' di ogni blocco cosi'
+   com'era: su sforzi brevissimi il risultato esplodeva, perche' 12
+   secondi a ~285% del CP pesavano come se quella potenza fosse durata
+   un blocco intero. Si ottenevano 137 TSS per 8 sprint da 12 secondi e
+   247 TSS/h per una seduta di attacchi: valori impossibili.
+
+   Qui la sessione viene espansa secondo per secondo, si applica la
+   finestra mobile di 30 secondi e solo dopo la quarta potenza. E'
+   piu' lavoro ma e' la definizione corretta, e rende confrontabili
+   formati con durate molto diverse. */
 function tssFromBlocks(blocks, CP) {
-  var totalMin = 0, sumP4 = 0;
-  blocks.forEach(function(b) {
-    var d = b.d;
-    totalMin += d;
+  var series = [];
+  blocks.forEach(function (b) {
+    var secs = Math.max(1, Math.round(b.d * 60));
     if (b.micro) {
-      var onFrac = b.micro.onSec/(b.micro.onSec+b.micro.offSec);
-      var onI = b.micro.onPct/100, offI = b.micro.offPct/100;
-      sumP4 += (Math.pow(onI,4)*onFrac + Math.pow(offI,4)*(1-onFrac)) * d;
+      var onI = b.micro.onPct / 100, offI = b.micro.offPct / 100;
+      var cycle = b.micro.onSec + b.micro.offSec;
+      for (var t = 0; t < secs; t++) {
+        series.push((t % cycle) < b.micro.onSec ? onI : offI);
+      }
     } else {
-      var i = ((b.lo+b.hi)/2)/100;
-      sumP4 += Math.pow(i,4) * d;
+      var i = ((b.lo + b.hi) / 2) / 100;
+      for (var k = 0; k < secs; k++) series.push(i);
     }
   });
-  if (!totalMin) return 0;
-  var normI = Math.pow(sumP4/totalMin, 0.25); // IF rispetto a CP
-  return Math.round(totalMin/60 * Math.pow(normI,2) * 100);
+  if (!series.length) return 0;
+
+  // media mobile a 30 secondi
+  var W = 30, sum = 0, roll = [];
+  for (var n = 0; n < series.length; n++) {
+    sum += series[n];
+    if (n >= W) sum -= series[n - W];
+    roll.push(sum / Math.min(n + 1, W));
+  }
+
+  var p4 = roll.reduce(function (s, v) { return s + Math.pow(v, 4); }, 0) / roll.length;
+  var normI = Math.pow(p4, 0.25);          // IF rispetto a CP
+  var hours = series.length / 3600;
+  return Math.round(hours * Math.pow(normI, 2) * 100);
 }
 
 function finishSession(date, week, name, type, blocks, CP, desc, tag) {
@@ -364,6 +391,148 @@ function buildRonnestad4020(date, week, CP, Wp, pz, phase) {
   return finishSession(date, week, series + 'x' + reps + 'x40/20', 'z5', blocks, CP, desc, 'ronnestad4020');
 }
 
+/* ============================================================
+   LACUNE COPERTE DA QUESTI FORMATI
+
+   1. POTENZA NEUROMUSCOLARE (Pmax). Il modello a tre parametri usa
+      Pmax, ma nessun allenamento della libreria lo allenava: lo sforzo
+      piu' breve erano le W' repeats a 45-180s, che e' capacita'
+      anaerobica, non potenza massima. Per chi corre in circuito e
+      arriva in volata e' una lacuna concreta.
+      NOTA: Pmax non e' una delle due leve degli obiettivi di gara
+      (li' si imposta CP e W'). Il modello lo assume costante, quindi
+      questi lavori servono a MANTENERLO, non compaiono nel calcolo
+      dell'enfasi.
+
+   2. SFORZI DA RITMO GARA. Le W' repeats partono da fresco; in gara si
+      attacca quando si e' gia' a soglia, con W' parzialmente esaurita.
+      E' una situazione fisiologicamente diversa e va allenata come tale.
+
+   3. DURATE VARIABILI nella stessa seduta: le transizioni fra sforzi di
+      lunghezza diversa non erano allenate da nessun formato.
+   ============================================================ */
+
+/* ---------- 13. Sprint neuromuscolari ----------
+   Recuperi lunghissimi: l'obiettivo e' la potenza di picco, non
+   l'accumulo di fatica. Se le ultime partenze calano molto, la seduta
+   e' finita: continuare allena altro. */
+function buildSprints(date, week, CP, Wp, pz, phase) {
+  var pdm = pdmModel();
+  var target = Math.round((pdm.Pmax || CP * 3) * 0.92);
+  var reps = phase === 'Tapering Finale' ? 4 : phase === 'Affilatura' ? 5 : 8;
+  var blocks = [wuBlock(CP, 20)];
+  for (var i = 0; i < reps; i++) {
+    blocks.push({z: 7, l: '12s', lo: Math.round(target / CP * 100) - 15, hi: Math.round(target / CP * 100), d: 0.2});
+    if (i < reps - 1) blocks.push({z: 1, l: 'Rec', lo: 40, hi: 55, d: 4});
+  }
+  blocks.push(cdBlock(CP, 12));
+  var desc = 'WU 20\', poi ' + reps + 'x12 secondi da fermo o quasi, tutto quello che hai (~' + target + 'W), ' +
+    'rec 4\' COMPLETI fra una e l\'altra. Il recupero lungo non e\' un dettaglio: serve a ricostituire i fosfati, ' +
+    'e accorciarlo trasforma la seduta in un lavoro anaerobico diverso. ' +
+    'Se le ultime partenze calano di oltre il 10%, fermati: allenare Pmax da stanco non allena Pmax.';
+  return finishSession(date, week, 'Sprint ' + reps + 'x12s', 'z6', blocks, CP, desc, 'sprints');
+}
+
+/* ---------- 14. Z2 lungo con sprint ----------
+   Mantiene la potenza di picco a costo aerobico quasi nullo: gli sprint
+   sono cosi' brevi da non intaccare la seduta di fondo. Sta nel giro
+   del sabato senza rubargli spazio. */
+function buildZ2Sprints(date, week, CP, Wp, pz, phase) {
+  var pdm = pdmModel();
+  var target = Math.round((pdm.Pmax || CP * 3) * 0.88);
+  var z2 = pz[1];
+  var totalMin = phase === 'Tapering Finale' ? 75 : 150;
+  var sprints = 6;
+  var blocks = [wuBlock(CP, 15)];
+  var chunk = Math.round((totalMin - 25) / sprints);
+  for (var i = 0; i < sprints; i++) {
+    blocks.push({z: 2, l: 'Z2', lo: 55, hi: 75, d: chunk});
+    blocks.push({z: 7, l: 'Sprint', lo: Math.round(target / CP * 100) - 15, hi: Math.round(target / CP * 100), d: 0.17});
+  }
+  blocks.push(cdBlock(CP, 10));
+  var desc = Math.round(totalMin / 60 * 10) / 10 + 'h in Z2 (' + z2.lo + '-' + z2.hi + 'W) con ' + sprints +
+    ' sprint di 10 secondi a ~' + target + 'W, uno ogni ' + chunk + '\'. ' +
+    'Gli sprint sono troppo brevi per intaccare il lavoro aerobico: mantieni la potenza di picco senza pagare nulla ' +
+    'sulla seduta di fondo. Riparti in Z2 subito dopo, senza recupero aggiuntivo.';
+  return finishSession(date, week, 'Z2 lungo + ' + sprints + ' sprint', 'z2', blocks, CP, desc, 'z2sprints');
+}
+
+/* ---------- 15. Attacchi da ritmo gara ----------
+   Strappi ripetuti partendo da Z3-Z4 invece che da fermo: in gara si
+   attacca con la W' gia' parzialmente consumata, ed e' li' che si
+   decide. Piu' duro di quanto i numeri suggeriscano. */
+function buildRaceAttacks(date, week, CP, Wp, pz, phase) {
+  var base = Math.round(CP * 0.88);
+  /* Potenza dell'attacco dal modello di Morton, non dall'iperbole a 2
+     parametri: CP + W'/45 dava 1010W su questo profilo, cioe' quasi
+     Pmax, che e' uno sprint e non un attacco. E' lo stesso errore gia'
+     corretto nel grafico della curva di potenza, qui reintrodotto.
+     Si parte dal massimo sostenibile 30s e si scala all'85%, perche'
+     l'attacco avviene da ritmo gara con la W' gia' in parte consumata. */
+  var attack = Math.round(predictedPower(30, cpModel()) * 0.85);
+  var sets = phase === 'Affilatura' ? 2 : 3;
+  var attacksPerSet = 4;
+  var blocks = [wuBlock(CP, 15)];
+  for (var s = 0; s < sets; s++) {
+    for (var i = 0; i < attacksPerSet; i++) {
+      blocks.push({z: 3, l: 'Ritmo', lo: 84, hi: 92, d: 2});
+      blocks.push({z: 6, l: 'Attacco', lo: Math.round(attack / CP * 100) - 5, hi: Math.round(attack / CP * 100), d: 0.5});
+    }
+    if (s < sets - 1) blocks.push({z: 1, l: 'Rec', lo: 40, hi: 55, d: 8});
+  }
+  blocks.push(cdBlock(CP, 10));
+  var desc = sets + ' serie da ' + attacksPerSet + 'x(2\' a ' + base + 'W + 30s di attacco a ' + attack + 'W), rec 8\' fra le serie. ' +
+    'Gli attacchi NON partono da fermo ma da ritmo gara, con la W\' gia\' in parte consumata: e\' la situazione reale ' +
+    'del finale di una granfondo o di un circuito. Aspettati che sia piu\' duro di quanto i numeri suggeriscano.';
+  return finishSession(date, week, 'Attacchi ' + sets + 'x' + attacksPerSet, 'z5', blocks, CP, desc, 'raceattacks');
+}
+
+/* ---------- 16. Piramide ----------
+   Durate crescenti e poi decrescenti: allena le transizioni fra sforzi
+   di lunghezza diversa, che nessun formato a ripetute uguali copre. */
+function buildPyramid(date, week, CP, Wp, pz, phase) {
+  var steps = phase === 'Affilatura' ? [1, 2, 3, 2, 1] : [1, 2, 3, 4, 3, 2, 1];
+  var blocks = [wuBlock(CP, 15)];
+  steps.forEach(function (m, i) {
+    /* Piu' lunga la ripetuta, minore l'intensita': si usa il modello per
+       scegliere un target sostenibile a QUELLA durata, invece di una
+       percentuale unica che sarebbe troppo dura sui gradini lunghi. */
+    var sust = Math.round(predictedPower(m * 60, cpModel()) * 0.93);
+    var pct = Math.round(sust / CP * 100);
+    blocks.push({z: m <= 2 ? 6 : 5, l: m + "'", lo: pct - 4, hi: pct, d: m});
+    if (i < steps.length - 1) blocks.push({z: 1, l: 'Rec', lo: 40, hi: 55, d: Math.max(2, m)});
+  });
+  blocks.push(cdBlock(CP, 10));
+  var desc = 'Piramide ' + steps.join('-') + ' minuti, recupero pari alla durata della ripetuta appena conclusa. ' +
+    'Ogni gradino ha un target diverso, calcolato sul tuo modello per quella durata specifica: ' +
+    'una percentuale unica sarebbe impossibile sui gradini lunghi e troppo facile su quelli brevi. ' +
+    'La parte difficile e\' la discesa, quando le ripetute si accorciano ma la fatica e\' gia\' addosso.';
+  return finishSession(date, week, 'Piramide ' + steps.join('-'), 'z5', blocks, CP, desc, 'pyramid');
+}
+
+/* ---------- 17. Soglia progressiva ----------
+   Ogni ripetuta piu' dura della precedente. Insegna a gestire il passo:
+   partire troppo forte qui si paga in modo evidente. */
+function buildProgressive(date, week, CP, Wp, pz, phase) {
+  var reps = phase === 'Affilatura' ? 3 : 4;
+  var repMin = 8;
+  var startPct = 88, stepPct = 5;
+  var blocks = [wuBlock(CP, 15)];
+  for (var i = 0; i < reps; i++) {
+    var pct = startPct + i * stepPct;
+    blocks.push({z: pct >= 100 ? 4 : 3, l: repMin + "'", lo: pct - 3, hi: pct, d: repMin});
+    if (i < reps - 1) blocks.push({z: 1, l: 'Rec', lo: 40, hi: 55, d: 4});
+  }
+  blocks.push(cdBlock(CP, 10));
+  var watts = [];
+  for (var j = 0; j < reps; j++) watts.push(Math.round(CP * (startPct + j * stepPct) / 100) + 'W');
+  var desc = reps + 'x' + repMin + '\' progressivi: ' + watts.join(' → ') + ', rec 4\'. ' +
+    'Ogni ripetuta piu\' dura della precedente, e l\'ultima deve essere completabile. ' +
+    'Serve a imparare a gestire il passo: se parti troppo forte qui te ne accorgi subito, ' +
+    'invece che a meta\' gara.';
+  return finishSession(date, week, 'Progressiva ' + reps + 'x' + repMin + "'", 'z4', blocks, CP, desc, 'progressive');
+}
+
 /* ---------- 11. Riposo ---------- */
 function buildOffDay(date, week) {
   return {date:date, week:week, name:'Riposo', type:'off', tss:0, durMin:0,
@@ -392,15 +561,15 @@ function buildRaceSpecificSession(date, week, CP, pz, raceProfile) {
    continuo, e la tua preferenza e' di fare i lavori lunghi nel giro
    del sabato. */
 var MIDWEEK_QUALITY_POOL = {
-  'Costruzione':   ['seiler4x8','overunder','ronnestad','sweetspot','eight3','bossi','ronnestad4020','torque','fivex5fast'],
-  'Picco Forma':   ['seiler4x8','norwegian4x4','ronnestad4020','fivex5fast','eight3','bossi','ronnestad','overunder','wprime'],
-  'Affilatura':    ['fivex5fast','norwegian4x4','ronnestad','wprime'],
-  'Tapering Finale':['fivex5fast','sweetspot']
+  'Costruzione':   ['seiler4x8','overunder','ronnestad','progressive','sweetspot','eight3','pyramid','bossi','ronnestad4020','sprints','torque','fivex5fast'],
+  'Picco Forma':   ['seiler4x8','raceattacks','norwegian4x4','ronnestad4020','fivex5fast','pyramid','eight3','bossi','sprints','ronnestad','overunder','wprime'],
+  'Affilatura':    ['fivex5fast','raceattacks','norwegian4x4','sprints','ronnestad','wprime'],
+  'Tapering Finale':['fivex5fast','sprints','sweetspot']
 };
 
 var WEEKEND_POOL = {
-  'Costruzione':   ['longthreshold','durability','seiler4x16','sweetspotlong'],
-  'Picco Forma':   ['durability','racesim','longthreshold','seiler4x16'],
+  'Costruzione':   ['longthreshold','durability','z2sprints','seiler4x16','sweetspotlong'],
+  'Picco Forma':   ['durability','racesim','longthreshold','z2sprints','seiler4x16'],
   'Affilatura':    ['longthreshold','durability'],
   'Tapering Finale':['z2long']
 };
@@ -409,6 +578,11 @@ function buildByKey(key, date, week, CP, Wp, pz, phase, raceProfile) {
   switch(key) {
     case 'ronnestad':     return buildRonnestad3015(date, week, CP, Wp, pz, phase);
     case 'ronnestad4020': return buildRonnestad4020(date, week, CP, Wp, pz, phase);
+    case 'sprints':       return buildSprints(date, week, CP, Wp, pz, phase);
+    case 'z2sprints':     return buildZ2Sprints(date, week, CP, Wp, pz, phase);
+    case 'raceattacks':   return buildRaceAttacks(date, week, CP, Wp, pz, phase);
+    case 'pyramid':       return buildPyramid(date, week, CP, Wp, pz, phase);
+    case 'progressive':   return buildProgressive(date, week, CP, Wp, pz, phase);
     case 'seiler4x8':     return buildIntervalFormat('seiler4x8', date, week, CP, Wp, pz, phase);
     case 'seiler4x16':    return buildIntervalFormat('seiler4x16', date, week, CP, Wp, pz, phase);
     case 'norwegian4x4':  return buildIntervalFormat('norwegian4x4', date, week, CP, Wp, pz, phase);
